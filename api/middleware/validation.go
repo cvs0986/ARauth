@@ -1,9 +1,6 @@
 package middleware
 
 import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -15,11 +12,9 @@ type ValidationError struct {
 
 // ValidationMiddleware returns a validation middleware
 func ValidationMiddleware() gin.HandlerFunc {
-	validate := validator.New()
-
+	// This middleware can be used to validate request bodies
+	// Individual handlers will use ShouldBindJSON which includes validation
 	return func(c *gin.Context) {
-		// This middleware can be used to validate request bodies
-		// Individual handlers will use ShouldBindJSON which includes validation
 		c.Next()
 	}
 }
