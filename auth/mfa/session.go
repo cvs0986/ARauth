@@ -2,7 +2,6 @@ package mfa
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
