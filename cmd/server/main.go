@@ -10,10 +10,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nuage-identity/iam/api/handlers"
 	"github.com/nuage-identity/iam/api/routes"
 	"github.com/nuage-identity/iam/config/loader"
 	"github.com/nuage-identity/iam/config/validator"
+	"github.com/nuage-identity/iam/identity/user"
 	"github.com/nuage-identity/iam/internal/logger"
+	"github.com/nuage-identity/iam/storage/postgres"
 	"go.uber.org/zap"
 )
 
@@ -56,6 +59,24 @@ func main() {
 		zap.String("port", fmt.Sprintf("%d", cfg.Server.Port)),
 	)
 
+	// Connect to database
+	db, err := postgres.NewConnection(&cfg.Database)
+	if err != nil {
+		logger.Logger.Fatal("Failed to connect to database", zap.Error(err))
+	}
+	defer db.Close()
+
+	logger.Logger.Info("Database connection established")
+
+	// Initialize repositories
+	userRepo := postgres.NewUserRepository(db)
+
+	// Initialize services
+	userService := user.NewService(userRepo)
+
+	// Initialize handlers
+	userHandler := handlers.NewUserHandler(userService)
+
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
 		gin.SetMode(gin.DebugMode)
@@ -66,8 +87,8 @@ func main() {
 	// Create Gin router
 	router := gin.New()
 
-	// Setup routes
-	routes.SetupRoutes(router, logger.Logger)
+	// Setup routes with dependencies
+	routes.SetupRoutes(router, logger.Logger, userHandler)
 
 	// Create HTTP server
 	srv := &http.Server{

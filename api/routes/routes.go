@@ -8,7 +8,7 @@ import (
 )
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler) {
 	// Middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -28,8 +28,15 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger) {
 			_ = auth // Placeholder for auth routes
 		}
 
-		// User routes (to be wired up with dependency injection)
-		_ = v1.Group("/users")
+		// User routes
+		users := v1.Group("/users")
+		{
+			users.POST("", userHandler.Create)
+			users.GET("", userHandler.List)
+			users.GET("/:id", userHandler.GetByID)
+			users.PUT("/:id", userHandler.Update)
+			users.DELETE("/:id", userHandler.Delete)
+		}
 
 		// Tenant routes (to be implemented)
 		tenants := v1.Group("/tenants")
