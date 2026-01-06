@@ -17,6 +17,7 @@ import (
 	"github.com/nuage-identity/iam/config/loader"
 	"github.com/nuage-identity/iam/config/validator"
 	"github.com/nuage-identity/iam/identity/user"
+	"github.com/nuage-identity/iam/internal/cache"
 	"github.com/nuage-identity/iam/internal/logger"
 	"github.com/nuage-identity/iam/storage/postgres"
 	"go.uber.org/zap"
@@ -69,6 +70,23 @@ func main() {
 	defer db.Close()
 
 	logger.Logger.Info("Database connection established")
+
+	// Connect to Redis
+	redisClient, err := postgres.NewRedisConnection(&cfg.Redis)
+	if err != nil {
+		logger.Logger.Warn("Failed to connect to Redis", zap.Error(err))
+		logger.Logger.Info("Continuing without Redis cache")
+		redisClient = nil
+	} else {
+		defer redisClient.Close()
+		logger.Logger.Info("Redis connection established")
+	}
+
+	// Initialize cache
+	var cacheClient *cache.Cache
+	if redisClient != nil {
+		cacheClient = cache.NewCache(redisClient)
+	}
 
 	// Initialize repositories
 	userRepo := postgres.NewUserRepository(db)
