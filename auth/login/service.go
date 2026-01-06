@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/auth/hydra"
-	"github.com/nuage-identity/iam/identity/credential"
 	"github.com/nuage-identity/iam/identity/models"
 	"github.com/nuage-identity/iam/security/password"
 	"github.com/nuage-identity/iam/storage/interfaces"
