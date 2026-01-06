@@ -118,9 +118,8 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 
 // handleOAuth2Login handles OAuth2 login flow with Hydra
 func (s *Service) handleOAuth2Login(ctx context.Context, challenge string, user *models.User) (*LoginResponse, error) {
-	// Get login request from Hydra
-	loginReq, err := s.hydraClient.GetLoginRequest(ctx, challenge)
-	if err != nil {
+	// Verify login request exists in Hydra (we don't need the full request for now)
+	if _, err := s.hydraClient.GetLoginRequest(ctx, challenge); err != nil {
 		return nil, fmt.Errorf("failed to get login request: %w", err)
 	}
 
