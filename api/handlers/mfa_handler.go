@@ -4,18 +4,24 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/api/middleware"
 	"github.com/nuage-identity/iam/auth/mfa"
+	"github.com/nuage-identity/iam/internal/audit"
 )
 
 // MFAHandler handles MFA-related HTTP requests
 type MFAHandler struct {
-	mfaService *mfa.Service
+	mfaService  *mfa.Service
+	auditLogger *audit.Logger
 }
 
 // NewMFAHandler creates a new MFA handler
-func NewMFAHandler(mfaService *mfa.Service) *MFAHandler {
-	return &MFAHandler{mfaService: mfaService}
+func NewMFAHandler(mfaService *mfa.Service, auditLogger *audit.Logger) *MFAHandler {
+	return &MFAHandler{
+		mfaService:  mfaService,
+		auditLogger: auditLogger,
+	}
 }
 
 // Enroll handles POST /api/v1/mfa/enroll
@@ -94,15 +100,32 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 
 	resp, err := h.mfaService.VerifyChallenge(c.Request.Context(), &req)
 	if err != nil {
+		// Log failed attempt
+		if resp != nil && resp.UserID != "" {
+			// Try to log if we have user info
+		}
 		middleware.RespondWithError(c, http.StatusUnauthorized, "verification_failed",
 			err.Error(), nil)
 		return
 	}
 
 	if !resp.Verified {
+		// Log failed verification
+		if resp.UserID != "" {
+			userID, _ := uuid.Parse(resp.UserID)
+			tenantID, _ := uuid.Parse(resp.TenantID)
+			h.auditLogger.LogMFAAction(c.Request.Context(), tenantID, userID, "verify_challenge", c.Request, "failure", "Invalid MFA code")
+		}
 		middleware.RespondWithError(c, http.StatusUnauthorized, "invalid_code",
 			"Invalid TOTP code or recovery code", nil)
 		return
+	}
+
+	// Log successful verification
+	if resp.UserID != "" {
+		userID, _ := uuid.Parse(resp.UserID)
+		tenantID, _ := uuid.Parse(resp.TenantID)
+		h.auditLogger.LogMFAAction(c.Request.Context(), tenantID, userID, "verify_challenge", c.Request, "success", "MFA challenge verified")
 	}
 
 	c.JSON(http.StatusOK, resp)

@@ -92,6 +92,10 @@ func main() {
 	userRepo := postgres.NewUserRepository(db)
 	credentialRepo := postgres.NewCredentialRepository(db)
 	mfaRecoveryCodeRepo := postgres.NewMFARecoveryCodeRepository(db)
+	auditRepo := postgres.NewAuditRepository(db)
+
+	// Initialize audit logger
+	auditLogger := audit.NewLogger(auditRepo)
 
 	// Initialize encryption (for MFA secrets)
 	encryptionKey := []byte(cfg.Security.EncryptionKey)
@@ -132,7 +136,7 @@ func main() {
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
 	authHandler := handlers.NewAuthHandler(loginService)
-	mfaHandler := handlers.NewMFAHandler(mfaService)
+	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger)
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
