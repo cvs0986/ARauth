@@ -86,8 +86,11 @@ func main() {
 		logger.Logger.Info("Redis connection established")
 	}
 
-	// Initialize cache (for future use)
-	_ = cache.NewCache(redisClient) // Will be used when implementing caching
+	// Initialize cache
+	var cacheClient *cache.Cache
+	if redisClient != nil {
+		cacheClient = cache.NewCache(redisClient)
+	}
 
 	// Initialize repositories
 	userRepo := postgres.NewUserRepository(db)
