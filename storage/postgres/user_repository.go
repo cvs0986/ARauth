@@ -275,7 +275,7 @@ func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // List retrieves a list of users with filters
-func (r *userRepository) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) ([]*user.User, error) {
+func (r *userRepository) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) ([]*models.User, error) {
 	if filters == nil {
 		filters = &interfaces.UserFilters{
 			Page:     1,
