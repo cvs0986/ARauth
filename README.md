@@ -29,31 +29,81 @@ Client App (Web/Mobile)
 
 ### Prerequisites
 
-- Go 1.21+
+- Go 1.21+ (will be installed automatically)
 - Docker and Docker Compose
-- PostgreSQL 14+ (or use Docker)
-- Redis 7+ (or use Docker)
-- ORY Hydra v2.0+ (or use Docker)
+- PostgreSQL 14+ (via Docker)
+- Redis 7+ (via Docker)
+- ORY Hydra v2.0+ (via Docker)
 
 ### Installation
 
+#### 1. Install Go (if not already installed)
+
 ```bash
-# Clone the repository
-git clone https://github.com/cvs0986/ARauth.git
-cd ARauth
+# Run the setup script
+bash scripts/setup-go.sh
 
-# Set up environment
+# Add Go to your PATH (if needed)
+export PATH=$PATH:~/go-install/go/bin
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOPATH/bin
+```
+
+#### 2. Install Development Tools
+
+```bash
+# Install all required development tools
+bash scripts/install-dev-tools.sh
+```
+
+#### 3. Set Up Environment
+
+```bash
+# Copy environment template
 cp .env.example .env
-# Edit .env with your configuration
 
-# Start dependencies
+# Edit .env with your configuration
+# Set DATABASE_PASSWORD, REDIS_PASSWORD, JWT_SECRET, etc.
+```
+
+#### 4. Start Dependencies
+
+```bash
+# Start PostgreSQL, Redis, and Hydra
+make docker-up
+
+# Or manually:
 docker-compose up -d postgres-iam postgres-hydra redis hydra
+```
+
+#### 5. Run Database Migrations
+
+```bash
+# Set database URL
+export DATABASE_URL="postgres://iam_user:change-me@localhost:5432/iam?sslmode=disable"
 
 # Run migrations
-go run cmd/migrate/main.go up
+make migrate-up
 
-# Start application
+# Or use the script:
+bash scripts/migrate.sh up
+```
+
+#### 6. Start Application
+
+```bash
+# Run the application
+make run
+
+# Or directly:
 go run cmd/server/main.go
+```
+
+#### 7. Verify
+
+```bash
+# Health check
+curl http://localhost:8080/health
 ```
 
 ## 📚 Documentation
@@ -65,6 +115,45 @@ Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 - **[API Design](./docs/technical/api-design.md)** - API specifications
 - **[Deployment Guide](./docs/deployment/kubernetes.md)** - Kubernetes deployment
 - **[Integration Guide](./docs/guides/integration-guide.md)** - Client integration
+- **[Development Strategy](./docs/planning/strategy.md)** - Development approach
+
+## 🛠️ Development
+
+### Build
+
+```bash
+make build
+```
+
+### Run Tests
+
+```bash
+make test
+make test-coverage  # With coverage report
+```
+
+### Code Quality
+
+```bash
+make lint   # Run linters
+make fmt    # Format code
+```
+
+### Database Migrations
+
+```bash
+make migrate-up      # Run migrations
+make migrate-down    # Rollback migrations
+make migrate-create  # Create new migration
+```
+
+### Docker Commands
+
+```bash
+make docker-up      # Start services
+make docker-down    # Stop services
+make docker-clean   # Stop and remove volumes
+```
 
 ## 🧩 Key Components
 
@@ -83,6 +172,23 @@ Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 - ✅ Short-lived access tokens
 - ✅ Key rotation via JWKS
 
+## 📁 Project Structure
+
+```
+iam/
+├── cmd/server/          # Application entry point
+├── api/                 # HTTP API layer
+├── auth/                # Authentication service
+├── identity/            # Identity management
+├── policy/              # Authorization
+├── storage/             # Data access layer
+├── security/             # Security utilities
+├── config/               # Configuration
+├── internal/             # Internal utilities
+├── migrations/           # Database migrations
+└── scripts/              # Development scripts
+```
+
 ## 📋 Project Status
 
 This project is in active development. See the [Roadmap](./docs/planning/roadmap.md) for current status and planned features.
@@ -97,7 +203,6 @@ Contributions are welcome! Please read our contributing guidelines and code of c
 
 ## 🔗 Links
 
-- **Repository**: https://github.com/cvs0986/ARauth
 - **Documentation**: [docs/](./docs/)
 - **Requirements**: [requirement.md](./requirement.md)
 
@@ -108,4 +213,3 @@ For questions or support, please open an issue on GitHub.
 ---
 
 **Built with ❤️ for modern, headless authentication**
-
