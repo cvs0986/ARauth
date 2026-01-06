@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/identity/models"
 	"github.com/nuage-identity/iam/security/encryption"
 	"github.com/nuage-identity/iam/security/totp"
 	"github.com/nuage-identity/iam/storage/interfaces"
