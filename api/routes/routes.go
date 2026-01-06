@@ -28,10 +28,11 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger) {
 			_ = auth // Placeholder for auth routes
 		}
 
-		// User routes (to be implemented)
+		// User routes
 		users := v1.Group("/users")
 		{
-			_ = users // Placeholder for user routes
+			// User handler will be injected via dependency injection
+			// For now, routes are defined but handler needs to be passed
 		}
 
 		// Tenant routes (to be implemented)

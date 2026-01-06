@@ -1,0 +1,195 @@
+package handlers
+
+import (
+	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/nuage-identity/iam/identity/user"
+	"github.com/nuage-identity/iam/storage/interfaces"
+)
+
+// UserHandler handles user-related HTTP requests
+type UserHandler struct {
+	userService *user.Service
+}
+
+// NewUserHandler creates a new user handler
+func NewUserHandler(userService *user.Service) *UserHandler {
+	return &UserHandler{userService: userService}
+}
+
+// Create handles POST /api/v1/users
+func (h *UserHandler) Create(c *gin.Context) {
+	var req user.CreateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_request",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	u, err := h.userService.Create(c.Request.Context(), &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "creation_failed",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, u)
+}
+
+// GetByID handles GET /api/v1/users/:id
+func (h *UserHandler) GetByID(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_id",
+			"message": "Invalid user ID format",
+		})
+		return
+	}
+
+	u, err := h.userService.GetByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":   "not_found",
+			"message": "User not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, u)
+}
+
+// List handles GET /api/v1/users
+func (h *UserHandler) List(c *gin.Context) {
+	tenantIDStr := c.Query("tenant_id")
+	if tenantIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_request",
+			"message": "tenant_id is required",
+		})
+		return
+	}
+
+	tenantID, err := uuid.Parse(tenantIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_tenant_id",
+			"message": "Invalid tenant ID format",
+		})
+		return
+	}
+
+	// Parse pagination
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	// Parse filters
+	filters := &interfaces.UserFilters{
+		Page:     page,
+		PageSize: pageSize,
+	}
+
+	if status := c.Query("status"); status != "" {
+		filters.Status = &status
+	}
+
+	if search := c.Query("search"); search != "" {
+		filters.Search = &search
+	}
+
+	// Get users
+	users, err := h.userService.List(c.Request.Context(), tenantID, filters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "internal_error",
+			"message": "Failed to retrieve users",
+		})
+		return
+	}
+
+	// Get total count
+	total, err := h.userService.Count(c.Request.Context(), tenantID, filters)
+	if err != nil {
+		total = len(users) // Fallback
+	}
+
+	totalPages := (total + pageSize - 1) / pageSize
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": users,
+		"pagination": gin.H{
+			"page":       page,
+			"limit":      pageSize,
+			"total":      total,
+			"total_pages": totalPages,
+		},
+	})
+}
+
+// Update handles PUT /api/v1/users/:id
+func (h *UserHandler) Update(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_id",
+			"message": "Invalid user ID format",
+		})
+		return
+	}
+
+	var req user.UpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_request",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	u, err := h.userService.Update(c.Request.Context(), id, &req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "update_failed",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, u)
+}
+
+// Delete handles DELETE /api/v1/users/:id
+func (h *UserHandler) Delete(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_id",
+			"message": "Invalid user ID format",
+		})
+		return
+	}
+
+	if err := h.userService.Delete(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error":   "not_found",
+			"message": "User not found",
+		})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
