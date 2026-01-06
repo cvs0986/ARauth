@@ -96,14 +96,11 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 
 	// Check if MFA is required
 	if user.MFAEnabled {
-		// Generate MFA session ID for the challenge
-		mfaSessionID := uuid.New().String()
-		
-		// TODO: Store MFA session in Redis with short TTL (5 minutes)
-		// For now, return MFA challenge
+		// MFA is required - client should call /api/v1/mfa/challenge endpoint
+		// with user_id and tenant_id to get a session
 		return &LoginResponse{
-			MFARequired:  true,
-			MFASessionID: mfaSessionID,
+			MFARequired: true,
+			// Client should call MFA challenge endpoint to get session
 		}, nil
 	}
 

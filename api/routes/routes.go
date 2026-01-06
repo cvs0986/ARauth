@@ -33,6 +33,8 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		{
 			mfa.POST("/enroll", mfaHandler.Enroll)
 			mfa.POST("/verify", mfaHandler.Verify)
+			mfa.POST("/challenge", mfaHandler.Challenge)
+			mfa.POST("/challenge/verify", mfaHandler.VerifyChallenge)
 		}
 
 		// User routes

@@ -64,3 +64,47 @@ func (h *MFAHandler) Verify(c *gin.Context) {
 	})
 }
 
+// Challenge handles POST /api/v1/mfa/challenge
+func (h *MFAHandler) Challenge(c *gin.Context) {
+	var req mfa.ChallengeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
+			"Request validation failed", middleware.FormatValidationErrors(err))
+		return
+	}
+
+	resp, err := h.mfaService.CreateChallenge(c.Request.Context(), &req)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "challenge_failed",
+			err.Error(), nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+// VerifyChallenge handles POST /api/v1/mfa/challenge/verify
+func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
+	var req mfa.VerifyChallengeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
+			"Request validation failed", middleware.FormatValidationErrors(err))
+		return
+	}
+
+	resp, err := h.mfaService.VerifyChallenge(c.Request.Context(), &req)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusUnauthorized, "verification_failed",
+			err.Error(), nil)
+		return
+	}
+
+	if !resp.Verified {
+		middleware.RespondWithError(c, http.StatusUnauthorized, "invalid_code",
+			"Invalid TOTP code or recovery code", nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+

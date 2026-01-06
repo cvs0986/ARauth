@@ -18,6 +18,7 @@ type Service struct {
 	mfaRecoveryCodeRepo interfaces.MFARecoveryCodeRepository
 	totpGenerator       *totp.Generator
 	encryptor           *encryption.Encryptor
+	sessionManager      *SessionManager
 }
 
 // NewService creates a new MFA service
@@ -27,6 +28,7 @@ func NewService(
 	mfaRecoveryCodeRepo interfaces.MFARecoveryCodeRepository,
 	totpGenerator *totp.Generator,
 	encryptor *encryption.Encryptor,
+	sessionManager *SessionManager,
 ) *Service {
 	return &Service{
 		userRepo:            userRepo,
@@ -34,6 +36,7 @@ func NewService(
 		mfaRecoveryCodeRepo: mfaRecoveryCodeRepo,
 		totpGenerator:       totpGenerator,
 		encryptor:           encryptor,
+		sessionManager:      sessionManager,
 	}
 }
 

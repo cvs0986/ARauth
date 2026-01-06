@@ -113,10 +113,21 @@ func main() {
 	// Initialize Hydra client
 	hydraClient := hydra.NewClient(cfg.Hydra.AdminURL)
 
+	// Initialize MFA session manager
+	var mfaSessionManager *mfa.SessionManager
+	if cacheClient != nil {
+		mfaSessionManager = mfa.NewSessionManager(cacheClient)
+	} else {
+		// Create a no-op session manager if Redis is not available
+		// In production, Redis should be required for MFA
+		logger.Logger.Warn("Redis not available - MFA sessions will not persist across restarts")
+		mfaSessionManager = mfa.NewSessionManager(cache.NewCache(nil)) // Will fail gracefully
+	}
+
 	// Initialize services
 	userService := user.NewService(userRepo)
 	loginService := login.NewService(userRepo, credentialRepo, hydraClient)
-	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor)
+	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, mfaSessionManager)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
