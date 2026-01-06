@@ -1,0 +1,78 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+
+# Go workspace file
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+build/
+*.o
+*.a
+
+# Kubernetes secrets
+secrets/
+*.secret.yaml
+
+# Docker
+.dockerignore
+
+# Local configuration
+config/local.yaml
+config/*.local.yaml
+
+# Hydra data
+hydra-data/
+
+# Redis dumps
+dump.rdb
+
+# Certificates (if generated locally)
+*.pem
+*.key
+*.crt
+!ca.crt  # Keep CA cert if needed
+
+# OS
+Thumbs.db
+.DS_Store
+
