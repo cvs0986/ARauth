@@ -7,17 +7,24 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/identity/models"
+	"github.com/nuage-identity/iam/security/password"
 	"github.com/nuage-identity/iam/storage/interfaces"
 )
 
 // Service provides user management business logic
 type Service struct {
-	repo interfaces.UserRepository
+	repo            interfaces.UserRepository
+	passwordValidator *password.Validator
 }
 
 // NewService creates a new user service
 func NewService(repo interfaces.UserRepository) *Service {
-	return &Service{repo: repo}
+	// Default password policy: min 12 chars, require all complexity
+	validator := password.NewValidator(12, true, true, true, true)
+	return &Service{
+		repo:              repo,
+		passwordValidator: validator,
+	}
 }
 
 // CreateUserRequest represents a request to create a user
@@ -54,6 +61,9 @@ func (s *Service) Create(ctx context.Context, req *CreateUserRequest) (*models.U
 	if !isValidEmail(req.Email) {
 		return nil, fmt.Errorf("invalid email format")
 	}
+
+	// Note: Password validation should be done when setting password
+	// This service doesn't handle password directly (handled by credential service)
 
 	// Check if user already exists
 	existing, _ := s.repo.GetByUsername(ctx, req.Username, req.TenantID)
