@@ -6,27 +6,35 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/nuage-identity/iam/identity/models"
+	"github.com/nuage-identity/iam/security/encryption"
 	"github.com/nuage-identity/iam/security/totp"
 	"github.com/nuage-identity/iam/storage/interfaces"
 )
 
 // Service provides MFA functionality
 type Service struct {
-	userRepo       interfaces.UserRepository
-	credentialRepo interfaces.CredentialRepository
-	totpGenerator  *totp.Generator
+	userRepo            interfaces.UserRepository
+	credentialRepo      interfaces.CredentialRepository
+	mfaRecoveryCodeRepo interfaces.MFARecoveryCodeRepository
+	totpGenerator       *totp.Generator
+	encryptor           *encryption.Encryptor
 }
 
 // NewService creates a new MFA service
 func NewService(
 	userRepo interfaces.UserRepository,
 	credentialRepo interfaces.CredentialRepository,
+	mfaRecoveryCodeRepo interfaces.MFARecoveryCodeRepository,
 	totpGenerator *totp.Generator,
+	encryptor *encryption.Encryptor,
 ) *Service {
 	return &Service{
-		userRepo:       userRepo,
-		credentialRepo: credentialRepo,
-		totpGenerator:  totpGenerator,
+		userRepo:            userRepo,
+		credentialRepo:      credentialRepo,
+		mfaRecoveryCodeRepo: mfaRecoveryCodeRepo,
+		totpGenerator:       totpGenerator,
+		encryptor:           encryptor,
 	}
 }
 
@@ -79,13 +87,28 @@ func (s *Service) Enroll(ctx context.Context, req *EnrollRequest) (*EnrollRespon
 		return nil, fmt.Errorf("failed to generate recovery codes: %w", err)
 	}
 
-	// TODO: Store secret and recovery codes (encrypted) in database
-	// For now, return them to the client
+	// Encrypt and store TOTP secret
+	encryptedSecret, err := s.encryptor.Encrypt(secret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt TOTP secret: %w", err)
+	}
+
+	// Update user with encrypted secret and enable MFA
+	user.MFAEnabled = true
+	user.MFASecretEncrypted = &encryptedSecret
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return nil, fmt.Errorf("failed to update user with MFA secret: %w", err)
+	}
+
+	// Store recovery codes (hashed in database)
+	if err := s.mfaRecoveryCodeRepo.CreateRecoveryCodes(ctx, user.ID, recoveryCodes); err != nil {
+		return nil, fmt.Errorf("failed to store recovery codes: %w", err)
+	}
 
 	return &EnrollResponse{
-		Secret:        secret,
+		Secret:        secret, // Return plaintext secret only once for QR code setup
 		QRCode:        qrCodeBase64,
-		RecoveryCodes: recoveryCodes,
+		RecoveryCodes: recoveryCodes, // Return recovery codes only once
 	}, nil
 }
 
@@ -102,20 +125,29 @@ func (s *Service) Verify(ctx context.Context, req *VerifyRequest) (bool, error) 
 		return false, fmt.Errorf("MFA is not enabled for this user")
 	}
 
-	// TODO: Get encrypted secret from database
-	// For now, this is a placeholder
-
 	if req.TOTPCode != "" {
+		// Get and decrypt TOTP secret
+		if user.MFASecretEncrypted == nil {
+			return false, fmt.Errorf("MFA secret not found")
+		}
+
+		secret, err := s.encryptor.Decrypt(*user.MFASecretEncrypted)
+		if err != nil {
+			return false, fmt.Errorf("failed to decrypt TOTP secret: %w", err)
+		}
+
 		// Verify TOTP code
-		// secret := getSecretFromDB(user.ID)
-		// return s.totpGenerator.Validate(secret, req.TOTPCode), nil
-		return false, fmt.Errorf("TOTP verification not yet implemented with database storage")
+		valid := s.totpGenerator.Validate(secret, req.TOTPCode)
+		return valid, nil
 	}
 
 	if req.RecoveryCode != "" {
 		// Verify recovery code
-		// return verifyRecoveryCode(user.ID, req.RecoveryCode), nil
-		return false, fmt.Errorf("recovery code verification not yet implemented with database storage")
+		valid, err := s.mfaRecoveryCodeRepo.VerifyAndDeleteRecoveryCode(ctx, req.UserID, req.RecoveryCode)
+		if err != nil {
+			return false, fmt.Errorf("failed to verify recovery code: %w", err)
+		}
+		return valid, nil
 	}
 
 	return false, fmt.Errorf("either totp_code or recovery_code must be provided")

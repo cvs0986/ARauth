@@ -8,7 +8,7 @@ import (
 )
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler) {
 	// Middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -26,6 +26,13 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/login", authHandler.Login)
+		}
+
+		// MFA routes
+		mfa := v1.Group("/mfa")
+		{
+			mfa.POST("/enroll", mfaHandler.Enroll)
+			mfa.POST("/verify", mfaHandler.Verify)
 		}
 
 		// User routes

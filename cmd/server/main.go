@@ -16,9 +16,13 @@ import (
 	"github.com/nuage-identity/iam/auth/login"
 	"github.com/nuage-identity/iam/config/loader"
 	"github.com/nuage-identity/iam/config/validator"
+	"github.com/nuage-identity/iam/api/handlers"
+	"github.com/nuage-identity/iam/auth/mfa"
 	"github.com/nuage-identity/iam/identity/user"
 	"github.com/nuage-identity/iam/internal/cache"
 	"github.com/nuage-identity/iam/internal/logger"
+	"github.com/nuage-identity/iam/security/encryption"
+	"github.com/nuage-identity/iam/security/totp"
 	"github.com/nuage-identity/iam/storage/postgres"
 	"go.uber.org/zap"
 )
@@ -88,6 +92,20 @@ func main() {
 	// Initialize repositories
 	userRepo := postgres.NewUserRepository(db)
 	credentialRepo := postgres.NewCredentialRepository(db)
+	mfaRecoveryCodeRepo := postgres.NewMFARecoveryCodeRepository(db)
+
+	// Initialize encryption (for MFA secrets)
+	encryptionKey := []byte(cfg.Security.EncryptionKey)
+	if len(encryptionKey) != 32 {
+		logger.Logger.Fatal("Encryption key must be exactly 32 bytes (AES-256)")
+	}
+	encryptor, err := encryption.NewEncryptor(encryptionKey)
+	if err != nil {
+		logger.Logger.Fatal("Failed to initialize encryptor", zap.Error(err))
+	}
+
+	// Initialize TOTP generator
+	totpGenerator := totp.NewGenerator(cfg.Security.TOTPIssuer)
 
 	// Initialize Hydra client
 	hydraClient := hydra.NewClient(cfg.Hydra.AdminURL)
@@ -95,10 +113,12 @@ func main() {
 	// Initialize services
 	userService := user.NewService(userRepo)
 	loginService := login.NewService(userRepo, credentialRepo, hydraClient)
+	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
 	authHandler := handlers.NewAuthHandler(loginService)
+	mfaHandler := handlers.NewMFAHandler(mfaService)
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
@@ -111,7 +131,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler)
 
 	// Create HTTP server
 	srv := &http.Server{
