@@ -30,6 +30,8 @@ hydra:
   timeout: 10s
 
 security:
+  encryption_key: "01234567890123456789012345678901" # 32 bytes - MUST be changed in production!
+  totp_issuer: "Nuage Identity"
   jwt:
     issuer: "https://iam.example.com"
     access_token_ttl: 15m

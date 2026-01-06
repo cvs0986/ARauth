@@ -105,7 +105,11 @@ func main() {
 	}
 
 	// Initialize TOTP generator
-	totpGenerator := totp.NewGenerator(cfg.Security.TOTPIssuer)
+	totpIssuer := cfg.Security.TOTPIssuer
+	if totpIssuer == "" {
+		totpIssuer = "Nuage Identity"
+	}
+	totpGenerator := totp.NewGenerator(totpIssuer)
 
 	// Initialize Hydra client
 	hydraClient := hydra.NewClient(cfg.Hydra.AdminURL)

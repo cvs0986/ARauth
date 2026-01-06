@@ -56,10 +56,12 @@ type HydraConfig struct {
 
 // SecurityConfig holds security configuration
 type SecurityConfig struct {
-	JWT       JWTConfig       `yaml:"jwt"`
-	Password  PasswordConfig  `yaml:"password"`
-	MFA       MFAConfig       `yaml:"mfa"`
-	RateLimit RateLimitConfig `yaml:"rate_limit"`
+	EncryptionKey string         `yaml:"encryption_key" env:"ENCRYPTION_KEY"` // 32-byte key for AES-256
+	TOTPIssuer    string         `yaml:"totp_issuer" env:"TOTP_ISSUER" envDefault:"Nuage Identity"`
+	JWT           JWTConfig      `yaml:"jwt"`
+	Password      PasswordConfig `yaml:"password"`
+	MFA           MFAConfig      `yaml:"mfa"`
+	RateLimit     RateLimitConfig `yaml:"rate_limit"`
 }
 
 // JWTConfig holds JWT configuration
