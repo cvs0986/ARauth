@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/nuage-identity/iam/identity/models"
 	"github.com/nuage-identity/iam/storage/interfaces"
 )
 
@@ -41,7 +42,7 @@ type UpdateUserRequest struct {
 }
 
 // Create creates a new user
-func (s *Service) Create(ctx context.Context, req *CreateUserRequest) (*User, error) {
+func (s *Service) Create(ctx context.Context, req *CreateUserRequest) (*models.User, error) {
 	// Validate username
 	req.Username = strings.TrimSpace(req.Username)
 	if len(req.Username) < 3 {
@@ -68,11 +69,11 @@ func (s *Service) Create(ctx context.Context, req *CreateUserRequest) (*User, er
 	// Set default status
 	status := req.Status
 	if status == "" {
-		status = UserStatusActive
+		status = models.UserStatusActive
 	}
 
 	// Create user
-	u := &User{
+	u := &models.User{
 		ID:        uuid.New(),
 		TenantID:  req.TenantID,
 		Username:  req.Username,
@@ -91,7 +92,7 @@ func (s *Service) Create(ctx context.Context, req *CreateUserRequest) (*User, er
 }
 
 // GetByID retrieves a user by ID
-func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*User, error) {
+func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	u, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -100,7 +101,7 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*User, error) {
 }
 
 // GetByUsername retrieves a user by username
-func (s *Service) GetByUsername(ctx context.Context, username string, tenantID uuid.UUID) (*User, error) {
+func (s *Service) GetByUsername(ctx context.Context, username string, tenantID uuid.UUID) (*models.User, error) {
 	u, err := s.repo.GetByUsername(ctx, username, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -109,7 +110,7 @@ func (s *Service) GetByUsername(ctx context.Context, username string, tenantID u
 }
 
 // Update updates an existing user
-func (s *Service) Update(ctx context.Context, id uuid.UUID, req *UpdateUserRequest) (*User, error) {
+func (s *Service) Update(ctx context.Context, id uuid.UUID, req *UpdateUserRequest) (*models.User, error) {
 	// Get existing user
 	u, err := s.repo.GetByID(ctx, id)
 	if err != nil {
@@ -173,7 +174,7 @@ func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // List retrieves a list of users
-func (s *Service) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) ([]*User, error) {
+func (s *Service) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) ([]*models.User, error) {
 	return s.repo.List(ctx, tenantID, filters)
 }
 

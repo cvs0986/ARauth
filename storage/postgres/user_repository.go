@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/identity/user"
+	"github.com/nuage-identity/iam/identity/models"
 	"github.com/nuage-identity/iam/storage/interfaces"
 )
 
@@ -23,7 +23,7 @@ func NewUserRepository(db *sql.DB) interfaces.UserRepository {
 }
 
 // Create creates a new user
-func (r *userRepository) Create(ctx context.Context, u *user.User) error {
+func (r *userRepository) Create(ctx context.Context, u *models.User) error {
 	query := `
 		INSERT INTO users (
 			id, tenant_id, username, email, first_name, last_name,
@@ -43,7 +43,7 @@ func (r *userRepository) Create(ctx context.Context, u *user.User) error {
 		u.UpdatedAt = now
 	}
 	if u.Status == "" {
-		u.Status = user.UserStatusActive
+		u.Status = models.UserStatusActive
 	}
 
 	var metadataJSON []byte
@@ -66,7 +66,7 @@ func (r *userRepository) Create(ctx context.Context, u *user.User) error {
 }
 
 // GetByID retrieves a user by ID
-func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*user.User, error) {
+func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	query := `
 		SELECT id, tenant_id, username, email, first_name, last_name,
 		       status, mfa_enabled, mfa_secret_encrypted, last_login_at,
@@ -75,7 +75,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*user.User,
 		WHERE id = $1 AND deleted_at IS NULL
 	`
 
-	u := &user.User{}
+	u := &models.User{}
 	var firstName, lastName, mfaSecret sql.NullString
 	var lastLoginAt, deletedAt sql.NullTime
 	var metadataJSON []byte
@@ -117,7 +117,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*user.User,
 }
 
 // GetByUsername retrieves a user by username and tenant ID
-func (r *userRepository) GetByUsername(ctx context.Context, username string, tenantID uuid.UUID) (*user.User, error) {
+func (r *userRepository) GetByUsername(ctx context.Context, username string, tenantID uuid.UUID) (*models.User, error) {
 	query := `
 		SELECT id, tenant_id, username, email, first_name, last_name,
 		       status, mfa_enabled, mfa_secret_encrypted, last_login_at,
@@ -126,7 +126,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string, ten
 		WHERE tenant_id = $1 AND username = $2 AND deleted_at IS NULL
 	`
 
-	u := &user.User{}
+	u := &models.User{}
 	var firstName, lastName, mfaSecret sql.NullString
 	var lastLoginAt, deletedAt sql.NullTime
 	var metadataJSON []byte
@@ -168,7 +168,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string, ten
 }
 
 // GetByEmail retrieves a user by email and tenant ID
-func (r *userRepository) GetByEmail(ctx context.Context, email string, tenantID uuid.UUID) (*user.User, error) {
+func (r *userRepository) GetByEmail(ctx context.Context, email string, tenantID uuid.UUID) (*models.User, error) {
 	query := `
 		SELECT id, tenant_id, username, email, first_name, last_name,
 		       status, mfa_enabled, mfa_secret_encrypted, last_login_at,
@@ -177,7 +177,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string, tenantID 
 		WHERE tenant_id = $1 AND email = $2 AND deleted_at IS NULL
 	`
 
-	u := &user.User{}
+	u := &models.User{}
 	var firstName, lastName, mfaSecret sql.NullString
 	var lastLoginAt, deletedAt sql.NullTime
 	var metadataJSON []byte
@@ -219,7 +219,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string, tenantID 
 }
 
 // Update updates an existing user
-func (r *userRepository) Update(ctx context.Context, u *user.User) error {
+func (r *userRepository) Update(ctx context.Context, u *models.User) error {
 	query := `
 		UPDATE users
 		SET username = $2, email = $3, first_name = $4, last_name = $5,
@@ -325,9 +325,9 @@ func (r *userRepository) List(ctx context.Context, tenantID uuid.UUID, filters *
 	}
 	defer rows.Close()
 
-		var users []*user.User
+		var users []*models.User
 	for rows.Next() {
-		u := &user.User{}
+		u := &models.User{}
 		var firstName, lastName, mfaSecret sql.NullString
 		var lastLoginAt, deletedAt sql.NullTime
 		var metadataJSON []byte
