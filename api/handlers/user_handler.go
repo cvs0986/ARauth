@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/nuage-identity/iam/api/middleware"
 	"github.com/nuage-identity/iam/identity/user"
 	"github.com/nuage-identity/iam/storage/interfaces"
 )
@@ -24,10 +25,8 @@ func NewUserHandler(userService *user.Service) *UserHandler {
 func (h *UserHandler) Create(c *gin.Context) {
 	var req user.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid_request",
-			"message": err.Error(),
-		})
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
+			"Request validation failed", middleware.FormatValidationErrors(err))
 		return
 	}
 

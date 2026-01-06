@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nuage-identity/iam/api/middleware"
 	"github.com/nuage-identity/iam/auth/login"
 )
 
@@ -21,10 +22,8 @@ func NewAuthHandler(loginService *login.Service) *AuthHandler {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req login.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid_request",
-			"message": err.Error(),
-		})
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
+			"Request validation failed", middleware.FormatValidationErrors(err))
 		return
 	}
 
