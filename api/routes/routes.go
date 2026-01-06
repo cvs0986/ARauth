@@ -8,7 +8,7 @@ import (
 )
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler) {
 	// Middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -22,10 +22,10 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
-		// Auth routes (to be implemented)
+		// Auth routes
 		auth := v1.Group("/auth")
 		{
-			_ = auth // Placeholder for auth routes
+			auth.POST("/login", authHandler.Login)
 		}
 
 		// User routes

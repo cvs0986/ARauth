@@ -12,6 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nuage-identity/iam/api/handlers"
 	"github.com/nuage-identity/iam/api/routes"
+	"github.com/nuage-identity/iam/auth/hydra"
+	"github.com/nuage-identity/iam/auth/login"
 	"github.com/nuage-identity/iam/config/loader"
 	"github.com/nuage-identity/iam/config/validator"
 	"github.com/nuage-identity/iam/identity/user"
@@ -70,12 +72,18 @@ func main() {
 
 	// Initialize repositories
 	userRepo := postgres.NewUserRepository(db)
+	credentialRepo := postgres.NewCredentialRepository(db)
+
+	// Initialize Hydra client
+	hydraClient := hydra.NewClient(cfg.Hydra.AdminURL)
 
 	// Initialize services
 	userService := user.NewService(userRepo)
+	loginService := login.NewService(userRepo, credentialRepo, hydraClient)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
+	authHandler := handlers.NewAuthHandler(loginService)
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
@@ -88,7 +96,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler)
 
 	// Create HTTP server
 	srv := &http.Server{
