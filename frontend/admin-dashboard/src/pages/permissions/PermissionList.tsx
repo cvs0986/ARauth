@@ -140,6 +140,20 @@ export function PermissionList() {
             )}
           </TableBody>
         </Table>
+
+        {filteredPermissions.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredPermissions.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
+        )}
       </div>
 
       <CreatePermissionDialog open={createOpen} onOpenChange={setCreateOpen} />

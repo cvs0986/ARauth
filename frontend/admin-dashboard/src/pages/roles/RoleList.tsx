@@ -161,6 +161,20 @@ export function RoleList() {
             )}
           </TableBody>
         </Table>
+
+        {filteredRoles.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredRoles.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
+        )}
       </div>
 
       <CreateRoleDialog open={createOpen} onOpenChange={setCreateOpen} />
