@@ -87,13 +87,6 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 				permissions.DELETE("/:id", permissionHandler.Delete)
 			}
 
-			// User-role assignment routes (tenant-scoped)
-			users := tenantScoped.Group("/users")
-			{
-				users.GET("/:user_id/roles", roleHandler.GetUserRoles)
-				users.POST("/:user_id/roles/:role_id", roleHandler.AssignRoleToUser)
-				users.DELETE("/:user_id/roles/:role_id", roleHandler.RemoveRoleFromUser)
-			}
 		}
 	}
 }
