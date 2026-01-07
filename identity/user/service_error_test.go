@@ -11,7 +11,7 @@ import (
 )
 
 func TestService_Create_InvalidEmail(t *testing.T) {
-	mockRepo := testutil.NewMockUserRepository()
+	mockRepo := new(testutil.MockUserRepository)
 	service := NewService(mockRepo)
 
 	req := &CreateUserRequest{
@@ -27,7 +27,7 @@ func TestService_Create_InvalidEmail(t *testing.T) {
 }
 
 func TestService_Create_EmptyUsername(t *testing.T) {
-	mockRepo := testutil.NewMockUserRepository()
+	mockRepo := new(testutil.MockUserRepository)
 	service := NewService(mockRepo)
 
 	req := &CreateUserRequest{
@@ -42,7 +42,7 @@ func TestService_Create_EmptyUsername(t *testing.T) {
 }
 
 func TestService_GetByID_NotFound(t *testing.T) {
-	mockRepo := testutil.NewMockUserRepository()
+	mockRepo := new(testutil.MockUserRepository)
 	service := NewService(mockRepo)
 
 	nonExistentID := uuid.New()
@@ -54,7 +54,7 @@ func TestService_GetByID_NotFound(t *testing.T) {
 }
 
 func TestService_GetByUsername_NotFound(t *testing.T) {
-	mockRepo := testutil.NewMockUserRepository()
+	mockRepo := new(testutil.MockUserRepository)
 	service := NewService(mockRepo)
 
 	tenantID := uuid.New()
@@ -67,7 +67,7 @@ func TestService_GetByUsername_NotFound(t *testing.T) {
 }
 
 func TestService_Update_NotFound(t *testing.T) {
-	mockRepo := testutil.NewMockUserRepository()
+	mockRepo := new(testutil.MockUserRepository)
 	service := NewService(mockRepo)
 
 	req := &UpdateUserRequest{
@@ -83,7 +83,7 @@ func TestService_Update_NotFound(t *testing.T) {
 }
 
 func TestService_Delete_NotFound(t *testing.T) {
-	mockRepo := testutil.NewMockUserRepository()
+	mockRepo := new(testutil.MockUserRepository)
 	service := NewService(mockRepo)
 
 	nonExistentID := uuid.New()

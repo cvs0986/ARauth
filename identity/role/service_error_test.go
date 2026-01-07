@@ -5,14 +5,139 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/internal/testutil"
+	"github.com/nuage-identity/iam/identity/models"
+	"github.com/nuage-identity/iam/storage/interfaces"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
+// MockRoleRepository is a mock implementation of RoleRepository
+type MockRoleRepository struct {
+	mock.Mock
+}
+
+func (m *MockRoleRepository) Create(ctx context.Context, r *models.Role) error {
+	args := m.Called(ctx, r)
+	return args.Error(0)
+}
+
+func (m *MockRoleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Role, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Role), args.Error(1)
+}
+
+func (m *MockRoleRepository) GetByName(ctx context.Context, tenantID uuid.UUID, name string) (*models.Role, error) {
+	args := m.Called(ctx, tenantID, name)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Role), args.Error(1)
+}
+
+func (m *MockRoleRepository) Update(ctx context.Context, r *models.Role) error {
+	args := m.Called(ctx, r)
+	return args.Error(0)
+}
+
+func (m *MockRoleRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockRoleRepository) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.RoleFilters) ([]*models.Role, error) {
+	args := m.Called(ctx, tenantID, filters)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.Role), args.Error(1)
+}
+
+func (m *MockRoleRepository) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]*models.Role, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.Role), args.Error(1)
+}
+
+func (m *MockRoleRepository) AssignRoleToUser(ctx context.Context, userID, roleID uuid.UUID) error {
+	args := m.Called(ctx, userID, roleID)
+	return args.Error(0)
+}
+
+func (m *MockRoleRepository) RemoveRoleFromUser(ctx context.Context, userID, roleID uuid.UUID) error {
+	args := m.Called(ctx, userID, roleID)
+	return args.Error(0)
+}
+
+// MockPermissionRepository is a mock implementation of PermissionRepository
+type MockPermissionRepository struct {
+	mock.Mock
+}
+
+func (m *MockPermissionRepository) Create(ctx context.Context, p *models.Permission) error {
+	args := m.Called(ctx, p)
+	return args.Error(0)
+}
+
+func (m *MockPermissionRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Permission, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Permission), args.Error(1)
+}
+
+func (m *MockPermissionRepository) GetByName(ctx context.Context, tenantID uuid.UUID, name string) (*models.Permission, error) {
+	args := m.Called(ctx, tenantID, name)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Permission), args.Error(1)
+}
+
+func (m *MockPermissionRepository) Update(ctx context.Context, p *models.Permission) error {
+	args := m.Called(ctx, p)
+	return args.Error(0)
+}
+
+func (m *MockPermissionRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockPermissionRepository) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.PermissionFilters) ([]*models.Permission, error) {
+	args := m.Called(ctx, tenantID, filters)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.Permission), args.Error(1)
+}
+
+func (m *MockPermissionRepository) GetRolePermissions(ctx context.Context, roleID uuid.UUID) ([]*models.Permission, error) {
+	args := m.Called(ctx, roleID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.Permission), args.Error(1)
+}
+
+func (m *MockPermissionRepository) AssignPermissionToRole(ctx context.Context, roleID, permissionID uuid.UUID) error {
+	args := m.Called(ctx, roleID, permissionID)
+	return args.Error(0)
+}
+
+func (m *MockPermissionRepository) RemovePermissionFromRole(ctx context.Context, roleID, permissionID uuid.UUID) error {
+	args := m.Called(ctx, roleID, permissionID)
+	return args.Error(0)
+}
+
 func TestService_Create_EmptyName(t *testing.T) {
-	mockRoleRepo := testutil.NewMockRoleRepository()
-	mockPermRepo := testutil.NewMockPermissionRepository()
+	mockRoleRepo := new(MockRoleRepository)
+	mockPermRepo := new(MockPermissionRepository)
 	service := NewService(mockRoleRepo, mockPermRepo)
 
 	req := &CreateRoleRequest{
@@ -25,8 +150,8 @@ func TestService_Create_EmptyName(t *testing.T) {
 }
 
 func TestService_Create_DuplicateName(t *testing.T) {
-	mockRoleRepo := testutil.NewMockRoleRepository()
-	mockPermRepo := testutil.NewMockPermissionRepository()
+	mockRoleRepo := new(MockRoleRepository)
+	mockPermRepo := new(MockPermissionRepository)
 	service := NewService(mockRoleRepo, mockPermRepo)
 
 	tenantID := uuid.New()
@@ -51,8 +176,8 @@ func TestService_Create_DuplicateName(t *testing.T) {
 }
 
 func TestService_GetByID_NotFound(t *testing.T) {
-	mockRoleRepo := testutil.NewMockRoleRepository()
-	mockPermRepo := testutil.NewMockPermissionRepository()
+	mockRoleRepo := new(MockRoleRepository)
+	mockPermRepo := new(MockPermissionRepository)
 	service := NewService(mockRoleRepo, mockPermRepo)
 
 	nonExistentID := uuid.New()
@@ -64,8 +189,8 @@ func TestService_GetByID_NotFound(t *testing.T) {
 }
 
 func TestService_AssignRoleToUser_RoleNotFound(t *testing.T) {
-	mockRoleRepo := testutil.NewMockRoleRepository()
-	mockPermRepo := testutil.NewMockPermissionRepository()
+	mockRoleRepo := new(MockRoleRepository)
+	mockPermRepo := new(MockPermissionRepository)
 	service := NewService(mockRoleRepo, mockPermRepo)
 
 	userID := uuid.New()
@@ -79,8 +204,8 @@ func TestService_AssignRoleToUser_RoleNotFound(t *testing.T) {
 }
 
 func TestService_AssignPermissionToRole_PermissionNotFound(t *testing.T) {
-	mockRoleRepo := testutil.NewMockRoleRepository()
-	mockPermRepo := testutil.NewMockPermissionRepository()
+	mockRoleRepo := new(MockRoleRepository)
+	mockPermRepo := new(MockPermissionRepository)
 	service := NewService(mockRoleRepo, mockPermRepo)
 
 	roleID := uuid.New()
