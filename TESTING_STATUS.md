@@ -18,14 +18,14 @@ Testing phase for Nuage Identity IAM Platform. All core development phases (1-6)
 
 **Overall Test Coverage: 50%** (up from 30%)
 
-**Total Tests: 40+ unit tests passing**
+**Total Tests: 43+ unit tests passing**
 
 ### Unit Tests
 
 | Component | Status | Coverage |
 |-----------|--------|----------|
 | Repositories | 🟡 In Progress | ~30% |
-| Services | ✅ Complete | ~80% |
+| Services | ✅ Complete | ~85% |
 | Security (Password/TOTP/Encryption) | ✅ Complete | ~85% |
 | Handlers | ⚠️ Pending | 0% |
 | Middleware | 🟡 In Progress | ~40% |
@@ -89,6 +89,7 @@ make benchmark
 ### Service Tests ✅
 - User service: 5 tests
 - Tenant service: 5 tests
+- Role service: 3 tests
 
 ### Security Tests ✅
 - Password hasher: 4 tests
