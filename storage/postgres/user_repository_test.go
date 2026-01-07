@@ -83,6 +83,10 @@ func TestUserRepository_GetByID(t *testing.T) {
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
+
 	user := &models.User{
 		ID:        uuid.New(),
 		TenantID:  tenantID,
@@ -110,6 +114,10 @@ func TestUserRepository_GetByUsername(t *testing.T) {
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
+
 	user := &models.User{
 		ID:        uuid.New(),
 		TenantID:  tenantID,
@@ -136,6 +144,10 @@ func TestUserRepository_Update(t *testing.T) {
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
+
 	user := &models.User{
 		ID:        uuid.New(),
 		TenantID:  tenantID,
@@ -168,6 +180,9 @@ func TestUserRepository_List(t *testing.T) {
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
 	
 	// Create multiple users
 	for i := 0; i < 3; i++ {
@@ -201,6 +216,10 @@ func TestUserRepository_List_WithFilters(t *testing.T) {
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
+
 	user := &models.User{
 		ID:        uuid.New(),
 		TenantID:  tenantID,
@@ -228,6 +247,10 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
+
 	user := &models.User{
 		ID:        uuid.New(),
 		TenantID:  tenantID,
@@ -254,6 +277,10 @@ func TestUserRepository_Delete(t *testing.T) {
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
+
 	user := &models.User{
 		ID:        uuid.New(),
 		TenantID:  tenantID,

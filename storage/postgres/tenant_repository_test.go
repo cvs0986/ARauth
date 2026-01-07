@@ -24,6 +24,7 @@ func TestTenantRepository_Create(t *testing.T) {
 		Name:      "Test Tenant",
 		Domain:    "test.example.com",
 		Status:    models.TenantStatusActive,
+		Metadata:  nil, // Explicitly set to nil to avoid JSON encoding issues
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

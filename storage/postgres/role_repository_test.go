@@ -45,6 +45,10 @@ func TestRoleRepository_GetByID(t *testing.T) {
 	repo := NewRoleRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
+
 	role := &models.Role{
 		ID:        uuid.New(),
 		TenantID:  tenantID,
@@ -70,6 +74,10 @@ func TestRoleRepository_GetByName(t *testing.T) {
 	repo := NewRoleRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
+
 	role := &models.Role{
 		ID:        uuid.New(),
 		TenantID:  tenantID,
@@ -95,6 +103,10 @@ func TestRoleRepository_Update(t *testing.T) {
 	repo := NewRoleRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
+
 	role := &models.Role{
 		ID:        uuid.New(),
 		TenantID:  tenantID,
@@ -127,6 +139,9 @@ func TestRoleRepository_List(t *testing.T) {
 	repo := NewRoleRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
 
 	// Create multiple roles
 	for i := 0; i < 3; i++ {
