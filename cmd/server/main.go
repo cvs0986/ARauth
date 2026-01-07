@@ -17,6 +17,7 @@ import (
 	"github.com/nuage-identity/iam/auth/mfa"
 	"github.com/nuage-identity/iam/config/loader"
 	"github.com/nuage-identity/iam/config/validator"
+	"github.com/nuage-identity/iam/identity/tenant"
 	"github.com/nuage-identity/iam/identity/user"
 	"github.com/nuage-identity/iam/internal/audit"
 	"github.com/nuage-identity/iam/internal/cache"
