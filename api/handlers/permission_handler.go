@@ -13,11 +13,11 @@ import (
 
 // PermissionHandler handles permission-related HTTP requests
 type PermissionHandler struct {
-	permissionService *permission.Service
+	permissionService permission.ServiceInterface
 }
 
 // NewPermissionHandler creates a new permission handler
-func NewPermissionHandler(permissionService *permission.Service) *PermissionHandler {
+func NewPermissionHandler(permissionService permission.ServiceInterface) *PermissionHandler {
 	return &PermissionHandler{permissionService: permissionService}
 }
 

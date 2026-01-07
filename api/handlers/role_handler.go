@@ -13,11 +13,11 @@ import (
 
 // RoleHandler handles role-related HTTP requests
 type RoleHandler struct {
-	roleService *role.Service
+	roleService role.ServiceInterface
 }
 
 // NewRoleHandler creates a new role handler
-func NewRoleHandler(roleService *role.Service) *RoleHandler {
+func NewRoleHandler(roleService role.ServiceInterface) *RoleHandler {
 	return &RoleHandler{roleService: roleService}
 }
 

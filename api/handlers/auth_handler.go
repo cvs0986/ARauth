@@ -10,11 +10,11 @@ import (
 
 // AuthHandler handles authentication-related HTTP requests
 type AuthHandler struct {
-	loginService *login.Service
+	loginService login.ServiceInterface
 }
 
 // NewAuthHandler creates a new auth handler
-func NewAuthHandler(loginService *login.Service) *AuthHandler {
+func NewAuthHandler(loginService login.ServiceInterface) *AuthHandler {
 	return &AuthHandler{loginService: loginService}
 }
 
