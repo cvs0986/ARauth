@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/identity/models"
+	"github.com/nuage-identity/iam/identity/user"
 	"github.com/nuage-identity/iam/internal/testutil"
 	"github.com/nuage-identity/iam/storage/postgres"
 	"github.com/stretchr/testify/assert"
