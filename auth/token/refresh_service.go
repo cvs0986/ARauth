@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/auth/claims"
 	"github.com/nuage-identity/iam/storage/interfaces"
 )
@@ -13,10 +12,10 @@ import (
 // RefreshService handles token refresh operations
 type RefreshService struct {
 	tokenService      ServiceInterface
-	refreshTokenRepo interfaces.RefreshTokenRepository
-	userRepo         interfaces.UserRepository
-	claimsBuilder    *claims.Builder
-	lifetimeResolver *LifetimeResolver
+	refreshTokenRepo  interfaces.RefreshTokenRepository
+	userRepo          interfaces.UserRepository
+	claimsBuilder     *claims.Builder
+	lifetimeResolver  *LifetimeResolver
 }
 
 // NewRefreshService creates a new refresh service
@@ -126,3 +125,12 @@ func (s *RefreshService) RefreshToken(ctx context.Context, refreshToken string) 
 	}, nil
 }
 
+// RevokeRefreshToken revokes a refresh token
+func (s *RefreshService) RevokeRefreshToken(ctx context.Context, refreshToken string) error {
+	refreshTokenHash, err := s.tokenService.HashRefreshToken(refreshToken)
+	if err != nil {
+		return fmt.Errorf("failed to hash refresh token: %w", err)
+	}
+
+	return s.refreshTokenRepo.RevokeByTokenHash(ctx, refreshTokenHash)
+}
