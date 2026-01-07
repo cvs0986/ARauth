@@ -9,7 +9,7 @@ import (
 )
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, tenantRepo interfaces.TenantRepository) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, tenantRepo interfaces.TenantRepository) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -62,6 +62,37 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 				mfa.POST("/verify", mfaHandler.Verify)
 				mfa.POST("/challenge", mfaHandler.Challenge)
 				mfa.POST("/challenge/verify", mfaHandler.VerifyChallenge)
+			}
+
+			// Role routes (tenant-scoped)
+			roles := tenantScoped.Group("/roles")
+			{
+				roles.POST("", roleHandler.Create)
+				roles.GET("", roleHandler.List)
+				roles.GET("/:id", roleHandler.GetByID)
+				roles.PUT("/:id", roleHandler.Update)
+				roles.DELETE("/:id", roleHandler.Delete)
+				roles.GET("/:role_id/permissions", roleHandler.GetRolePermissions)
+				roles.POST("/:role_id/permissions/:permission_id", roleHandler.AssignPermissionToRole)
+				roles.DELETE("/:role_id/permissions/:permission_id", roleHandler.RemovePermissionFromRole)
+			}
+
+			// Permission routes (tenant-scoped)
+			permissions := tenantScoped.Group("/permissions")
+			{
+				permissions.POST("", permissionHandler.Create)
+				permissions.GET("", permissionHandler.List)
+				permissions.GET("/:id", permissionHandler.GetByID)
+				permissions.PUT("/:id", permissionHandler.Update)
+				permissions.DELETE("/:id", permissionHandler.Delete)
+			}
+
+			// User-role assignment routes (tenant-scoped)
+			users := tenantScoped.Group("/users")
+			{
+				users.GET("/:user_id/roles", roleHandler.GetUserRoles)
+				users.POST("/:user_id/roles/:role_id", roleHandler.AssignRoleToUser)
+				users.DELETE("/:user_id/roles/:role_id", roleHandler.RemoveRoleFromUser)
 			}
 		}
 	}

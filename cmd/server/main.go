@@ -17,6 +17,8 @@ import (
 	"github.com/nuage-identity/iam/auth/mfa"
 	"github.com/nuage-identity/iam/config/loader"
 	"github.com/nuage-identity/iam/config/validator"
+	"github.com/nuage-identity/iam/identity/permission"
+	"github.com/nuage-identity/iam/identity/role"
 	"github.com/nuage-identity/iam/identity/tenant"
 	"github.com/nuage-identity/iam/identity/user"
 	"github.com/nuage-identity/iam/internal/audit"
@@ -99,6 +101,8 @@ func main() {
 	credentialRepo := postgres.NewCredentialRepository(db)
 	mfaRecoveryCodeRepo := postgres.NewMFARecoveryCodeRepository(db)
 	auditRepo := postgres.NewAuditRepository(db)
+	roleRepo := postgres.NewRoleRepository(db)
+	permissionRepo := postgres.NewPermissionRepository(db)
 
 	// Initialize audit logger
 	auditLogger := audit.NewLogger(auditRepo)
@@ -139,12 +143,16 @@ func main() {
 	userService := user.NewService(userRepo)
 	loginService := login.NewService(userRepo, credentialRepo, hydraClient)
 	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, mfaSessionManager)
+	roleService := role.NewService(roleRepo, permissionRepo)
+	permissionService := permission.NewService(permissionRepo)
 
 	// Initialize handlers
 	tenantHandler := handlers.NewTenantHandler(tenantService)
 	userHandler := handlers.NewUserHandler(userService)
 	authHandler := handlers.NewAuthHandler(loginService)
 	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger)
+	roleHandler := handlers.NewRoleHandler(roleService)
+	permissionHandler := handlers.NewPermissionHandler(permissionService)
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
@@ -157,7 +165,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, tenantRepo)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, tenantRepo)
 
 	// Create HTTP server
 	srv := &http.Server{
