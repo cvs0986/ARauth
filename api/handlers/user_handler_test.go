@@ -10,7 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/api/middleware"
 	"github.com/nuage-identity/iam/identity/models"
 	"github.com/nuage-identity/iam/identity/user"
 	"github.com/nuage-identity/iam/storage/interfaces"
@@ -76,9 +75,9 @@ func (m *MockUserService) List(ctx context.Context, tenantID uuid.UUID, filters 
 	return args.Get(0).([]*models.User), args.Error(1)
 }
 
-func (m *MockUserService) Count(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) (int64, error) {
+func (m *MockUserService) Count(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) (int, error) {
 	args := m.Called(ctx, tenantID, filters)
-	return args.Get(0).(int64), args.Error(1)
+	return args.Get(0).(int), args.Error(1)
 }
 
 func TestUserHandler_Create(t *testing.T) {

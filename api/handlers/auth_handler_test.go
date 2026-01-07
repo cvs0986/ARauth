@@ -10,7 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/api/middleware"
 	"github.com/nuage-identity/iam/auth/login"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

@@ -15,8 +15,5 @@ type ServiceInterface interface {
 	Update(ctx context.Context, id uuid.UUID, req *UpdatePermissionRequest) (*models.Permission, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.PermissionFilters) ([]*models.Permission, error)
-	GetRolePermissions(ctx context.Context, roleID uuid.UUID) ([]*models.Permission, error)
-	AssignPermissionToRole(ctx context.Context, roleID, permissionID uuid.UUID) error
-	RemovePermissionFromRole(ctx context.Context, roleID, permissionID uuid.UUID) error
 }
 
