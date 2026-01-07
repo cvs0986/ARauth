@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
+import { Dashboard } from './pages/Dashboard';
 import { TenantList } from './pages/tenants/TenantList';
 import { UserList } from './pages/users/UserList';
 import { RoleList } from './pages/roles/RoleList';
@@ -33,10 +34,7 @@ function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <div className="space-y-4">
-                    <h1 className="text-3xl font-bold">Dashboard</h1>
-                    <p className="text-gray-600">Welcome to Nuage Identity Admin Dashboard</p>
-                  </div>
+                  <Dashboard />
                 </Layout>
               </ProtectedRoute>
             }
