@@ -21,7 +21,12 @@ docs/
 │   │   └── AUTHENTICATION_FLOWS_GUIDE.md  # Complete guide for Direct JWT and OAuth2/OIDC flows
 │   ├── testing/                    # Testing guides
 │   │   ├── TESTING_GUIDE.md        # Comprehensive testing guide
-│   │   └── QUICK_START_TESTING.md  # Quick start for testing
+│   │   ├── QUICK_START_TESTING.md  # Quick start for testing
+│   │   └── CODE_COVERAGE_GUIDE.md  # Code coverage guide
+│   ├── setup/                      # Setup and configuration guides
+│   │   ├── GITHUB_SETUP.md
+│   │   ├── SETUP_REPOSITORY.md
+│   │   └── ... (other setup docs)
 │   ├── deployment/                 # Deployment guides
 │   │   └── using-as-iam-service.md # Using Nuage Identity as IAM service
 │   └── integration/                # Integration guides
@@ -37,7 +42,8 @@ docs/
 │   └── token-lifetime-configuration.md  # Token lifetime configuration guide
 │
 ├── planning/                       # Planning and decisions
-│   └── repository-structure-decision.md  # Monorepo vs polyrepo decision
+│   ├── repository-structure-decision.md  # Monorepo vs polyrepo decision
+│   └── BRANCHES.md                # Branching strategy
 │
 ├── technical/                      # Technical documentation
 │   ├── api-design.md              # API design specifications
