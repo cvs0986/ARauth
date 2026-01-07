@@ -29,8 +29,8 @@ func (m *MockPermissionRepository) GetByID(ctx context.Context, id uuid.UUID) (*
 	return args.Get(0).(*models.Permission), args.Error(1)
 }
 
-func (m *MockPermissionRepository) GetByName(ctx context.Context, name string, tenantID uuid.UUID) (*models.Permission, error) {
-	args := m.Called(ctx, name, tenantID)
+func (m *MockPermissionRepository) GetByName(ctx context.Context, tenantID uuid.UUID, name string) (*models.Permission, error) {
+	args := m.Called(ctx, tenantID, name)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -125,19 +125,21 @@ func TestService_GetByID(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestService_AssignPermissionToRole(t *testing.T) {
+func TestService_GetRolePermissions(t *testing.T) {
 	mockRepo := new(MockPermissionRepository)
 	service := NewService(mockRepo)
 
 	roleID := uuid.New()
-	permissionID := uuid.New()
-	expectedPermission := &models.Permission{ID: permissionID}
+	expectedPermissions := []*models.Permission{
+		{ID: uuid.New(), Name: "users:read"},
+		{ID: uuid.New(), Name: "users:write"},
+	}
 
-	mockRepo.On("GetByID", mock.Anything, permissionID).Return(expectedPermission, nil)
-	mockRepo.On("AssignPermissionToRole", mock.Anything, roleID, permissionID).Return(nil)
+	mockRepo.On("GetRolePermissions", mock.Anything, roleID).Return(expectedPermissions, nil)
 
-	err := service.AssignPermissionToRole(context.Background(), roleID, permissionID)
+	permissions, err := service.GetRolePermissions(context.Background(), roleID)
 	require.NoError(t, err)
+	assert.Len(t, permissions, 2)
 
 	mockRepo.AssertExpectations(t)
 }
