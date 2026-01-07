@@ -29,7 +29,6 @@ func BenchmarkValidate(b *testing.B) {
 	}
 
 	// Generate a valid code for testing using the totp library directly
-	import "github.com/pquerna/otp/totp"
 	code, err := totp.GenerateCode(secret, time.Now())
 	if err != nil {
 		b.Fatal(err)
