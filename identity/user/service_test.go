@@ -77,7 +77,6 @@ func TestService_Create(t *testing.T) {
 		TenantID:  tenantID,
 		Username:  "testuser",
 		Email:     "test@example.com",
-		Password:  "SecurePass123!",
 		FirstName: "Test",
 		LastName:  "User",
 	}
@@ -114,7 +113,6 @@ func TestService_Create_DuplicateUsername(t *testing.T) {
 		TenantID: tenantID,
 		Username: "testuser",
 		Email:    "test@example.com",
-		Password: "SecurePass123!",
 	}
 
 	existingUser := &models.User{
