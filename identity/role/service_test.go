@@ -62,7 +62,7 @@ func (m *MockRoleRepository) List(ctx context.Context, tenantID uuid.UUID, filte
 }
 
 
-func (m *MockRoleRepository) RemoveFromUser(ctx context.Context, userID, roleID uuid.UUID) error {
+func (m *MockRoleRepository) RemoveRoleFromUser(ctx context.Context, userID, roleID uuid.UUID) error {
 	args := m.Called(ctx, userID, roleID)
 	return args.Error(0)
 }

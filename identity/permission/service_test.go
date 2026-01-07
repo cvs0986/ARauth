@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/identity/models"
+	"github.com/nuage-identity/iam/storage/interfaces"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -47,7 +48,7 @@ func (m *MockPermissionRepository) Delete(ctx context.Context, id uuid.UUID) err
 	return args.Error(0)
 }
 
-func (m *MockPermissionRepository) List(ctx context.Context, tenantID uuid.UUID, filters interface{}) ([]*models.Permission, error) {
+func (m *MockPermissionRepository) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.PermissionFilters) ([]*models.Permission, error) {
 	args := m.Called(ctx, tenantID, filters)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -125,19 +126,19 @@ func TestService_GetByID(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestService_GetRolePermissions(t *testing.T) {
+func TestService_List(t *testing.T) {
 	mockRepo := new(MockPermissionRepository)
 	service := NewService(mockRepo)
 
-	roleID := uuid.New()
+	tenantID := uuid.New()
 	expectedPermissions := []*models.Permission{
 		{ID: uuid.New(), Name: "users:read"},
 		{ID: uuid.New(), Name: "users:write"},
 	}
 
-	mockRepo.On("GetRolePermissions", mock.Anything, roleID).Return(expectedPermissions, nil)
+	mockRepo.On("List", mock.Anything, tenantID, (*interfaces.PermissionFilters)(nil)).Return(expectedPermissions, nil)
 
-	permissions, err := service.GetRolePermissions(context.Background(), roleID)
+	permissions, err := service.List(context.Background(), tenantID, nil)
 	require.NoError(t, err)
 	assert.Len(t, permissions, 2)
 
