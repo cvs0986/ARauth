@@ -1,16 +1,12 @@
 -- Add indexes for performance optimization
 
--- Users table indexes
--- Note: idx_users_tenant_id, idx_users_username_tenant, and idx_users_email_tenant 
--- already created in 000002_create_users.up.sql
--- Creating additional filtered indexes for soft-deleted records
+-- Users table indexes (filtered indexes for soft-deleted records)
 CREATE INDEX IF NOT EXISTS idx_users_email_filtered ON users(tenant_id, email) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_users_username_filtered ON users(tenant_id, username) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC);
 
 -- Credentials table indexes
 CREATE INDEX IF NOT EXISTS idx_credentials_user_id ON credentials(user_id);
--- Note: last_attempt_at column doesn't exist in credentials table, skipping index
 
 -- Tenants table indexes
 CREATE INDEX IF NOT EXISTS idx_tenants_domain ON tenants(domain) WHERE deleted_at IS NULL;
@@ -46,4 +42,3 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_event_type ON audit_logs(event_type);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_event ON audit_logs(tenant_id, event_type, created_at DESC);
-
