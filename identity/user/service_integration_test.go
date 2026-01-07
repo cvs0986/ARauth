@@ -13,6 +13,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// createTestTenantForIntegration creates a test tenant for integration tests
+func createTestTenantForIntegration(t *testing.T, db interface {
+	ExecContext(ctx context.Context, query string, args ...interface{}) error
+}, tenantID uuid.UUID) {
+	query := `
+		INSERT INTO tenants (id, name, domain, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+	_, err := db.ExecContext(context.Background(), query,
+		tenantID,
+		"Test Tenant",
+		"test-"+tenantID.String()+".example.com",
+		"active",
+		"NOW()",
+		"NOW()",
+	)
+	require.NoError(t, err)
+}
+
 func TestService_Create_Integration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
@@ -25,6 +44,9 @@ func TestService_Create_Integration(t *testing.T) {
 	service := NewService(repo)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	createTestTenantForIntegration(t, db, tenantID)
+
 	req := &CreateUserRequest{
 		TenantID: tenantID,
 		Username: "integrationuser",
@@ -52,6 +74,9 @@ func TestService_GetByID_Integration(t *testing.T) {
 	service := NewService(repo)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	createTestTenantForIntegration(t, db, tenantID)
+
 	req := &CreateUserRequest{
 		TenantID: tenantID,
 		Username: "getuser",
@@ -80,6 +105,9 @@ func TestService_GetByUsername_Integration(t *testing.T) {
 	service := NewService(repo)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	createTestTenantForIntegration(t, db, tenantID)
+
 	req := &CreateUserRequest{
 		TenantID: tenantID,
 		Username: "usernameuser",
