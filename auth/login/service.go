@@ -21,7 +21,7 @@ type Service struct {
 	hydraClient      *hydra.Client
 	passwordHasher   *password.Hasher
 	claimsBuilder    *claims.Builder
-	tokenService     TokenServiceInterface
+	tokenService     token.ServiceInterface
 	lifetimeResolver *token.LifetimeResolver
 }
 
