@@ -114,7 +114,7 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		if resp.UserID != "" {
 			userID, _ := uuid.Parse(resp.UserID)
 			tenantID, _ := uuid.Parse(resp.TenantID)
-			h.auditLogger.LogMFAAction(c.Request.Context(), tenantID, userID, "verify_challenge", c.Request, "failure", "Invalid MFA code")
+			_ = h.auditLogger.LogMFAAction(c.Request.Context(), tenantID, userID, "verify_challenge", c.Request, "failure", "Invalid MFA code") // Ignore audit log errors
 		}
 		middleware.RespondWithError(c, http.StatusUnauthorized, "invalid_code",
 			"Invalid TOTP code or recovery code", nil)
@@ -125,7 +125,7 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 	if resp.UserID != "" {
 		userID, _ := uuid.Parse(resp.UserID)
 		tenantID, _ := uuid.Parse(resp.TenantID)
-		h.auditLogger.LogMFAAction(c.Request.Context(), tenantID, userID, "verify_challenge", c.Request, "success", "MFA challenge verified")
+		_ = h.auditLogger.LogMFAAction(c.Request.Context(), tenantID, userID, "verify_challenge", c.Request, "success", "MFA challenge verified") // Ignore audit log errors
 	}
 
 	c.JSON(http.StatusOK, resp)

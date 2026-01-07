@@ -8,7 +8,7 @@ CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC);
 
 -- Credentials table indexes
 CREATE INDEX IF NOT EXISTS idx_credentials_user_id ON credentials(user_id);
-CREATE INDEX IF NOT EXISTS idx_credentials_last_attempt_at ON credentials(last_attempt_at);
+-- Note: last_attempt_at column doesn't exist in credentials table, skipping index
 
 -- Tenants table indexes
 CREATE INDEX IF NOT EXISTS idx_tenants_domain ON tenants(domain) WHERE deleted_at IS NULL;

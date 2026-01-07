@@ -43,7 +43,7 @@ func LoadConfig(path string) (*config.Config, error) {
 func loadFromEnv(cfg *config.Config) {
 	// Server
 	if port := os.Getenv("SERVER_PORT"); port != "" {
-		fmt.Sscanf(port, "%d", &cfg.Server.Port)
+		_, _ = fmt.Sscanf(port, "%d", &cfg.Server.Port)
 	}
 	if host := os.Getenv("SERVER_HOST"); host != "" {
 		cfg.Server.Host = host
@@ -54,7 +54,7 @@ func loadFromEnv(cfg *config.Config) {
 		cfg.Database.Host = host
 	}
 	if port := os.Getenv("DATABASE_PORT"); port != "" {
-		fmt.Sscanf(port, "%d", &cfg.Database.Port)
+		_, _ = fmt.Sscanf(port, "%d", &cfg.Database.Port)
 	}
 	if name := os.Getenv("DATABASE_NAME"); name != "" {
 		cfg.Database.Name = name
@@ -71,7 +71,7 @@ func loadFromEnv(cfg *config.Config) {
 		cfg.Redis.Host = host
 	}
 	if port := os.Getenv("REDIS_PORT"); port != "" {
-		fmt.Sscanf(port, "%d", &cfg.Redis.Port)
+		_, _ = fmt.Sscanf(port, "%d", &cfg.Redis.Port)
 	}
 	if password := os.Getenv("REDIS_PASSWORD"); password != "" {
 		cfg.Redis.Password = password

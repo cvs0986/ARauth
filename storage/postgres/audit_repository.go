@@ -90,7 +90,7 @@ func (r *auditRepository) GetByID(ctx context.Context, id uuid.UUID) (*interface
 		log.ResourceID = &resourceID.String
 	}
 	if len(metadataJSON) > 0 {
-		json.Unmarshal(metadataJSON, &log.Metadata)
+		_ = json.Unmarshal(metadataJSON, &log.Metadata) // Ignore unmarshal errors for optional metadata
 	}
 
 	return log, nil
@@ -191,7 +191,7 @@ func (r *auditRepository) List(ctx context.Context, tenantID uuid.UUID, filters 
 			log.ResourceID = &resourceID.String
 		}
 		if len(metadataJSON) > 0 {
-			json.Unmarshal(metadataJSON, &log.Metadata)
+			_ = json.Unmarshal(metadataJSON, &log.Metadata) // Ignore unmarshal errors for optional metadata
 		}
 
 		logs = append(logs, log)

@@ -71,10 +71,10 @@ func (r *cachedTenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*mo
 
 	// Store in cache
 	if tenant != nil {
-		r.cache.Set(ctx, cacheKey, tenant, r.cacheTTL)
+		_ = r.cache.Set(ctx, cacheKey, tenant, r.cacheTTL) // Ignore cache errors
 		// Also cache by domain
 		if tenant.Domain != "" {
-			r.cache.Set(ctx, r.cacheKey("domain", tenant.Domain), tenant, r.cacheTTL)
+			_ = r.cache.Set(ctx, r.cacheKey("domain", tenant.Domain), tenant, r.cacheTTL) // Ignore cache errors
 		}
 	}
 
@@ -100,9 +100,9 @@ func (r *cachedTenantRepository) GetByDomain(ctx context.Context, domain string)
 
 	// Store in cache
 	if tenant != nil {
-		r.cache.Set(ctx, cacheKey, tenant, r.cacheTTL)
+		_ = r.cache.Set(ctx, cacheKey, tenant, r.cacheTTL) // Ignore cache errors
 		// Also cache by ID
-		r.cache.Set(ctx, r.cacheKey("id", tenant.ID.String()), tenant, r.cacheTTL)
+		_ = r.cache.Set(ctx, r.cacheKey("id", tenant.ID.String()), tenant, r.cacheTTL) // Ignore cache errors
 	}
 
 	return tenant, nil
@@ -162,7 +162,7 @@ func (r *cachedTenantRepository) invalidateTenantCache(ctx context.Context, tena
 	}
 
 	for _, key := range keys {
-		r.cache.Delete(ctx, key)
+		_ = r.cache.Delete(ctx, key) // Ignore cache errors
 	}
 }
 

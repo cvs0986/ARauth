@@ -110,7 +110,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Use
 		u.DeletedAt = &deletedAt.Time
 	}
 	if len(metadataJSON) > 0 {
-		json.Unmarshal(metadataJSON, &u.Metadata)
+		_ = json.Unmarshal(metadataJSON, &u.Metadata) // Ignore unmarshal errors for optional metadata
 	}
 
 	return u, nil
@@ -161,7 +161,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string, ten
 		u.DeletedAt = &deletedAt.Time
 	}
 	if len(metadataJSON) > 0 {
-		json.Unmarshal(metadataJSON, &u.Metadata)
+		_ = json.Unmarshal(metadataJSON, &u.Metadata) // Ignore unmarshal errors for optional metadata
 	}
 
 	return u, nil
@@ -212,7 +212,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string, tenantID 
 		u.DeletedAt = &deletedAt.Time
 	}
 	if len(metadataJSON) > 0 {
-		json.Unmarshal(metadataJSON, &u.Metadata)
+		_ = json.Unmarshal(metadataJSON, &u.Metadata) // Ignore unmarshal errors for optional metadata
 	}
 
 	return u, nil
@@ -358,7 +358,7 @@ func (r *userRepository) List(ctx context.Context, tenantID uuid.UUID, filters *
 			u.DeletedAt = &deletedAt.Time
 		}
 		if len(metadataJSON) > 0 {
-			json.Unmarshal(metadataJSON, &u.Metadata)
+			_ = json.Unmarshal(metadataJSON, &u.Metadata) // Ignore unmarshal errors for optional metadata
 		}
 
 		users = append(users, u)

@@ -71,7 +71,7 @@ func (r *cachedUserRepository) GetByID(ctx context.Context, id uuid.UUID) (*mode
 
 	// Store in cache
 	if user != nil {
-		r.cache.Set(ctx, cacheKey, user, r.cacheTTL)
+		_ = r.cache.Set(ctx, cacheKey, user, r.cacheTTL) // Ignore cache errors
 	}
 
 	return user, nil
@@ -96,7 +96,7 @@ func (r *cachedUserRepository) GetByUsername(ctx context.Context, username strin
 
 	// Store in cache
 	if user != nil {
-		r.cache.Set(ctx, cacheKey, user, r.cacheTTL)
+		_ = r.cache.Set(ctx, cacheKey, user, r.cacheTTL) // Ignore cache errors
 		// Also cache by ID
 		r.cache.Set(ctx, r.cacheKey("id", user.ID.String()), user, r.cacheTTL)
 	}
@@ -123,7 +123,7 @@ func (r *cachedUserRepository) GetByEmail(ctx context.Context, email string, ten
 
 	// Store in cache
 	if user != nil {
-		r.cache.Set(ctx, cacheKey, user, r.cacheTTL)
+		_ = r.cache.Set(ctx, cacheKey, user, r.cacheTTL) // Ignore cache errors
 		// Also cache by ID
 		r.cache.Set(ctx, r.cacheKey("id", user.ID.String()), user, r.cacheTTL)
 	}
@@ -188,7 +188,7 @@ func (r *cachedUserRepository) invalidateUserCache(ctx context.Context, userID u
 	}
 
 	for _, key := range keys {
-		r.cache.Delete(ctx, key)
+		_ = r.cache.Delete(ctx, key) // Ignore cache errors
 	}
 }
 

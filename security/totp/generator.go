@@ -89,7 +89,13 @@ func generateRandomCode(length int) string {
 	// Generate random bytes
 	randomBytes := make([]byte, 4)
 	for i := range b {
-		rand.Read(randomBytes)
+		if _, err := rand.Read(randomBytes); err != nil {
+			// Fallback to deterministic if random fails
+			randomBytes[0] = byte(i)
+			randomBytes[1] = byte(i >> 8)
+			randomBytes[2] = byte(i >> 16)
+			randomBytes[3] = byte(i >> 24)
+		}
 		idx := binary.BigEndian.Uint32(randomBytes) % uint32(len(charset))
 		b[i] = charset[idx]
 	}

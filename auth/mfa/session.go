@@ -68,7 +68,7 @@ func (sm *SessionManager) GetSession(ctx context.Context, sessionID string) (*MF
 
 	// Check if session expired
 	if time.Now().After(session.ExpiresAt) {
-		sm.DeleteSession(ctx, sessionID)
+		_ = sm.DeleteSession(ctx, sessionID) // Ignore error on cleanup
 		return nil, fmt.Errorf("session expired")
 	}
 
@@ -84,7 +84,7 @@ func (sm *SessionManager) IncrementAttempts(ctx context.Context, sessionID strin
 
 	session.Attempts++
 	if session.Attempts >= session.MaxAttempts {
-		sm.DeleteSession(ctx, sessionID)
+		_ = sm.DeleteSession(ctx, sessionID) // Ignore error on cleanup
 		return fmt.Errorf("maximum attempts exceeded")
 	}
 
@@ -111,7 +111,7 @@ func (sm *SessionManager) VerifySession(ctx context.Context, sessionID string) (
 	}
 
 	if session.Attempts >= session.MaxAttempts {
-		sm.DeleteSession(ctx, sessionID)
+		_ = sm.DeleteSession(ctx, sessionID) // Ignore error on cleanup
 		return nil, fmt.Errorf("maximum attempts exceeded")
 	}
 

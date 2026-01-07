@@ -95,13 +95,19 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 	if !valid {
 		// Increment failed attempts
 		cred.IncrementFailedAttempts()
-		s.credentialRepo.Update(ctx, cred)
+		if err := s.credentialRepo.Update(ctx, cred); err != nil {
+			// Log error but continue
+			return nil, fmt.Errorf("invalid credentials")
+		}
 		return nil, fmt.Errorf("invalid credentials")
 	}
 
 	// Reset failed attempts on successful login
 	cred.ResetFailedAttempts()
-	s.credentialRepo.Update(ctx, cred)
+	if err := s.credentialRepo.Update(ctx, cred); err != nil {
+		// Log error but continue with login
+		// The credential update failure shouldn't block login
+	}
 
 	// Check if MFA is required
 	if user.MFAEnabled {

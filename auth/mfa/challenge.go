@@ -94,7 +94,7 @@ func (s *Service) VerifyChallenge(ctx context.Context, req *VerifyChallengeReque
 	}
 
 	// Delete session on successful verification
-	s.sessionManager.DeleteSession(ctx, req.SessionID)
+	_ = s.sessionManager.DeleteSession(ctx, req.SessionID) // Ignore error on cleanup
 
 	return &VerifyChallengeResponse{
 		Verified: true,

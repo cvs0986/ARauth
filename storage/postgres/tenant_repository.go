@@ -85,7 +85,7 @@ func (r *tenantRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.T
 	}
 
 	if len(metadataJSON) > 0 {
-		json.Unmarshal(metadataJSON, &tenant.Metadata)
+		_ = json.Unmarshal(metadataJSON, &tenant.Metadata) // Ignore unmarshal errors for optional metadata
 	}
 	if deletedAt.Valid {
 		tenant.DeletedAt = &deletedAt.Time
@@ -119,7 +119,7 @@ func (r *tenantRepository) GetByDomain(ctx context.Context, domain string) (*mod
 	}
 
 	if len(metadataJSON) > 0 {
-		json.Unmarshal(metadataJSON, &tenant.Metadata)
+		_ = json.Unmarshal(metadataJSON, &tenant.Metadata) // Ignore unmarshal errors for optional metadata
 	}
 	if deletedAt.Valid {
 		tenant.DeletedAt = &deletedAt.Time
@@ -243,7 +243,7 @@ func (r *tenantRepository) List(ctx context.Context, filters *interfaces.TenantF
 		}
 
 		if len(metadataJSON) > 0 {
-			json.Unmarshal(metadataJSON, &tenant.Metadata)
+			_ = json.Unmarshal(metadataJSON, &tenant.Metadata) // Ignore unmarshal errors for optional metadata
 		}
 		if deletedAt.Valid {
 			tenant.DeletedAt = &deletedAt.Time

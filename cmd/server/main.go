@@ -63,7 +63,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
 		os.Exit(1)
 	}
-	defer logger.Sync()
+	defer func() {
+		_ = logger.Sync() // Ignore sync errors on shutdown
+	}()
 
 	logger.Logger.Info("Starting Nuage Identity IAM API",
 		zap.String("version", "0.1.0"),
