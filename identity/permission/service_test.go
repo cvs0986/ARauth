@@ -92,7 +92,7 @@ func TestService_Create(t *testing.T) {
 		Name:     req.Name,
 	}
 
-	mockRepo.On("GetByName", mock.Anything, req.Name, tenantID).Return(nil, assert.AnError)
+	mockRepo.On("GetByName", mock.Anything, tenantID, req.Name).Return(nil, assert.AnError)
 	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.Permission")).Return(nil).Run(func(args mock.Arguments) {
 		perm := args.Get(1).(*models.Permission)
 		perm.ID = expectedPermission.ID
