@@ -58,7 +58,7 @@ func TestRoleRepository_GetByID(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	err := repo.Create(context.Background(), role)
+	err = repo.Create(context.Background(), role)
 	require.NoError(t, err)
 
 	retrieved, err = repo.GetByID(context.Background(), role.ID)
@@ -87,7 +87,7 @@ func TestRoleRepository_GetByName(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	err := repo.Create(context.Background(), role)
+	err = repo.Create(context.Background(), role)
 	require.NoError(t, err)
 
 	retrieved, err = repo.GetByName(context.Background(), tenantID, role.Name)
@@ -116,7 +116,7 @@ func TestRoleRepository_Update(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	err := repo.Create(context.Background(), role)
+	err = repo.Create(context.Background(), role)
 	require.NoError(t, err)
 
 	// Update role

@@ -97,7 +97,7 @@ func TestUserRepository_GetByID(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	err := repo.Create(context.Background(), user)
+	err = repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
 	retrieved, err := repo.GetByID(context.Background(), user.ID)
@@ -128,7 +128,7 @@ func TestUserRepository_GetByUsername(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	err := repo.Create(context.Background(), user)
+	err = repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
 	retrieved, err = repo.GetByUsername(context.Background(), user.Username, tenantID)
@@ -158,7 +158,7 @@ func TestUserRepository_Update(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	err := repo.Create(context.Background(), user)
+	err = repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
 	// Update user
@@ -230,7 +230,7 @@ func TestUserRepository_List_WithFilters(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	err := repo.Create(context.Background(), user)
+	err = repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
 	retrieved, err = repo.GetByID(context.Background(), user.ID)
@@ -261,7 +261,7 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	err := repo.Create(context.Background(), user)
+	err = repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
 	retrieved, err = repo.GetByEmail(context.Background(), user.Email, tenantID)
@@ -291,7 +291,7 @@ func TestUserRepository_Delete(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	err := repo.Create(context.Background(), user)
+	err = repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
 	err = repo.Delete(context.Background(), user.ID)
