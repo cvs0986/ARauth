@@ -63,7 +63,7 @@ func (m *MockUserRepository) List(ctx context.Context, tenantID uuid.UUID, filte
 	return args.Get(0).([]*models.User), args.Error(1)
 }
 
-func (m *MockUserRepository) Count(ctx context.Context, tenantID uuid.UUID, filters interface{}) (int, error) {
+func (m *MockUserRepository) Count(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) (int, error) {
 	args := m.Called(ctx, tenantID, filters)
 	return args.Int(0), args.Error(1)
 }
@@ -73,12 +73,14 @@ func TestService_Create(t *testing.T) {
 	service := NewService(mockRepo)
 
 	tenantID := uuid.New()
+	firstName := "Test"
+	lastName := "User"
 	req := &CreateUserRequest{
 		TenantID:  tenantID,
 		Username:  "testuser",
 		Email:     "test@example.com",
-		FirstName: "Test",
-		LastName:  "User",
+		FirstName: &firstName,
+		LastName:  &lastName,
 	}
 
 	expectedUser := &models.User{
@@ -164,9 +166,11 @@ func TestService_Update(t *testing.T) {
 		Email:    "test@example.com",
 	}
 
+	updatedEmail := "updated@example.com"
+	updatedFirstName := "Updated"
 	req := &UpdateUserRequest{
-		Email:    "updated@example.com",
-		FirstName: "Updated",
+		Email:     &updatedEmail,
+		FirstName: &updatedFirstName,
 	}
 
 	mockRepo.On("GetByID", mock.Anything, userID).Return(existingUser, nil)
