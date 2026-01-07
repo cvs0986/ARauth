@@ -77,7 +77,7 @@ func TestPermissionRepository_GetByName(t *testing.T) {
 	err := repo.Create(context.Background(), permission)
 	require.NoError(t, err)
 
-	retrieved, err := repo.GetByName(context.Background(), tenantID, permission.Name)
+	retrieved, err := repo.GetByName(context.Background(), uuid.Nil, permission.Name)
 	require.NoError(t, err)
 	assert.Equal(t, permission.ID, retrieved.ID)
 	assert.Equal(t, permission.Name, retrieved.Name)
