@@ -16,9 +16,9 @@ Testing phase for Nuage Identity IAM Platform. All core development phases (1-6)
 
 ## Test Coverage Status
 
-**Overall Test Coverage: 75%** (up from 30%)
+**Overall Test Coverage: 78%** (up from 30%)
 
-**Total Tests: 84+ tests passing (64+ unit + 20 integration)**
+**Total Tests: 100+ tests passing (84+ unit + 20 integration)**
 
 ### Unit Tests
 
