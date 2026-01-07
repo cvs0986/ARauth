@@ -19,6 +19,7 @@ import { EditRoleDialog } from './EditRoleDialog';
 import { DeleteRoleDialog } from './DeleteRoleDialog';
 import { RolePermissionsDialog } from './RolePermissionsDialog';
 import { SearchInput } from '@/components/SearchInput';
+import { Pagination } from '@/components/Pagination';
 import type { Role } from '@shared/types/api';
 
 export function RoleList() {
@@ -28,6 +29,8 @@ export function RoleList() {
   const [deleteRole, setDeleteRole] = useState<Role | null>(null);
   const [permissionsRole, setPermissionsRole] = useState<Role | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const { data: roles, isLoading, error } = useQuery({
     queryKey: ['roles'],
@@ -45,6 +48,22 @@ export function RoleList() {
       );
     });
   }, [roles, searchQuery]);
+
+  // Paginate filtered roles
+  const paginatedRoles = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredRoles.slice(start, end);
+  }, [filteredRoles, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredRoles.length / pageSize);
+
+  // Reset to page 1 when filters change
+  useMemo(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => roleApi.delete(id),
@@ -79,9 +98,6 @@ export function RoleList() {
           onChange={setSearchQuery}
           placeholder="Search by name or description..."
         />
-        <div className="text-sm text-gray-500">
-          Showing {filteredRoles.length} of {roles?.length || 0} roles
-        </div>
       </div>
 
       <div className="border rounded-lg">
@@ -95,7 +111,7 @@ export function RoleList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredRoles.map((role) => (
+            {paginatedRoles.map((role) => (
               <TableRow key={role.id}>
                 <TableCell className="font-medium">{role.name}</TableCell>
                 <TableCell>{role.description || '-'}</TableCell>

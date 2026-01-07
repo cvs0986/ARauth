@@ -18,6 +18,7 @@ import { CreateUserDialog } from './CreateUserDialog';
 import { EditUserDialog } from './EditUserDialog';
 import { DeleteUserDialog } from './DeleteUserDialog';
 import { SearchInput } from '@/components/SearchInput';
+import { Pagination } from '@/components/Pagination';
 import type { User } from '@shared/types/api';
 
 export function UserList() {
@@ -27,6 +28,8 @@ export function UserList() {
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const { data: users, isLoading, error } = useQuery({
     queryKey: ['users'],
@@ -48,6 +51,22 @@ export function UserList() {
       return matchesSearch && matchesStatus;
     });
   }, [users, searchQuery, statusFilter]);
+
+  // Paginate filtered users
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredUsers.slice(start, end);
+  }, [filteredUsers, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredUsers.length / pageSize);
+
+  // Reset to page 1 when filters change
+  useMemo(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => userApi.delete(id),
@@ -95,9 +114,6 @@ export function UserList() {
             <option value="locked">Locked</option>
           </select>
         </div>
-        <div className="text-sm text-gray-500">
-          Showing {filteredUsers.length} of {users?.length || 0} users
-        </div>
       </div>
 
       <div className="border rounded-lg">
@@ -113,7 +129,7 @@ export function UserList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.map((user) => (
+            {paginatedUsers.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.username}</TableCell>
                 <TableCell>{user.email}</TableCell>

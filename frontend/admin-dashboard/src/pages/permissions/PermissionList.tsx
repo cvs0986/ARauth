@@ -18,6 +18,7 @@ import { CreatePermissionDialog } from './CreatePermissionDialog';
 import { EditPermissionDialog } from './EditPermissionDialog';
 import { DeletePermissionDialog } from './DeletePermissionDialog';
 import { SearchInput } from '@/components/SearchInput';
+import { Pagination } from '@/components/Pagination';
 import type { Permission } from '@shared/types/api';
 
 export function PermissionList() {
@@ -26,6 +27,8 @@ export function PermissionList() {
   const [editPermission, setEditPermission] = useState<Permission | null>(null);
   const [deletePermission, setDeletePermission] = useState<Permission | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const { data: permissions, isLoading, error } = useQuery({
     queryKey: ['permissions'],
@@ -79,9 +82,6 @@ export function PermissionList() {
           onChange={setSearchQuery}
           placeholder="Search by resource, action, or description..."
         />
-        <div className="text-sm text-gray-500">
-          Showing {filteredPermissions.length} of {permissions?.length || 0} permissions
-        </div>
       </div>
 
       <div className="border rounded-lg">
@@ -96,7 +96,7 @@ export function PermissionList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredPermissions.map((permission) => (
+            {paginatedPermissions.map((permission) => (
               <TableRow key={permission.id}>
                 <TableCell className="font-medium">{permission.resource}</TableCell>
                 <TableCell>{permission.action}</TableCell>
