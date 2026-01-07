@@ -145,21 +145,21 @@ export function Roles() {
                           )}
                           <div className="mt-3">
                             <p className="text-sm font-medium text-gray-700">
-                              Permissions ({role.permissions?.length || 0}):
+                              Permission IDs ({Array.isArray(role.permissions) ? role.permissions.length : 0}):
                             </p>
-                            {role.permissions && role.permissions.length > 0 ? (
+                            {role.permissions && Array.isArray(role.permissions) && role.permissions.length > 0 ? (
                               <div className="mt-2 flex flex-wrap gap-2">
-                                {role.permissions.map((permission, index) => (
+                                {role.permissions.map((permissionId, index) => (
                                   <span
                                     key={index}
-                                    className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                                    className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-mono"
                                   >
-                                    {permission}
+                                    {permissionId}
                                   </span>
                                 ))}
                               </div>
                             ) : (
-                              <p className="text-sm text-gray-500 mt-1">No permissions</p>
+                              <p className="text-sm text-gray-500 mt-1">No permissions assigned</p>
                             )}
                           </div>
                         </div>
