@@ -570,6 +570,163 @@ export function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Token Settings */}
+        <TabsContent value="tokens">
+          <Card>
+            <CardHeader>
+              <CardTitle>Token Lifetime Settings</CardTitle>
+              <CardDescription>
+                Configure JWT token lifetimes and Remember Me settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitToken(onTokenSubmit)} className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Default Token Lifetimes</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="accessTokenTTLMinutes">Access Token TTL (minutes)</Label>
+                      <Input
+                        id="accessTokenTTLMinutes"
+                        type="number"
+                        {...registerToken('accessTokenTTLMinutes', { valueAsNumber: true })}
+                        disabled={isLoading}
+                        placeholder="15"
+                      />
+                      {tokenErrors.accessTokenTTLMinutes && (
+                        <p className="text-sm text-red-600">
+                          {tokenErrors.accessTokenTTLMinutes.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="refreshTokenTTLDays">Refresh Token TTL (days)</Label>
+                      <Input
+                        id="refreshTokenTTLDays"
+                        type="number"
+                        {...registerToken('refreshTokenTTLDays', { valueAsNumber: true })}
+                        disabled={isLoading}
+                        placeholder="30"
+                      />
+                      {tokenErrors.refreshTokenTTLDays && (
+                        <p className="text-sm text-red-600">
+                          {tokenErrors.refreshTokenTTLDays.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="idTokenTTLMinutes">ID Token TTL (minutes)</Label>
+                      <Input
+                        id="idTokenTTLMinutes"
+                        type="number"
+                        {...registerToken('idTokenTTLMinutes', { valueAsNumber: true })}
+                        disabled={isLoading}
+                        placeholder="60"
+                      />
+                      {tokenErrors.idTokenTTLMinutes && (
+                        <p className="text-sm text-red-600">
+                          {tokenErrors.idTokenTTLMinutes.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Remember Me Settings</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="rememberMeEnabled"
+                        {...registerToken('rememberMeEnabled')}
+                        disabled={isLoading}
+                        className="rounded"
+                      />
+                      <Label htmlFor="rememberMeEnabled">Enable Remember Me</Label>
+                    </div>
+
+                    {rememberMeEnabled && (
+                      <div className="ml-6 space-y-4 border-l-2 pl-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="rememberMeRefreshTokenTTLDays">
+                              Remember Me Refresh Token TTL (days)
+                            </Label>
+                            <Input
+                              id="rememberMeRefreshTokenTTLDays"
+                              type="number"
+                              {...registerToken('rememberMeRefreshTokenTTLDays', { valueAsNumber: true })}
+                              disabled={isLoading}
+                              placeholder="90"
+                            />
+                            {tokenErrors.rememberMeRefreshTokenTTLDays && (
+                              <p className="text-sm text-red-600">
+                                {tokenErrors.rememberMeRefreshTokenTTLDays.message}
+                              </p>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="rememberMeAccessTokenTTLMinutes">
+                              Remember Me Access Token TTL (minutes)
+                            </Label>
+                            <Input
+                              id="rememberMeAccessTokenTTLMinutes"
+                              type="number"
+                              {...registerToken('rememberMeAccessTokenTTLMinutes', { valueAsNumber: true })}
+                              disabled={isLoading}
+                              placeholder="60"
+                            />
+                            {tokenErrors.rememberMeAccessTokenTTLMinutes && (
+                              <p className="text-sm text-red-600">
+                                {tokenErrors.rememberMeAccessTokenTTLMinutes.message}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Security Options</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="tokenRotationEnabled"
+                        {...registerToken('tokenRotationEnabled')}
+                        disabled={isLoading}
+                        className="rounded"
+                      />
+                      <Label htmlFor="tokenRotationEnabled">
+                        Enable Token Rotation (recommended)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="requireMFAForExtendedSessions"
+                        {...registerToken('requireMFAForExtendedSessions')}
+                        disabled={isLoading}
+                        className="rounded"
+                      />
+                      <Label htmlFor="requireMFAForExtendedSessions">
+                        Require MFA for extended sessions (Remember Me)
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? 'Saving...' : 'Save Token Settings'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
