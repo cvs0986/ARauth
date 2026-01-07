@@ -93,6 +93,7 @@ func main() {
 	}
 
 	// Initialize repositories
+	tenantRepo := postgres.NewTenantRepository(db)
 	userRepo := postgres.NewUserRepository(db)
 	credentialRepo := postgres.NewCredentialRepository(db)
 	mfaRecoveryCodeRepo := postgres.NewMFARecoveryCodeRepository(db)
@@ -133,11 +134,13 @@ func main() {
 	}
 
 	// Initialize services
+	tenantService := tenant.NewService(tenantRepo)
 	userService := user.NewService(userRepo)
 	loginService := login.NewService(userRepo, credentialRepo, hydraClient)
 	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, mfaSessionManager)
 
 	// Initialize handlers
+	tenantHandler := handlers.NewTenantHandler(tenantService)
 	userHandler := handlers.NewUserHandler(userService)
 	authHandler := handlers.NewAuthHandler(loginService)
 	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger)
@@ -153,7 +156,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, tenantRepo)
 
 	// Create HTTP server
 	srv := &http.Server{

@@ -55,7 +55,12 @@ type LoginResponse struct {
 
 // Login authenticates a user and returns tokens
 func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
-	// Get user by username
+	// Validate tenant ID is provided
+	if req.TenantID == uuid.Nil {
+		return nil, fmt.Errorf("tenant_id is required")
+	}
+
+	// Get user by username (tenant-scoped)
 	user, err := s.userRepo.GetByUsername(ctx, req.Username, req.TenantID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid credentials")

@@ -23,12 +23,21 @@ func NewUserHandler(userService *user.Service) *UserHandler {
 
 // Create handles POST /api/v1/users
 func (h *UserHandler) Create(c *gin.Context) {
+	// Get tenant ID from context (set by tenant middleware)
+	tenantID, ok := middleware.RequireTenant(c)
+	if !ok {
+		return
+	}
+
 	var req user.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
 			"Request validation failed", middleware.FormatValidationErrors(err))
 		return
 	}
+
+	// Set tenant ID from context (override any tenant_id in request body)
+	req.TenantID = tenantID
 
 	u, err := h.userService.Create(c.Request.Context(), &req)
 	if err != nil {

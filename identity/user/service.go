@@ -50,6 +50,11 @@ type UpdateUserRequest struct {
 
 // Create creates a new user
 func (s *Service) Create(ctx context.Context, req *CreateUserRequest) (*models.User, error) {
+	// Validate tenant ID is provided
+	if req.TenantID == uuid.Nil {
+		return nil, fmt.Errorf("tenant_id is required")
+	}
+
 	// Validate username
 	req.Username = strings.TrimSpace(req.Username)
 	if len(req.Username) < 3 {
@@ -183,8 +188,12 @@ func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.repo.Delete(ctx, id)
 }
 
-// List retrieves a list of users
+// List retrieves a list of users (tenant-scoped)
 func (s *Service) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) ([]*models.User, error) {
+	// Ensure tenant ID is provided
+	if tenantID == uuid.Nil {
+		return nil, fmt.Errorf("tenant_id is required")
+	}
 	return s.repo.List(ctx, tenantID, filters)
 }
 
