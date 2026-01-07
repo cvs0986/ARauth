@@ -10,6 +10,7 @@ import { Login } from './pages/Login';
 import { TenantList } from './pages/tenants/TenantList';
 import { UserList } from './pages/users/UserList';
 import { RoleList } from './pages/roles/RoleList';
+import { PermissionList } from './pages/permissions/PermissionList';
 
 // Create QueryClient instance
 const queryClient = new QueryClient({
@@ -66,6 +67,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <RoleList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/permissions"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <PermissionList />
                 </Layout>
               </ProtectedRoute>
             }
