@@ -4,6 +4,7 @@ package user
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,9 +15,7 @@ import (
 )
 
 // createTestTenantForIntegration creates a test tenant for integration tests
-func createTestTenantForIntegration(t *testing.T, db interface {
-	ExecContext(ctx context.Context, query string, args ...interface{}) error
-}, tenantID uuid.UUID) {
+func createTestTenantForIntegration(t *testing.T, db *sql.DB, tenantID uuid.UUID) {
 	query := `
 		INSERT INTO tenants (id, name, domain, status, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, NOW(), NOW())
