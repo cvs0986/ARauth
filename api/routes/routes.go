@@ -1,16 +1,40 @@
 package routes
 
 import (
+	"database/sql"
+
 	"github.com/gin-gonic/gin"
 	"github.com/nuage-identity/iam/api/handlers"
 	"github.com/nuage-identity/iam/api/middleware"
 	"github.com/nuage-identity/iam/internal/cache"
 	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
+// Helper functions to extract database and Redis clients
+func getDB(db interface{}) *sql.DB {
+	if db == nil {
+		return nil
+	}
+	if sqlDB, ok := db.(*sql.DB); ok {
+		return sqlDB
+	}
+	return nil
+}
+
+func getRedis(redisClient interface{}) *redis.Client {
+	if redisClient == nil {
+		return nil
+	}
+	if client, ok := redisClient.(*redis.Client); ok {
+		return client
+	}
+	return nil
+}
+
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -18,8 +42,10 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 	router.Use(middleware.RateLimit(cacheClient))
 
 	// Health check
-	healthHandler := handlers.NewHealthHandler()
+	healthHandler := handlers.NewHealthHandlerWithDeps(getDB(db), cacheClient, getRedis(redisClient))
 	router.GET("/health", healthHandler.Check)
+	router.GET("/health/live", healthHandler.Liveness)
+	router.GET("/health/ready", healthHandler.Readiness)
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")

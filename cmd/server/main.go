@@ -169,7 +169,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, tenantRepo, cacheClient)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, tenantRepo, cacheClient, db, redisClient)
 
 	// Create HTTP server
 	srv := &http.Server{
