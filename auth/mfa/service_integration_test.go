@@ -229,7 +229,22 @@ func TestService_CreateChallenge_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	totpGenerator := totp.NewGenerator("Test Issuer")
-	cacheClient := cache.NewCache(nil)
+	
+	// Try to connect to Redis for cache (required for MFA sessions)
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		t.Skip("REDIS_URL not set, skipping MFA challenge test (requires cache)")
+	}
+	
+	redisClient, err := postgres.NewRedisConnection(&config.RedisConfig{
+		URL: redisURL,
+	})
+	if err != nil {
+		t.Skipf("Failed to connect to Redis, skipping MFA challenge test: %v", err)
+	}
+	defer redisClient.Close()
+	
+	cacheClient := cache.NewCache(redisClient)
 	sessionManager := NewSessionManager(cacheClient)
 
 	service := NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, sessionManager)

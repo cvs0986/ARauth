@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -27,13 +29,18 @@ func (r *mfaRecoveryCodeRepository) CreateRecoveryCodes(ctx context.Context, use
 	}
 
 	// Insert new codes
+	// Hash codes using Go's crypto/sha256 (more portable than PostgreSQL's digest)
 	query := `
 		INSERT INTO mfa_recovery_codes (id, user_id, code_hash, created_at)
-		VALUES (gen_random_uuid(), $1, encode(digest($2, 'sha256'), 'hex'), NOW())
+		VALUES (gen_random_uuid(), $1, $2, NOW())
 	`
 
 	for _, code := range codes {
-		_, err := r.db.ExecContext(ctx, query, userID, code)
+		// Hash the code using SHA256
+		hash := sha256.Sum256([]byte(code))
+		codeHash := hex.EncodeToString(hash[:])
+
+		_, err := r.db.ExecContext(ctx, query, userID, codeHash)
 		if err != nil {
 			return fmt.Errorf("failed to create recovery code: %w", err)
 		}
@@ -62,17 +69,21 @@ func (r *mfaRecoveryCodeRepository) GetRecoveryCodes(ctx context.Context, userID
 
 // VerifyAndDeleteRecoveryCode verifies a recovery code and deletes it if valid
 func (r *mfaRecoveryCodeRepository) VerifyAndDeleteRecoveryCode(ctx context.Context, userID uuid.UUID, code string) (bool, error) {
+	// Hash the code using SHA256 (same as in CreateRecoveryCodes)
+	hash := sha256.Sum256([]byte(code))
+	codeHash := hex.EncodeToString(hash[:])
+
 	query := `
 		UPDATE mfa_recovery_codes
 		SET used_at = NOW()
 		WHERE user_id = $1 
-		  AND code_hash = encode(digest($2, 'sha256'), 'hex')
+		  AND code_hash = $2
 		  AND used_at IS NULL
 		RETURNING id
 	`
 
 	var id uuid.UUID
-	err := r.db.QueryRowContext(ctx, query, userID, code).Scan(&id)
+	err := r.db.QueryRowContext(ctx, query, userID, codeHash).Scan(&id)
 	if err == sql.ErrNoRows {
 		return false, nil // Code not found or already used
 	}
