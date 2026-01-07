@@ -12,12 +12,12 @@ import (
 
 // MFAHandler handles MFA-related HTTP requests
 type MFAHandler struct {
-	mfaService  *mfa.Service
+	mfaService  mfa.ServiceInterface
 	auditLogger *audit.Logger
 }
 
 // NewMFAHandler creates a new MFA handler
-func NewMFAHandler(mfaService *mfa.Service, auditLogger *audit.Logger) *MFAHandler {
+func NewMFAHandler(mfaService mfa.ServiceInterface, auditLogger *audit.Logger) *MFAHandler {
 	return &MFAHandler{
 		mfaService:  mfaService,
 		auditLogger: auditLogger,
