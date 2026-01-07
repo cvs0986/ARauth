@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iam-api
+  namespace: nuage-identity
+  labels:
+    app: iam-api
+    version: v1
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: iam-api
+  template:
+    metadata:
+      labels:
+        app: iam-api
+        version: v1
+    spec:
+      containers:
+      - name: iam-api
+        image: nuage-identity/iam-api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: CONFIG_PATH
+          value: "/etc/iam/config.yaml"
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: iam-secrets
+              key: database-password
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: iam-secrets
+              key: redis-password
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: iam-secrets
+              key: encryption-key
+        - name: HYDRA_ADMIN_URL
+          valueFrom:
+            secretKeyRef:
+              name: iam-secrets
+              key: hydra-admin-url
+        volumeMounts:
+        - name: config
+          mountPath: /etc/iam
+          readOnly: true
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: config
+        configMap:
+          name: iam-config
+      restartPolicy: Always
+
