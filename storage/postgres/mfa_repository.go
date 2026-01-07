@@ -95,12 +95,3 @@ func (r *mfaRecoveryCodeRepository) DeleteRecoveryCodes(ctx context.Context, use
 	return nil
 }
 
-// Helper function to hash recovery codes (not used directly, but for reference)
-// hashRecoveryCode is used in SQL queries via digest() function
-// This function is kept for documentation purposes but not used in Go code
-func _hashRecoveryCode(code string) string {
-	// This is done in SQL using digest() function
-	// Keeping this for reference
-	return ""
-}
-

@@ -98,7 +98,7 @@ func (r *cachedUserRepository) GetByUsername(ctx context.Context, username strin
 	if user != nil {
 		_ = r.cache.Set(ctx, cacheKey, user, r.cacheTTL) // Ignore cache errors
 		// Also cache by ID
-		r.cache.Set(ctx, r.cacheKey("id", user.ID.String()), user, r.cacheTTL)
+		_ = r.cache.Set(ctx, r.cacheKey("id", user.ID.String()), user, r.cacheTTL) // Ignore cache errors
 	}
 
 	return user, nil
@@ -125,7 +125,7 @@ func (r *cachedUserRepository) GetByEmail(ctx context.Context, email string, ten
 	if user != nil {
 		_ = r.cache.Set(ctx, cacheKey, user, r.cacheTTL) // Ignore cache errors
 		// Also cache by ID
-		r.cache.Set(ctx, r.cacheKey("id", user.ID.String()), user, r.cacheTTL)
+		_ = r.cache.Set(ctx, r.cacheKey("id", user.ID.String()), user, r.cacheTTL) // Ignore cache errors
 	}
 
 	return user, nil

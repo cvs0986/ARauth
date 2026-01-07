@@ -100,9 +100,11 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 
 	resp, err := h.mfaService.VerifyChallenge(c.Request.Context(), &req)
 	if err != nil {
-		// Log failed attempt
+		// Log failed attempt if we have user info
 		if resp != nil && resp.UserID != "" {
-			// Try to log if we have user info
+			userID, _ := uuid.Parse(resp.UserID)
+			tenantID, _ := uuid.Parse(resp.TenantID)
+			_ = h.auditLogger.LogMFAAction(c.Request.Context(), tenantID, userID, "verify_challenge", c.Request, "failure", err.Error()) // Ignore audit log errors
 		}
 		middleware.RespondWithError(c, http.StatusUnauthorized, "verification_failed",
 			err.Error(), nil)

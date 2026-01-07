@@ -84,8 +84,8 @@ func RateLimitWithConfig(cacheClient *cache.Cache, config RateLimitConfig) gin.H
 		if err != nil {
 			// Window doesn't exist, create new one
 			currentWindow = windowStart
-			cacheClient.Set(c.Request.Context(), windowKey, windowStart, config.Window*2)
-			cacheClient.Set(c.Request.Context(), countKey, 1, config.Window*2)
+			_ = cacheClient.Set(c.Request.Context(), windowKey, windowStart, config.Window*2) // Ignore cache errors
+			_ = cacheClient.Set(c.Request.Context(), countKey, 1, config.Window*2)             // Ignore cache errors
 			c.Next()
 			return
 		}
@@ -94,8 +94,8 @@ func RateLimitWithConfig(cacheClient *cache.Cache, config RateLimitConfig) gin.H
 		if currentWindow != windowStart {
 			// New window, reset count
 			currentWindow = windowStart
-			cacheClient.Set(c.Request.Context(), windowKey, windowStart, config.Window*2)
-			cacheClient.Set(c.Request.Context(), countKey, 1, config.Window*2)
+			_ = cacheClient.Set(c.Request.Context(), windowKey, windowStart, config.Window*2) // Ignore cache errors
+			_ = cacheClient.Set(c.Request.Context(), countKey, 1, config.Window*2)             // Ignore cache errors
 			c.Next()
 			return
 		}

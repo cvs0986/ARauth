@@ -107,6 +107,8 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 	if err := s.credentialRepo.Update(ctx, cred); err != nil {
 		// Log error but continue with login
 		// The credential update failure shouldn't block login
+		// Error is intentionally ignored to not block successful authentication
+		_ = err
 	}
 
 	// Check if MFA is required
