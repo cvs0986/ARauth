@@ -140,9 +140,11 @@ func (r *tenantRepository) Update(ctx context.Context, tenant *models.Tenant) er
 
 	tenant.UpdatedAt = time.Now()
 
-	var metadataJSON []byte
+	var metadataJSON interface{}
 	if tenant.Metadata != nil {
 		metadataJSON, _ = json.Marshal(tenant.Metadata)
+	} else {
+		metadataJSON = nil
 	}
 
 	_, err := r.db.ExecContext(ctx, query,
