@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/auth/credential"
 	"github.com/nuage-identity/iam/config"
+	"github.com/nuage-identity/iam/identity/credential"
 	"github.com/nuage-identity/iam/identity/models"
 	"github.com/nuage-identity/iam/internal/cache"
 	"github.com/nuage-identity/iam/internal/testutil"
