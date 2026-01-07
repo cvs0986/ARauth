@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -48,7 +49,11 @@ func TestRequirePermission(t *testing.T) {
 				}
 				c.Next()
 			})
-			router.GET("/test", RequirePermission(tt.requiredPerm), func(c *gin.Context) {
+			// RequirePermission takes resource and action
+			parts := strings.Split(tt.requiredPerm, ":")
+			resource := parts[0]
+			action := parts[1]
+			router.GET("/test", RequirePermission(resource, action), func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{"message": "success"})
 			})
 
@@ -95,9 +100,13 @@ func TestHasPermission(t *testing.T) {
 			router := gin.New()
 			router.GET("/test", func(c *gin.Context) {
 				if tt.userPermissions != nil {
-					c.Set("permissions", tt.userPermissions)
+					c.Set("user_permissions", tt.userPermissions)
 				}
-				result := HasPermission(c, tt.requiredPerm)
+				// HasPermission takes resource and action
+				parts := strings.Split(tt.requiredPerm, ":")
+				resource := parts[0]
+				action := parts[1]
+				result := HasPermission(c, resource, action)
 				assert.Equal(t, tt.expectedResult, result)
 				c.JSON(http.StatusOK, gin.H{"has_permission": result})
 			})
