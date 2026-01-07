@@ -19,10 +19,8 @@ func TestPermissionRepository_Create(t *testing.T) {
 
 	repo := NewPermissionRepository(db)
 
-	tenantID := uuid.New()
 	permission := &models.Permission{
 		ID:        uuid.New(),
-		TenantID:  tenantID,
 		Name:      "users:read",
 		Resource:  "users",
 		Action:    "read",
@@ -67,10 +65,8 @@ func TestPermissionRepository_GetByName(t *testing.T) {
 
 	repo := NewPermissionRepository(db)
 
-	tenantID := uuid.New()
 	permission := &models.Permission{
 		ID:        uuid.New(),
-		TenantID:  tenantID,
 		Name:      "users:delete",
 		Resource:  "users",
 		Action:    "delete",
