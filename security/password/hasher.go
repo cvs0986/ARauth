@@ -48,15 +48,26 @@ func (h *Hasher) Hash(password string) (string, error) {
 // Verify verifies a password against a hash
 func (h *Hasher) Verify(password string, hash string) (bool, error) {
 	// Parse hash format: $argon2id$v=19$m=65536,t=3,p=4$salt$hash
+	// Split by $ to get components
+	parts := strings.Split(hash, "$")
+	if len(parts) != 6 || parts[0] != "" || parts[1] != "argon2id" {
+		return false, fmt.Errorf("invalid hash format")
+	}
+
 	var version int
 	var m, t, p uint32
-	var saltStr, hashStr string
-
-	_, err := fmt.Sscanf(hash, "$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
-		&version, &m, &t, &p, &saltStr, &hashStr)
+	_, err := fmt.Sscanf(parts[2], "v=%d", &version)
 	if err != nil {
 		return false, fmt.Errorf("invalid hash format: %w", err)
 	}
+
+	_, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &m, &t, &p)
+	if err != nil {
+		return false, fmt.Errorf("invalid hash format: %w", err)
+	}
+
+	saltStr := parts[4]
+	hashStr := parts[5]
 
 	// Decode salt and hash
 	saltBytes, err := base64.RawStdEncoding.DecodeString(saltStr)
