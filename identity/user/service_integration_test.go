@@ -19,15 +19,13 @@ func createTestTenantForIntegration(t *testing.T, db interface {
 }, tenantID uuid.UUID) {
 	query := `
 		INSERT INTO tenants (id, name, domain, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		VALUES ($1, $2, $3, $4, NOW(), NOW())
 	`
 	_, err := db.ExecContext(context.Background(), query,
 		tenantID,
 		"Test Tenant",
 		"test-"+tenantID.String()+".example.com",
 		"active",
-		"NOW()",
-		"NOW()",
 	)
 	require.NoError(t, err)
 }
