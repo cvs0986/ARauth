@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/auth/claims"
-	"github.com/nuage-identity/iam/auth/hydra"
 	"github.com/nuage-identity/iam/identity/credential"
 	"github.com/nuage-identity/iam/identity/models"
 	"github.com/nuage-identity/iam/internal/testutil"
@@ -24,10 +23,7 @@ func TestService_Login_Integration(t *testing.T) {
 	}
 
 	// Setup test database
-	db, err := testutil.SetupTestDB(t)
-	if err != nil {
-		t.Skipf("Skipping integration test: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
 	defer testutil.TeardownTestDB(t, db)
 
 	// Create repositories
@@ -99,10 +95,7 @@ func TestService_Login_InvalidPassword_Integration(t *testing.T) {
 		t.Skip("Skipping integration test")
 	}
 
-	db, err := testutil.SetupTestDB(t)
-	if err != nil {
-		t.Skipf("Skipping integration test: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
 	defer testutil.TeardownTestDB(t, db)
 
 	userRepo := postgres.NewUserRepository(db)
@@ -162,10 +155,7 @@ func TestService_Login_UserNotFound_Integration(t *testing.T) {
 		t.Skip("Skipping integration test")
 	}
 
-	db, err := testutil.SetupTestDB(t)
-	if err != nil {
-		t.Skipf("Skipping integration test: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
 	defer testutil.TeardownTestDB(t, db)
 
 	userRepo := postgres.NewUserRepository(db)

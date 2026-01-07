@@ -19,10 +19,7 @@ func TestService_Create_Integration(t *testing.T) {
 		t.Skip("Skipping integration test")
 	}
 
-	db, err := testutil.SetupTestDB(t)
-	if err != nil {
-		t.Skipf("Skipping integration test: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
 	defer testutil.TeardownTestDB(t, db)
 
 	repo := postgres.NewUserRepository(db)
@@ -49,10 +46,7 @@ func TestService_GetByID_Integration(t *testing.T) {
 		t.Skip("Skipping integration test")
 	}
 
-	db, err := testutil.SetupTestDB(t)
-	if err != nil {
-		t.Skipf("Skipping integration test: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
 	defer testutil.TeardownTestDB(t, db)
 
 	repo := postgres.NewUserRepository(db)
@@ -80,10 +74,7 @@ func TestService_GetByUsername_Integration(t *testing.T) {
 		t.Skip("Skipping integration test")
 	}
 
-	db, err := testutil.SetupTestDB(t)
-	if err != nil {
-		t.Skipf("Skipping integration test: %v", err)
-	}
+	db := testutil.SetupTestDB(t)
 	defer testutil.TeardownTestDB(t, db)
 
 	repo := postgres.NewUserRepository(db)
