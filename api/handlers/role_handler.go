@@ -333,7 +333,7 @@ func (h *RoleHandler) RemoveRoleFromUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Role removed successfully"})
 }
 
-// GetRolePermissions handles GET /api/v1/roles/:role_id/permissions
+// GetRolePermissions handles GET /api/v1/roles/:id/permissions
 func (h *RoleHandler) GetRolePermissions(c *gin.Context) {
 	// Get tenant ID from context
 	tenantID, ok := middleware.RequireTenant(c)
@@ -341,7 +341,7 @@ func (h *RoleHandler) GetRolePermissions(c *gin.Context) {
 		return
 	}
 
-	roleIDStr := c.Param("role_id")
+	roleIDStr := c.Param("id")
 	roleID, err := uuid.Parse(roleIDStr)
 	if err != nil {
 		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_role_id",
@@ -372,7 +372,7 @@ func (h *RoleHandler) GetRolePermissions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"permissions": permissions})
 }
 
-// AssignPermissionToRole handles POST /api/v1/roles/:role_id/permissions/:permission_id
+// AssignPermissionToRole handles POST /api/v1/roles/:id/permissions/:permission_id
 func (h *RoleHandler) AssignPermissionToRole(c *gin.Context) {
 	// Get tenant ID from context
 	tenantID, ok := middleware.RequireTenant(c)
@@ -380,7 +380,7 @@ func (h *RoleHandler) AssignPermissionToRole(c *gin.Context) {
 		return
 	}
 
-	roleIDStr := c.Param("role_id")
+	roleIDStr := c.Param("id")
 	roleID, err := uuid.Parse(roleIDStr)
 	if err != nil {
 		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_role_id",
@@ -418,7 +418,7 @@ func (h *RoleHandler) AssignPermissionToRole(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Permission assigned successfully"})
 }
 
-// RemovePermissionFromRole handles DELETE /api/v1/roles/:role_id/permissions/:permission_id
+// RemovePermissionFromRole handles DELETE /api/v1/roles/:id/permissions/:permission_id
 func (h *RoleHandler) RemovePermissionFromRole(c *gin.Context) {
 	// Get tenant ID from context
 	tenantID, ok := middleware.RequireTenant(c)
@@ -426,7 +426,7 @@ func (h *RoleHandler) RemovePermissionFromRole(c *gin.Context) {
 		return
 	}
 
-	roleIDStr := c.Param("role_id")
+	roleIDStr := c.Param("id")
 	roleID, err := uuid.Parse(roleIDStr)
 	if err != nil {
 		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_role_id",

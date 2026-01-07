@@ -95,16 +95,19 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			}
 
 			// Role routes (tenant-scoped)
+			// Note: More specific routes (with /permissions) must come before generic :id routes
 			roles := tenantScoped.Group("/roles")
 			{
 				roles.POST("", roleHandler.Create)
 				roles.GET("", roleHandler.List)
+				// Permission routes (must come before :id routes to avoid conflict)
+				roles.GET("/:id/permissions", roleHandler.GetRolePermissions)
+				roles.POST("/:id/permissions/:permission_id", roleHandler.AssignPermissionToRole)
+				roles.DELETE("/:id/permissions/:permission_id", roleHandler.RemovePermissionFromRole)
+				// Generic role routes
 				roles.GET("/:id", roleHandler.GetByID)
 				roles.PUT("/:id", roleHandler.Update)
 				roles.DELETE("/:id", roleHandler.Delete)
-				roles.GET("/:role_id/permissions", roleHandler.GetRolePermissions)
-				roles.POST("/:role_id/permissions/:permission_id", roleHandler.AssignPermissionToRole)
-				roles.DELETE("/:role_id/permissions/:permission_id", roleHandler.RemovePermissionFromRole)
 			}
 
 			// Permission routes (tenant-scoped)
