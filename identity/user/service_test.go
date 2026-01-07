@@ -175,12 +175,13 @@ func TestService_Update(t *testing.T) {
 	}
 
 	mockRepo.On("GetByID", mock.Anything, userID).Return(existingUser, nil)
+	mockRepo.On("GetByEmail", mock.Anything, updatedEmail, tenantID).Return(nil, assert.AnError) // Email not taken
 	mockRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.User")).Return(nil)
 
 	user, err := service.Update(context.Background(), userID, req)
 	require.NoError(t, err)
-	assert.Equal(t, req.Email, user.Email)
-	assert.Equal(t, req.FirstName, user.FirstName)
+	assert.Equal(t, *req.Email, user.Email)
+	assert.Equal(t, *req.FirstName, user.FirstName)
 
 	mockRepo.AssertExpectations(t)
 }
