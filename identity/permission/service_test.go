@@ -61,7 +61,7 @@ func (m *MockPermissionRepository) AssignPermissionToRole(ctx context.Context, r
 	return args.Error(0)
 }
 
-func (m *MockPermissionRepository) RemoveFromRole(ctx context.Context, roleID, permissionID uuid.UUID) error {
+func (m *MockPermissionRepository) RemovePermissionFromRole(ctx context.Context, roleID, permissionID uuid.UUID) error {
 	args := m.Called(ctx, roleID, permissionID)
 	return args.Error(0)
 }
