@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/auth/token"
 	"github.com/nuage-identity/iam/identity/models"
 	"github.com/nuage-identity/iam/storage/interfaces"
 )
