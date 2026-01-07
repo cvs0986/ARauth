@@ -37,35 +37,32 @@
    - Refresh token storage
    - Remember Me support
 
----
-
-## 🚧 In Progress
-
-1. **Token Endpoints** (Next)
-   - POST /api/v1/auth/refresh
+7. **Token Endpoints** ✅
+   - POST /api/v1/auth/refresh (with rotation)
    - POST /api/v1/auth/revoke
+
+8. **JWT Middleware** ✅
+   - Token extraction from Authorization header
+   - Token validation (signature, claims)
+   - User context setting
 
 ---
 
 ## 📋 Remaining
 
-1. **JWT Middleware**
-   - Token validation
-   - User context setting
-
-2. **Frontend Updates**
+1. **Frontend Updates**
    - Remember Me checkbox
    - Admin Dashboard UI for token settings
 
 ---
 
-## 📊 Progress: 70% Complete
+## 📊 Progress: 85% Complete
 
 - ✅ Foundation (migrations, config, interfaces)
 - ✅ Data Layer (repositories)
 - ✅ Token Service
 - ✅ Business Logic (login service)
-- ⏳ API Layer (endpoints, middleware)
+- ✅ API Layer (endpoints, middleware)
 - ⏳ Frontend (UI components)
 
 ---
@@ -75,8 +72,8 @@
 - #25: JWT Token Service ✅ CLOSED
 - #26: PostgreSQL Repositories ✅ CLOSED
 - #27: Update Login Service ✅ CLOSED
-- #28: Token Endpoints 📋 OPEN
-- #29: JWT Middleware 📋 OPEN
+- #28: Token Endpoints ✅ CLOSED
+- #29: JWT Middleware ✅ CLOSED
 - #30: Remember Me UI 📋 OPEN
 - #31: Admin Dashboard Token Settings 📋 OPEN
 
@@ -84,17 +81,14 @@
 
 ## 🎯 Next Steps
 
-1. Create token refresh endpoint
-2. Create token revocation endpoint
-3. Create JWT validation middleware
-4. Add Remember Me to login UI
-5. Create Admin Dashboard token settings UI
+1. Add Remember Me checkbox to login UI
+2. Create Admin Dashboard token settings UI
 
 ---
 
 ## 📝 Recent Commits
 
-- `fix(auth): fix import statements in login service`
-- `fix(auth): fix compilation errors in login service`
+- `feat(auth): implement token refresh, revocation, and JWT middleware`
+- `fix: update GetPublicKey to return interface{} for interface compliance`
+- `fix: add token package import to main.go`
 - `feat(auth): update login service to issue JWT tokens`
-- `feat(auth): implement token repositories and JWT service`
