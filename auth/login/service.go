@@ -133,19 +133,28 @@ func (s *Service) handleOAuth2Login(ctx context.Context, challenge string, user 
 		return nil, fmt.Errorf("failed to get login request: %w", err)
 	}
 
-	// Build claims (simplified for now)
+	// Build claims from user, roles, and permissions
+	claimsObj, err := s.claimsBuilder.BuildClaims(ctx, user)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build claims: %w", err)
+	}
+
+	// Convert claims to map for Hydra
 	claims := map[string]interface{}{
-		"sub":    user.ID.String(),
-		"tenant": user.TenantID.String(),
-		"email":  user.Email,
-		"username": user.Username,
+		"sub":        claimsObj.Subject,
+		"tenant_id":  claimsObj.TenantID,
+		"email":      claimsObj.Email,
+		"username":   claimsObj.Username,
+		"roles":      claimsObj.Roles,
+		"permissions": claimsObj.Permissions,
+		"scope":      claimsObj.Scope,
 	}
 
 	// Accept login in Hydra
 	acceptResp, err := s.hydraClient.AcceptLoginRequest(ctx, challenge, &hydra.AcceptLoginRequest{
-		Subject: user.ID.String(),
-		Context: claims,
-		Remember: true,
+		Subject:     user.ID.String(),
+		Context:     claims,
+		Remember:    true,
 		RememberFor: 3600,
 	})
 	if err != nil {
