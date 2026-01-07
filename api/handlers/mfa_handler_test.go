@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/auth/mfa"
-	"github.com/nuage-identity/iam/internal/audit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -68,21 +67,12 @@ func (m *MockMFAService) VerifyChallenge(ctx context.Context, req *mfa.VerifyCha
 	return args.Get(0).(*mfa.VerifyChallengeResponse), args.Error(1)
 }
 
-// MockAuditLogger is a mock implementation of audit.Logger
-type MockAuditLogger struct {
-	mock.Mock
-}
-
-func (m *MockAuditLogger) LogMFAAction(ctx context.Context, tenantID, userID uuid.UUID, action string, req *http.Request, result, message string) {
-	m.Called(ctx, tenantID, userID, action, req, result, message)
-}
-
 func TestMFAHandler_Enroll(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockMFAService)
-	mockAudit := new(MockAuditLogger)
-	handler := NewMFAHandler(mockService, mockAudit)
+	// Note: Audit logger is not easily mockable, but tests can still verify handler behavior
+	handler := NewMFAHandler(mockService, nil)
 
 	router := gin.New()
 	router.POST("/api/v1/mfa/enroll", handler.Enroll)
@@ -115,8 +105,7 @@ func TestMFAHandler_Challenge(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockMFAService)
-	mockAudit := new(MockAuditLogger)
-	handler := NewMFAHandler(mockService, mockAudit)
+	handler := NewMFAHandler(mockService, nil)
 
 	router := gin.New()
 	router.POST("/api/v1/mfa/challenge", handler.Challenge)
@@ -149,8 +138,7 @@ func TestMFAHandler_Enroll_InvalidRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockMFAService)
-	mockAudit := new(MockAuditLogger)
-	handler := NewMFAHandler(mockService, mockAudit)
+	handler := NewMFAHandler(mockService, nil)
 
 	router := gin.New()
 	router.POST("/api/v1/mfa/enroll", handler.Enroll)

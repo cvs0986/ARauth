@@ -10,7 +10,6 @@ import (
 type ServiceInterface interface {
 	Enroll(ctx context.Context, req *EnrollRequest) (*EnrollResponse, error)
 	Verify(ctx context.Context, req *VerifyRequest) (bool, error)
-	Disable(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID) error
 	GenerateRecoveryCodes(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID) ([]string, error)
 	VerifyRecoveryCode(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID, code string) error
 	CreateChallenge(ctx context.Context, req *ChallengeRequest) (*ChallengeResponse, error)
