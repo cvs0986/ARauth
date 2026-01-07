@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zaptest"
 )
 
