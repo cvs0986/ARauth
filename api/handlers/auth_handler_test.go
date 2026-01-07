@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +21,7 @@ type MockLoginService struct {
 	mock.Mock
 }
 
-func (m *MockLoginService) Login(ctx interface{}, req *login.LoginRequest) (*login.LoginResponse, error) {
+func (m *MockLoginService) Login(ctx context.Context, req *login.LoginRequest) (*login.LoginResponse, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

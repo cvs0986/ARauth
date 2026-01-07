@@ -21,7 +21,7 @@ type MockUserService struct {
 	mock.Mock
 }
 
-func (m *MockUserService) Create(ctx interface{}, req *user.CreateUserRequest) (*models.User, error) {
+func (m *MockUserService) Create(ctx context.Context, req *user.CreateUserRequest) (*models.User, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -29,7 +29,7 @@ func (m *MockUserService) Create(ctx interface{}, req *user.CreateUserRequest) (
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockUserService) GetByID(ctx interface{}, id uuid.UUID) (*models.User, error) {
+func (m *MockUserService) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -37,7 +37,7 @@ func (m *MockUserService) GetByID(ctx interface{}, id uuid.UUID) (*models.User, 
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockUserService) GetByUsername(ctx interface{}, username string, tenantID uuid.UUID) (*models.User, error) {
+func (m *MockUserService) GetByUsername(ctx context.Context, username string, tenantID uuid.UUID) (*models.User, error) {
 	args := m.Called(ctx, username, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -45,7 +45,7 @@ func (m *MockUserService) GetByUsername(ctx interface{}, username string, tenant
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockUserService) GetByEmail(ctx interface{}, email string, tenantID uuid.UUID) (*models.User, error) {
+func (m *MockUserService) GetByEmail(ctx context.Context, email string, tenantID uuid.UUID) (*models.User, error) {
 	args := m.Called(ctx, email, tenantID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -53,7 +53,7 @@ func (m *MockUserService) GetByEmail(ctx interface{}, email string, tenantID uui
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockUserService) Update(ctx interface{}, id uuid.UUID, req *user.UpdateUserRequest) (*models.User, error) {
+func (m *MockUserService) Update(ctx context.Context, id uuid.UUID, req *user.UpdateUserRequest) (*models.User, error) {
 	args := m.Called(ctx, id, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -61,12 +61,12 @@ func (m *MockUserService) Update(ctx interface{}, id uuid.UUID, req *user.Update
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockUserService) Delete(ctx interface{}, id uuid.UUID) error {
+func (m *MockUserService) Delete(ctx context.Context, id uuid.UUID) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }
 
-func (m *MockUserService) List(ctx interface{}, tenantID uuid.UUID, filters interface{}) ([]*models.User, error) {
+func (m *MockUserService) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) ([]*models.User, error) {
 	args := m.Called(ctx, tenantID, filters)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -74,7 +74,7 @@ func (m *MockUserService) List(ctx interface{}, tenantID uuid.UUID, filters inte
 	return args.Get(0).([]*models.User), args.Error(1)
 }
 
-func (m *MockUserService) Count(ctx interface{}, tenantID uuid.UUID, filters interface{}) (int64, error) {
+func (m *MockUserService) Count(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) (int64, error) {
 	args := m.Called(ctx, tenantID, filters)
 	return args.Get(0).(int64), args.Error(1)
 }
@@ -96,7 +96,6 @@ func TestUserHandler_Create(t *testing.T) {
 	reqBody := user.CreateUserRequest{
 		Username: "testuser",
 		Email:    "test@example.com",
-		Password: "password123",
 	}
 	body, _ := json.Marshal(reqBody)
 

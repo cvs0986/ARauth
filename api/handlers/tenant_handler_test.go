@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +21,7 @@ type MockTenantService struct {
 	mock.Mock
 }
 
-func (m *MockTenantService) Create(ctx interface{}, req *tenant.CreateTenantRequest) (*models.Tenant, error) {
+func (m *MockTenantService) Create(ctx context.Context, req *tenant.CreateTenantRequest) (*models.Tenant, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -28,7 +29,7 @@ func (m *MockTenantService) Create(ctx interface{}, req *tenant.CreateTenantRequ
 	return args.Get(0).(*models.Tenant), args.Error(1)
 }
 
-func (m *MockTenantService) GetByID(ctx interface{}, id uuid.UUID) (*models.Tenant, error) {
+func (m *MockTenantService) GetByID(ctx context.Context, id uuid.UUID) (*models.Tenant, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -36,7 +37,7 @@ func (m *MockTenantService) GetByID(ctx interface{}, id uuid.UUID) (*models.Tena
 	return args.Get(0).(*models.Tenant), args.Error(1)
 }
 
-func (m *MockTenantService) GetByDomain(ctx interface{}, domain string) (*models.Tenant, error) {
+func (m *MockTenantService) GetByDomain(ctx context.Context, domain string) (*models.Tenant, error) {
 	args := m.Called(ctx, domain)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -44,7 +45,7 @@ func (m *MockTenantService) GetByDomain(ctx interface{}, domain string) (*models
 	return args.Get(0).(*models.Tenant), args.Error(1)
 }
 
-func (m *MockTenantService) Update(ctx interface{}, id uuid.UUID, req *tenant.UpdateTenantRequest) (*models.Tenant, error) {
+func (m *MockTenantService) Update(ctx context.Context, id uuid.UUID, req *tenant.UpdateTenantRequest) (*models.Tenant, error) {
 	args := m.Called(ctx, id, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -52,12 +53,12 @@ func (m *MockTenantService) Update(ctx interface{}, id uuid.UUID, req *tenant.Up
 	return args.Get(0).(*models.Tenant), args.Error(1)
 }
 
-func (m *MockTenantService) Delete(ctx interface{}, id uuid.UUID) error {
+func (m *MockTenantService) Delete(ctx context.Context, id uuid.UUID) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }
 
-func (m *MockTenantService) List(ctx interface{}, filters interface{}) ([]*models.Tenant, error) {
+func (m *MockTenantService) List(ctx context.Context, filters interface{}) ([]*models.Tenant, error) {
 	args := m.Called(ctx, filters)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
