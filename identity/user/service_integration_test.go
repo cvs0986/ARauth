@@ -19,6 +19,7 @@ func createTestTenantForIntegration(t *testing.T, db *sql.DB, tenantID uuid.UUID
 	query := `
 		INSERT INTO tenants (id, name, domain, status, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, NOW(), NOW())
+		ON CONFLICT (domain) DO NOTHING
 	`
 	_, err := db.ExecContext(context.Background(), query,
 		tenantID,

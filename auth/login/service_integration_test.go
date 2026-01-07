@@ -41,7 +41,7 @@ func TestService_Login_Integration(t *testing.T) {
 	tenant := &models.Tenant{
 		ID:     tenantID,
 		Name:   "Test Tenant",
-		Domain: "test.example.com",
+		Domain: "test-" + tenantID.String() + ".example.com",
 		Status: "active",
 	}
 	err := tenantRepo.Create(context.Background(), tenant)
@@ -109,7 +109,7 @@ func TestService_Login_InvalidPassword_Integration(t *testing.T) {
 	tenant := &models.Tenant{
 		ID:     tenantID,
 		Name:   "Test Tenant",
-		Domain: "test.example.com",
+		Domain: "test-" + tenantID.String() + ".example.com",
 		Status: "active",
 	}
 	err := tenantRepo.Create(context.Background(), tenant)
