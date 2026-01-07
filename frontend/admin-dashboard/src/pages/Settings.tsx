@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
-import { Shield, Key, Settings as SettingsIcon, Mail } from 'lucide-react';
+import { Shield, Key, Settings as SettingsIcon, Mail, Clock } from 'lucide-react';
 
 // Settings schemas
 const securitySettingsSchema = z.object({
@@ -44,9 +44,21 @@ const systemSettingsSchema = z.object({
   lockoutDuration: z.number().min(60),
 });
 
+const tokenSettingsSchema = z.object({
+  accessTokenTTLMinutes: z.number().min(1).max(1440), // 1 minute to 24 hours
+  refreshTokenTTLDays: z.number().min(1).max(365), // 1 day to 1 year
+  idTokenTTLMinutes: z.number().min(1).max(1440),
+  rememberMeEnabled: z.boolean(),
+  rememberMeRefreshTokenTTLDays: z.number().min(1).max(365),
+  rememberMeAccessTokenTTLMinutes: z.number().min(1).max(1440),
+  tokenRotationEnabled: z.boolean(),
+  requireMFAForExtendedSessions: z.boolean(),
+});
+
 type SecuritySettings = z.infer<typeof securitySettingsSchema>;
 type OAuthSettings = z.infer<typeof oauthSettingsSchema>;
 type SystemSettings = z.infer<typeof systemSettingsSchema>;
+type TokenSettings = z.infer<typeof tokenSettingsSchema>;
 
 export function Settings() {
   const [activeTab, setActiveTab] = useState('security');
@@ -104,6 +116,28 @@ export function Settings() {
     },
   });
 
+  // Token Settings Form
+  const {
+    register: registerToken,
+    handleSubmit: handleSubmitToken,
+    watch,
+    formState: { errors: tokenErrors },
+  } = useForm<TokenSettings>({
+    resolver: zodResolver(tokenSettingsSchema),
+    defaultValues: {
+      accessTokenTTLMinutes: 15, // 15 minutes
+      refreshTokenTTLDays: 30, // 30 days
+      idTokenTTLMinutes: 60, // 1 hour
+      rememberMeEnabled: true,
+      rememberMeRefreshTokenTTLDays: 90, // 90 days
+      rememberMeAccessTokenTTLMinutes: 60, // 60 minutes
+      tokenRotationEnabled: true,
+      requireMFAForExtendedSessions: false,
+    },
+  });
+
+  const rememberMeEnabled = watch('rememberMeEnabled');
+
   const onSecuritySubmit = async (data: SecuritySettings) => {
     setIsLoading(true);
     setError(null);
@@ -135,6 +169,23 @@ export function Settings() {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save OAuth settings');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onTokenSubmit = async (data: TokenSettings) => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // TODO: Implement API call to save token settings
+      // await tokenSettingsApi.update(data);
+      console.log('Token settings:', data);
+      setSuccess('Token settings saved successfully');
+    } catch (err) {
+      setError('Failed to save token settings');
     } finally {
       setIsLoading(false);
     }
@@ -190,6 +241,10 @@ export function Settings() {
           <TabsTrigger value="system">
             <SettingsIcon className="mr-2 h-4 w-4" />
             System
+          </TabsTrigger>
+          <TabsTrigger value="tokens">
+            <Clock className="mr-2 h-4 w-4" />
+            Token Settings
           </TabsTrigger>
         </TabsList>
 
