@@ -100,7 +100,8 @@ func TestUserRepository_GetByID(t *testing.T) {
 	err = repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
-	retrieved, err := repo.GetByID(context.Background(), user.ID)
+	var retrieved *models.User
+	retrieved, err = repo.GetByID(context.Background(), user.ID)
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, retrieved.ID)
 	assert.Equal(t, user.Username, retrieved.Username)
