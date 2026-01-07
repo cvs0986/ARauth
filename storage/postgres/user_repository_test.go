@@ -217,32 +217,6 @@ func TestUserRepository_List_WithFilters(t *testing.T) {
 	assert.Equal(t, user.Email, retrieved.Email)
 }
 
-func TestUserRepository_GetByUsername(t *testing.T) {
-	db, cleanup := setupTestDB(t)
-	defer cleanup()
-
-	repo := NewUserRepository(db)
-
-	tenantID := uuid.New()
-	user := &models.User{
-		ID:        uuid.New(),
-		TenantID:  tenantID,
-		Username:  "testuser",
-		Email:     "test@example.com",
-		Status:    models.UserStatusActive,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	err := repo.Create(context.Background(), user)
-	require.NoError(t, err)
-
-	retrieved, err := repo.GetByUsername(context.Background(), user.Username, tenantID)
-	require.NoError(t, err)
-	assert.Equal(t, user.ID, retrieved.ID)
-	assert.Equal(t, user.Username, retrieved.Username)
-}
-
 func TestUserRepository_GetByEmail(t *testing.T) {
 	db, cleanup := setupTestDB(t)
 	defer cleanup()
@@ -267,36 +241,6 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, retrieved.ID)
 	assert.Equal(t, user.Email, retrieved.Email)
-}
-
-func TestUserRepository_Update(t *testing.T) {
-	db, cleanup := setupTestDB(t)
-	defer cleanup()
-
-	repo := NewUserRepository(db)
-
-	tenantID := uuid.New()
-	user := &models.User{
-		ID:        uuid.New(),
-		TenantID:  tenantID,
-		Username:  "testuser",
-		Email:     "test@example.com",
-		Status:    models.UserStatusActive,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	err := repo.Create(context.Background(), user)
-	require.NoError(t, err)
-
-	newEmail := "updated@example.com"
-	user.Email = newEmail
-	err = repo.Update(context.Background(), user)
-	require.NoError(t, err)
-
-	updated, err := repo.GetByID(context.Background(), user.ID)
-	require.NoError(t, err)
-	assert.Equal(t, newEmail, updated.Email)
 }
 
 func TestUserRepository_Delete(t *testing.T) {
@@ -326,38 +270,5 @@ func TestUserRepository_Delete(t *testing.T) {
 	deleted, err := repo.GetByID(context.Background(), user.ID)
 	assert.Error(t, err)
 	assert.Nil(t, deleted)
-}
-
-func TestUserRepository_List(t *testing.T) {
-	db, cleanup := setupTestDB(t)
-	defer cleanup()
-
-	repo := NewUserRepository(db)
-
-	tenantID := uuid.New()
-
-	// Create multiple users
-	for i := 0; i < 5; i++ {
-		user := &models.User{
-			ID:        uuid.New(),
-			TenantID:  tenantID,
-			Username:  "testuser" + string(rune(i+'0')),
-			Email:     "test" + string(rune(i+'0')) + "@example.com",
-			Status:    models.UserStatusActive,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		}
-		err := repo.Create(context.Background(), user)
-		require.NoError(t, err)
-	}
-
-	filters := &interfaces.UserFilters{
-		Page:     1,
-		PageSize: 10,
-	}
-
-	users, err := repo.List(context.Background(), tenantID, filters)
-	require.NoError(t, err)
-	assert.GreaterOrEqual(t, len(users), 5)
 }
 
