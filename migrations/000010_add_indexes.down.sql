@@ -1,12 +1,12 @@
 -- Drop indexes
 
-DROP INDEX IF EXISTS idx_audit_logs_tenant_event;
+DROP INDEX IF EXISTS idx_audit_logs_tenant_action;
 DROP INDEX IF EXISTS idx_audit_logs_created_at;
-DROP INDEX IF EXISTS idx_audit_logs_event_type;
-DROP INDEX IF EXISTS idx_audit_logs_user_id;
+DROP INDEX IF EXISTS idx_audit_logs_action;
+DROP INDEX IF EXISTS idx_audit_logs_actor_id;
 DROP INDEX IF EXISTS idx_audit_logs_tenant_id;
 
-DROP INDEX IF EXISTS idx_mfa_recovery_codes_used;
+DROP INDEX IF EXISTS idx_mfa_recovery_codes_user_used;
 DROP INDEX IF EXISTS idx_mfa_recovery_codes_user_id;
 
 DROP INDEX IF EXISTS idx_role_permissions_unique;
@@ -19,7 +19,6 @@ DROP INDEX IF EXISTS idx_user_roles_user_id;
 
 DROP INDEX IF EXISTS idx_permissions_name;
 DROP INDEX IF EXISTS idx_permissions_resource_action;
-DROP INDEX IF EXISTS idx_permissions_tenant_id;
 
 DROP INDEX IF EXISTS idx_roles_is_system;
 DROP INDEX IF EXISTS idx_roles_name;

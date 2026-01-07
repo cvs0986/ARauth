@@ -18,9 +18,9 @@ CREATE INDEX IF NOT EXISTS idx_roles_name ON roles(tenant_id, name) WHERE delete
 CREATE INDEX IF NOT EXISTS idx_roles_is_system ON roles(is_system) WHERE deleted_at IS NULL;
 
 -- Permissions table indexes
-CREATE INDEX IF NOT EXISTS idx_permissions_tenant_id ON permissions(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_permissions_resource_action ON permissions(resource, action) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_permissions_name ON permissions(tenant_id, name) WHERE deleted_at IS NULL;
+-- Note: permissions table doesn't have tenant_id or deleted_at columns
+CREATE INDEX IF NOT EXISTS idx_permissions_resource_action ON permissions(resource, action);
+CREATE INDEX IF NOT EXISTS idx_permissions_name ON permissions(name);
 
 -- User roles table indexes
 CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id);
@@ -34,11 +34,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_role_permissions_unique ON role_permission
 
 -- MFA recovery codes table indexes
 CREATE INDEX IF NOT EXISTS idx_mfa_recovery_codes_user_id ON mfa_recovery_codes(user_id);
-CREATE INDEX IF NOT EXISTS idx_mfa_recovery_codes_used ON mfa_recovery_codes(user_id, used);
+-- Note: mfa_recovery_codes table has 'used' as boolean, index on (user_id, used) for filtering
+CREATE INDEX IF NOT EXISTS idx_mfa_recovery_codes_user_used ON mfa_recovery_codes(user_id, used);
 
 -- Audit logs table indexes
+-- Note: audit_logs table uses 'actor_id' instead of 'user_id' and 'action' instead of 'event_type'
 CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_id ON audit_logs(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_event_type ON audit_logs(event_type);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_id ON audit_logs(actor_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_event ON audit_logs(tenant_id, event_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_action ON audit_logs(tenant_id, action, created_at DESC);
