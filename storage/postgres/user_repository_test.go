@@ -185,7 +185,7 @@ func TestUserRepository_List(t *testing.T) {
 		Limit:    10,
 		Offset:   0,
 	}
-	users, err := repo.List(context.Background(), filters)
+	users, err := repo.List(context.Background(), tenantID, filters)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(users), 3)
 }
