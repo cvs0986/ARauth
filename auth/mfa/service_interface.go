@@ -2,8 +2,6 @@ package mfa
 
 import (
 	"context"
-
-	"github.com/google/uuid"
 )
 
 // ServiceInterface defines the interface for MFA service operations
