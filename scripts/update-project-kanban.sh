@@ -107,9 +107,15 @@ for ISSUE_NUM in 1 2 3 4 5 6 7 8 9; do
         if [ -n "$ITEM_ID" ] && [ "$ITEM_ID" != "null" ]; then
             echo "  Item ID: $ITEM_ID"
             
-            # Update status to "Done" (use first available completion status)
-            DONE_ID=$(echo "$DONE_OPTION" | head -1 | cut -d'|' -f1)
-            DONE_NAME=$(echo "$DONE_OPTION" | head -1 | cut -d'|' -f2)
+            # Update status to "Done" (use "Done" option specifically)
+            DONE_ID=$(echo "$DONE_OPTION" | grep "|Done$" | cut -d'|' -f1)
+            DONE_NAME="Done"
+            
+            # If "Done" not found, use the last option (usually Done)
+            if [ -z "$DONE_ID" ] || [ "$DONE_ID" == "null" ]; then
+                DONE_ID=$(echo "$DONE_OPTION" | tail -1 | cut -d'|' -f1)
+                DONE_NAME=$(echo "$DONE_OPTION" | tail -1 | cut -d'|' -f2)
+            fi
             
             if [ -n "$DONE_ID" ] && [ "$DONE_ID" != "null" ]; then
                 echo "  Updating status to: $DONE_NAME"
