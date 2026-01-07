@@ -27,6 +27,35 @@ Client App (Web/Mobile)
 
 ## 🚀 Quick Start
 
+### Option 1: Docker Image (Recommended)
+
+Use Nuage Identity like Keycloak - just pull and run:
+
+```bash
+# Pull the image
+docker pull nuage-identity/iam-api:latest
+
+# Run with your database
+docker run -d \
+  --name nuage-iam \
+  -p 8080:8080 \
+  -e DATABASE_HOST=your-postgres-host \
+  -e DATABASE_PORT=5432 \
+  -e DATABASE_NAME=iam \
+  -e DATABASE_USER=iam_user \
+  -e DATABASE_PASSWORD=your_password \
+  -e JWT_SECRET=your-jwt-secret \
+  -e ENCRYPTION_KEY=your-32-byte-key \
+  nuage-identity/iam-api:latest
+
+# Test
+curl http://localhost:8080/health
+```
+
+See [Using as IAM Service](./docs/guides/using-as-iam-service.md) for complete guide.
+
+### Option 2: Docker Compose (Complete Stack)
+
 ### Prerequisites
 
 - Go 1.21+ (will be installed automatically)
@@ -110,12 +139,29 @@ curl http://localhost:8080/health
 
 Comprehensive documentation is available in the [`docs/`](./docs/) directory:
 
+### Getting Started
+- **[Using as IAM Service](./docs/guides/using-as-iam-service.md)** - Use like Keycloak (Docker, K8s, etc.)
+- **[Docker Image Usage](./docs/deployment/docker-image-usage.md)** - Docker image quick start
+- **[Getting Started](./docs/guides/getting-started.md)** - Development setup guide
+- **[Frontend Quick Start](./docs/guides/frontend-quick-start.md)** - Frontend setup guide
+- **[Testing Quick Reference](./docs/guides/testing-quick-reference.md)** - Testing guide
+
+### Architecture & Design
 - **[Architecture Overview](./docs/architecture/overview.md)** - System architecture
-- **[Getting Started](./docs/guides/getting-started.md)** - Quick start guide
+- **[Frontend-Backend Integration](./docs/architecture/frontend-backend-integration.md)** - How frontend and backend work together
 - **[API Design](./docs/technical/api-design.md)** - API specifications
-- **[Deployment Guide](./docs/deployment/kubernetes.md)** - Kubernetes deployment
-- **[Integration Guide](./docs/guides/integration-guide.md)** - Client integration
+- **[Frontend Implementation Plan](./docs/planning/frontend-implementation-plan.md)** - Frontend development plan
+- **[Testing Implementation Summary](./docs/planning/testing-implementation-summary.md)** - Testing strategy summary
+
+### Development
 - **[Development Strategy](./docs/planning/strategy.md)** - Development approach
+- **[E2E Testing Strategy](./docs/testing/e2e-testing-strategy.md)** - Comprehensive testing strategy
+- **[Integration Guide](./docs/guides/integration-guide.md)** - Client integration
+
+### Deployment
+- **[Kubernetes Deployment](./docs/deployment/kubernetes.md)** - Kubernetes deployment
+- **[Docker Compose](./docs/deployment/docker-compose.md)** - Docker Compose setup
+- **[API Documentation](./docs/api/README.md)** - API endpoint documentation
 
 ## 🛠️ Development
 
