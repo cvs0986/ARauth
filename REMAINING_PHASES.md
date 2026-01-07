@@ -50,28 +50,29 @@
 
 ---
 
-### Phase 4: Authorization (Weeks 9-10) - Not Started
+### Phase 4: Authorization (Weeks 9-10) - ✅ Complete
 
-**What's Needed**:
-- [ ] Role model and repository
-- [ ] Permission model and repository
-- [ ] Role service implementation
-- [ ] Permission service implementation
-- [ ] Role API endpoints
-- [ ] Permission API endpoints
-- [ ] User-role assignment service
-- [ ] Role-permission relationships
-- [ ] Claims builder (builds JWT claims from roles/permissions)
-- [ ] JWT claims injection into Hydra tokens
-- [ ] Authorization middleware
-- [ ] RBAC tests
+**What's Implemented**:
+- ✅ Role model and repository
+- ✅ Permission model and repository
+- ✅ Role service implementation
+- ✅ Permission service implementation
+- ✅ Role API endpoints (CRUD + assignments)
+- ✅ Permission API endpoints (CRUD)
+- ✅ User-role assignment service
+- ✅ Role-permission relationships
+- ✅ Claims builder (builds JWT claims from roles/permissions)
+- ✅ JWT claims injection into Hydra tokens
+- ✅ Authorization middleware
+- ⚠️ RBAC tests (pending)
 
 **Current State**:
 - ✅ Database migrations for roles and permissions exist
-- ❌ No role/permission models
-- ❌ No role/permission repositories
-- ❌ No authorization logic
-- ❌ No claims building
+- ✅ Role and permission models created
+- ✅ Role and permission repositories implemented
+- ✅ Complete authorization logic
+- ✅ Claims building integrated
+- ✅ All endpoints tenant-scoped
 
 ---
 
