@@ -29,7 +29,7 @@ func NewService(repo interfaces.UserRepository) *Service {
 
 // CreateUserRequest represents a request to create a user
 type CreateUserRequest struct {
-	TenantID  uuid.UUID              `json:"tenant_id" binding:"required"`
+	TenantID  uuid.UUID              `json:"tenant_id"` // Set from context, not from request body
 	Username  string                 `json:"username" binding:"required,min=3,max=255"`
 	Email     string                 `json:"email" binding:"required,email"`
 	FirstName *string                `json:"first_name,omitempty"`

@@ -36,7 +36,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Set tenant ID from context (override any tenant_id in request body)
+	// Set tenant ID from context (always override any tenant_id in request body for security)
 	req.TenantID = tenantID
 
 	u, err := h.userService.Create(c.Request.Context(), &req)
