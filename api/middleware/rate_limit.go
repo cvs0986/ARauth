@@ -137,7 +137,7 @@ func RateLimitWithConfig(cacheClient *cache.Cache, config RateLimitConfig) gin.H
 
 		// Increment count
 		newCount := count + 1
-		cacheClient.Set(c.Request.Context(), countKey, newCount, config.Window*2)
+		_ = cacheClient.Set(c.Request.Context(), countKey, newCount, config.Window*2) // Ignore cache errors
 
 		// Set rate limit headers
 		remaining := config.Requests - newCount
