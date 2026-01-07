@@ -18,6 +18,7 @@ import { CreateTenantDialog } from './CreateTenantDialog';
 import { EditTenantDialog } from './EditTenantDialog';
 import { DeleteTenantDialog } from './DeleteTenantDialog';
 import { SearchInput } from '@/components/SearchInput';
+import { Pagination } from '@/components/Pagination';
 import type { Tenant } from '@shared/types/api';
 
 export function TenantList() {
@@ -27,6 +28,8 @@ export function TenantList() {
   const [deleteTenant, setDeleteTenant] = useState<Tenant | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const { data: tenants, isLoading, error } = useQuery({
     queryKey: ['tenants'],
@@ -47,6 +50,22 @@ export function TenantList() {
       return matchesSearch && matchesStatus;
     });
   }, [tenants, searchQuery, statusFilter]);
+
+  // Paginate filtered tenants
+  const paginatedTenants = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredTenants.slice(start, end);
+  }, [filteredTenants, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredTenants.length / pageSize);
+
+  // Reset to page 1 when filters change
+  useMemo(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => tenantApi.delete(id),
@@ -94,9 +113,6 @@ export function TenantList() {
             <option value="suspended">Suspended</option>
           </select>
         </div>
-        <div className="text-sm text-gray-500">
-          Showing {filteredTenants.length} of {tenants?.length || 0} tenants
-        </div>
       </div>
 
       <div className="border rounded-lg">
@@ -111,7 +127,7 @@ export function TenantList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTenants.map((tenant) => (
+            {paginatedTenants.map((tenant) => (
               <TableRow key={tenant.id}>
                 <TableCell className="font-medium">{tenant.name}</TableCell>
                 <TableCell>{tenant.domain}</TableCell>
@@ -165,6 +181,20 @@ export function TenantList() {
             )}
           </TableBody>
         </Table>
+
+        {filteredTenants.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredTenants.length}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
+        )}
       </div>
 
       <CreateTenantDialog open={createOpen} onOpenChange={setCreateOpen} />
