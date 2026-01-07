@@ -16,9 +16,9 @@ Testing phase for Nuage Identity IAM Platform. All core development phases (1-6)
 
 ## Test Coverage Status
 
-**Overall Test Coverage: 55%** (up from 30%)
+**Overall Test Coverage: 58%** (up from 30%)
 
-**Total Tests: 46+ unit tests passing**
+**Total Tests: 51+ unit tests passing**
 
 ### Unit Tests
 
@@ -34,10 +34,15 @@ Testing phase for Nuage Identity IAM Platform. All core development phases (1-6)
 
 | Flow | Status |
 |------|--------|
-| Authentication | ⚠️ Pending |
+| Authentication | 🟡 In Progress |
 | MFA | ⚠️ Pending |
 | RBAC | ⚠️ Pending |
 | Multi-Tenancy | ⚠️ Pending |
+
+**Integration Test Infrastructure:**
+- ✅ Test database utilities ready
+- ✅ Integration test structure created
+- 🟡 Authentication flow tests (2 tests, requires test DB)
 
 ### Performance Tests
 
@@ -111,6 +116,13 @@ make benchmark
   - Check endpoint
   - Live endpoint
   - Ready endpoint
+- Tenant handler: 3 tests
+  - Create tenant
+  - Get by ID
+  - List tenants
+- Auth handler: 2 tests
+  - Login
+  - Invalid request handling
 
 ### Repository Tests 🟡
 - User repository: Structure ready (6 tests, requires test DB)
