@@ -172,7 +172,7 @@ func TestService_Login_UserNotFound_Integration(t *testing.T) {
 		Password: "TestPassword123!",
 	}
 
-	_, err = service.Login(context.Background(), req)
+	_, err := service.Login(context.Background(), req)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid credentials")
 }
