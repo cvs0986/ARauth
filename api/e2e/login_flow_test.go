@@ -17,10 +17,10 @@ import (
 	"github.com/nuage-identity/iam/identity/credential"
 	"github.com/nuage-identity/iam/identity/models"
 	"github.com/nuage-identity/iam/internal/cache"
-	"github.com/nuage-identity/iam/internal/testutil"
 	"github.com/nuage-identity/iam/security/encryption"
 	"github.com/nuage-identity/iam/security/password"
 	"github.com/nuage-identity/iam/security/totp"
+	"github.com/nuage-identity/iam/internal/testutil"
 	"github.com/nuage-identity/iam/storage/postgres"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -87,7 +87,7 @@ func TestE2E_LoginFlow(t *testing.T) {
 	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRepo, totpGenerator, encryptor, nil)
 
 	// Setup test server
-	server, _ := testutil.SetupTestServerWithAuth(db, cacheClient, loginService, mfaService)
+	server, _ := setupTestServerWithAuth(db, cacheClient, loginService, mfaService)
 	defer server.Close()
 
 	// Test: Login request
@@ -177,7 +177,7 @@ func TestE2E_LoginFlow_InvalidCredentials(t *testing.T) {
 	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRepo, totpGenerator, encryptor, nil)
 
 	// Setup test server
-	server, _ := testutil.SetupTestServerWithAuth(db, cacheClient, loginService, mfaService)
+	server, _ := setupTestServerWithAuth(db, cacheClient, loginService, mfaService)
 	defer server.Close()
 
 	// Test: Login with wrong password

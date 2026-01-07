@@ -1,4 +1,6 @@
-package testutil
+// +build e2e
+
+package e2e
 
 import (
 	"database/sql"
@@ -7,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nuage-identity/iam/api/handlers"
 	"github.com/nuage-identity/iam/api/middleware"
+	"github.com/nuage-identity/iam/auth/claims"
 	"github.com/nuage-identity/iam/auth/login"
 	"github.com/nuage-identity/iam/auth/mfa"
 	"github.com/nuage-identity/iam/identity/permission"
@@ -19,81 +22,8 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-// SetupTestServer creates a test HTTP server with all routes configured
-func SetupTestServer(db *sql.DB, cacheClient *cache.Cache) (*httptest.Server, *gin.Engine) {
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
-
-	// Setup logger
-	logger := zaptest.NewLogger(nil)
-
-	// Setup repositories
-	userRepo := postgres.NewUserRepository(db)
-	tenantRepo := postgres.NewTenantRepository(db)
-	roleRepo := postgres.NewRoleRepository(db)
-	permissionRepo := postgres.NewPermissionRepository(db)
-
-	// Setup services
-	userService := user.NewService(userRepo)
-	tenantService := tenant.NewService(tenantRepo)
-	roleService := role.NewService(roleRepo, permissionRepo)
-	permissionService := permission.NewService(permissionRepo)
-
-	// Setup handlers
-	userHandler := handlers.NewUserHandler(userService)
-	tenantHandler := handlers.NewTenantHandler(tenantService)
-	roleHandler := handlers.NewRoleHandler(roleService)
-	permissionHandler := handlers.NewPermissionHandler(permissionService)
-
-	// Setup middleware
-	router.Use(middleware.Recovery(logger))
-	router.Use(middleware.Logging(logger))
-	router.Use(middleware.CORS())
-	router.Use(middleware.TenantMiddleware(tenantRepo))
-
-	// API routes
-	api := router.Group("/api/v1")
-	{
-		// Tenant routes
-		tenants := api.Group("/tenants")
-		{
-			tenants.POST("", tenantHandler.Create)
-			tenants.GET("/:id", tenantHandler.GetByID)
-			tenants.GET("", tenantHandler.List)
-		}
-
-		// User routes
-		users := api.Group("/users")
-		{
-			users.POST("", userHandler.Create)
-			users.GET("/:id", userHandler.GetByID)
-			users.GET("", userHandler.List)
-		}
-
-		// Role routes
-		roles := api.Group("/roles")
-		{
-			roles.POST("", roleHandler.Create)
-			roles.GET("/:id", roleHandler.GetByID)
-			roles.GET("", roleHandler.List)
-		}
-
-		// Permission routes
-		permissions := api.Group("/permissions")
-		{
-			permissions.POST("", permissionHandler.Create)
-			permissions.GET("/:id", permissionHandler.GetByID)
-			permissions.GET("", permissionHandler.List)
-		}
-	}
-
-	// Create test server
-	server := httptest.NewServer(router)
-	return server, router
-}
-
-// SetupTestServerWithAuth creates a test HTTP server with authentication routes
-func SetupTestServerWithAuth(db *sql.DB, cacheClient *cache.Cache, loginService login.ServiceInterface, mfaService mfa.ServiceInterface) (*httptest.Server, *gin.Engine) {
+// setupTestServerWithAuth creates a test HTTP server with authentication routes
+func setupTestServerWithAuth(db *sql.DB, cacheClient *cache.Cache, loginService login.ServiceInterface, mfaService mfa.ServiceInterface) (*httptest.Server, *gin.Engine) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
@@ -168,6 +98,79 @@ func SetupTestServerWithAuth(db *sql.DB, cacheClient *cache.Cache, loginService 
 		{
 			permissions.POST("", permissionHandler.Create)
 			permissions.GET("/:id", permissionHandler.GetByID)
+		}
+	}
+
+	// Create test server
+	server := httptest.NewServer(router)
+	return server, router
+}
+
+// setupTestServer creates a test HTTP server with all routes configured
+func setupTestServer(db *sql.DB, cacheClient *cache.Cache) (*httptest.Server, *gin.Engine) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	// Setup logger
+	logger := zaptest.NewLogger(nil)
+
+	// Setup repositories
+	userRepo := postgres.NewUserRepository(db)
+	tenantRepo := postgres.NewTenantRepository(db)
+	roleRepo := postgres.NewRoleRepository(db)
+	permissionRepo := postgres.NewPermissionRepository(db)
+
+	// Setup services
+	userService := user.NewService(userRepo)
+	tenantService := tenant.NewService(tenantRepo)
+	roleService := role.NewService(roleRepo, permissionRepo)
+	permissionService := permission.NewService(permissionRepo)
+
+	// Setup handlers
+	userHandler := handlers.NewUserHandler(userService)
+	tenantHandler := handlers.NewTenantHandler(tenantService)
+	roleHandler := handlers.NewRoleHandler(roleService)
+	permissionHandler := handlers.NewPermissionHandler(permissionService)
+
+	// Setup middleware
+	router.Use(middleware.Recovery(logger))
+	router.Use(middleware.Logging(logger))
+	router.Use(middleware.CORS())
+	router.Use(middleware.TenantMiddleware(tenantRepo))
+
+	// API routes
+	api := router.Group("/api/v1")
+	{
+		// Tenant routes
+		tenants := api.Group("/tenants")
+		{
+			tenants.POST("", tenantHandler.Create)
+			tenants.GET("/:id", tenantHandler.GetByID)
+			tenants.GET("", tenantHandler.List)
+		}
+
+		// User routes
+		users := api.Group("/users")
+		{
+			users.POST("", userHandler.Create)
+			users.GET("/:id", userHandler.GetByID)
+			users.GET("", userHandler.List)
+		}
+
+		// Role routes
+		roles := api.Group("/roles")
+		{
+			roles.POST("", roleHandler.Create)
+			roles.GET("/:id", roleHandler.GetByID)
+			roles.GET("", roleHandler.List)
+		}
+
+		// Permission routes
+		permissions := api.Group("/permissions")
+		{
+			permissions.POST("", permissionHandler.Create)
+			permissions.GET("/:id", permissionHandler.GetByID)
+			permissions.GET("", permissionHandler.List)
 		}
 	}
 

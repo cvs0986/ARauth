@@ -53,7 +53,7 @@ func TestE2E_RBACFlow(t *testing.T) {
 	require.NoError(t, userRepo.Create(context.Background(), user))
 
 	// Setup test server
-	server, _ := testutil.SetupTestServer(db, cacheClient)
+	server, _ := setupTestServer(db, cacheClient)
 	defer server.Close()
 
 	// Step 1: Create permission
