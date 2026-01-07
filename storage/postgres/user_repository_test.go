@@ -188,7 +188,9 @@ func TestUserRepository_List(t *testing.T) {
 	users, err := repo.List(context.Background(), filters)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(users), 3)
-} {
+}
+
+func TestUserRepository_List_WithFilters(t *testing.T) {
 	db, cleanup := setupTestDB(t)
 	defer cleanup()
 
