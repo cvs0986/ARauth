@@ -46,24 +46,24 @@ func (h *Hasher) Hash(password string) (string, error) {
 
 // Verify verifies a password against a hash
 func (h *Hasher) Verify(password string, hash string) (bool, error) {
-	// Parse hash
+	// Parse hash format: $argon2id$v=19$m=65536,t=3,p=4$salt$hash
 	var version int
 	var m, t, p uint32
-	var salt, hashBytes []byte
+	var saltStr, hashStr string
 
 	_, err := fmt.Sscanf(hash, "$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
-		&version, &m, &t, &p, &salt, &hashBytes)
+		&version, &m, &t, &p, &saltStr, &hashStr)
 	if err != nil {
 		return false, fmt.Errorf("invalid hash format: %w", err)
 	}
 
 	// Decode salt and hash
-	saltBytes, err := base64.RawStdEncoding.DecodeString(string(salt))
+	saltBytes, err := base64.RawStdEncoding.DecodeString(saltStr)
 	if err != nil {
 		return false, fmt.Errorf("failed to decode salt: %w", err)
 	}
 
-	hashBytesDecoded, err := base64.RawStdEncoding.DecodeString(string(hashBytes))
+	hashBytesDecoded, err := base64.RawStdEncoding.DecodeString(hashStr)
 	if err != nil {
 		return false, fmt.Errorf("failed to decode hash: %w", err)
 	}
