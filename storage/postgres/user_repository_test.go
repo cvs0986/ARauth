@@ -181,9 +181,8 @@ func TestUserRepository_List(t *testing.T) {
 
 	// List users
 	filters := &interfaces.UserFilters{
-		TenantID: &tenantID,
-		Limit:    10,
-		Offset:   0,
+		Page:     1,
+		PageSize: 10,
 	}
 	users, err := repo.List(context.Background(), tenantID, filters)
 	require.NoError(t, err)
