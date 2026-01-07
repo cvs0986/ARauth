@@ -131,6 +131,7 @@ func TestUserRepository_GetByUsername(t *testing.T) {
 	err = repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
+	var retrieved *models.User
 	retrieved, err = repo.GetByUsername(context.Background(), user.Username, tenantID)
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, retrieved.ID)
@@ -168,6 +169,7 @@ func TestUserRepository_Update(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify update
+	var retrieved *models.User
 	retrieved, err = repo.GetByID(context.Background(), user.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "updated@example.com", retrieved.Email)
@@ -233,6 +235,7 @@ func TestUserRepository_List_WithFilters(t *testing.T) {
 	err = repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
+	var retrieved *models.User
 	retrieved, err = repo.GetByID(context.Background(), user.ID)
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, retrieved.ID)
@@ -264,6 +267,7 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 	err = repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
+	var retrieved *models.User
 	retrieved, err = repo.GetByEmail(context.Background(), user.Email, tenantID)
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, retrieved.ID)
