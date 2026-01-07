@@ -2,6 +2,9 @@ package totp
 
 import (
 	"testing"
+	"time"
+
+	"github.com/pquerna/otp/totp"
 )
 
 // BenchmarkGenerateSecret benchmarks TOTP secret generation
@@ -25,8 +28,12 @@ func BenchmarkValidate(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	// Generate a valid code for testing
-	code := generator.GenerateCodeNow(secret)
+	// Generate a valid code for testing using the totp library directly
+	import "github.com/pquerna/otp/totp"
+	code, err := totp.GenerateCode(secret, time.Now())
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
