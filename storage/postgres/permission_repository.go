@@ -22,10 +22,11 @@ func NewPermissionRepository(db *sql.DB) interfaces.PermissionRepository {
 }
 
 // Create creates a new permission
+// Note: permissions table doesn't have tenant_id column - permissions are global
 func (r *permissionRepository) Create(ctx context.Context, permission *models.Permission) error {
 	query := `
-		INSERT INTO permissions (id, tenant_id, name, description, resource, action, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO permissions (id, name, description, resource, action, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	now := time.Now()
@@ -40,7 +41,7 @@ func (r *permissionRepository) Create(ctx context.Context, permission *models.Pe
 	}
 
 	_, err := r.db.ExecContext(ctx, query,
-		permission.ID, permission.TenantID, permission.Name, permission.Description,
+		permission.ID, permission.Name, permission.Description,
 		permission.Resource, permission.Action, permission.CreatedAt, permission.UpdatedAt,
 	)
 
@@ -52,9 +53,10 @@ func (r *permissionRepository) Create(ctx context.Context, permission *models.Pe
 }
 
 // GetByID retrieves a permission by ID
+// Note: permissions table doesn't have tenant_id column - permissions are global
 func (r *permissionRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Permission, error) {
 	query := `
-		SELECT id, tenant_id, name, description, resource, action, created_at, updated_at, deleted_at
+		SELECT id, name, description, resource, action, created_at, updated_at, deleted_at
 		FROM permissions
 		WHERE id = $1 AND deleted_at IS NULL
 	`
@@ -64,7 +66,7 @@ func (r *permissionRepository) GetByID(ctx context.Context, id uuid.UUID) (*mode
 	var deletedAt sql.NullTime
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&permission.ID, &permission.TenantID, &permission.Name, &description,
+		&permission.ID, &permission.Name, &description,
 		&permission.Resource, &permission.Action, &permission.CreatedAt,
 		&permission.UpdatedAt, &deletedAt,
 	)
@@ -86,20 +88,22 @@ func (r *permissionRepository) GetByID(ctx context.Context, id uuid.UUID) (*mode
 	return permission, nil
 }
 
-// GetByName retrieves a permission by name and tenant ID
+// GetByName retrieves a permission by name
+// Note: permissions table doesn't have tenant_id column - permissions are global
+// tenantID parameter is kept for interface compatibility but not used
 func (r *permissionRepository) GetByName(ctx context.Context, tenantID uuid.UUID, name string) (*models.Permission, error) {
 	query := `
-		SELECT id, tenant_id, name, description, resource, action, created_at, updated_at, deleted_at
+		SELECT id, name, description, resource, action, created_at, updated_at, deleted_at
 		FROM permissions
-		WHERE tenant_id = $1 AND name = $2 AND deleted_at IS NULL
+		WHERE name = $1 AND deleted_at IS NULL
 	`
 
 	permission := &models.Permission{}
 	var description sql.NullString
 	var deletedAt sql.NullTime
 
-	err := r.db.QueryRowContext(ctx, query, tenantID, name).Scan(
-		&permission.ID, &permission.TenantID, &permission.Name, &description,
+	err := r.db.QueryRowContext(ctx, query, name).Scan(
+		&permission.ID, &permission.Name, &description,
 		&permission.Resource, &permission.Action, &permission.CreatedAt,
 		&permission.UpdatedAt, &deletedAt,
 	)
@@ -169,6 +173,8 @@ func (r *permissionRepository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // List retrieves a list of permissions with filters
+// Note: permissions table doesn't have tenant_id column - permissions are global
+// tenantID parameter is kept for interface compatibility but not used
 func (r *permissionRepository) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.PermissionFilters) ([]*models.Permission, error) {
 	if filters == nil {
 		filters = &interfaces.PermissionFilters{
@@ -187,12 +193,12 @@ func (r *permissionRepository) List(ctx context.Context, tenantID uuid.UUID, fil
 	offset := (filters.Page - 1) * filters.PageSize
 
 	query := `
-		SELECT id, tenant_id, name, description, resource, action, created_at, updated_at, deleted_at
+		SELECT id, name, description, resource, action, created_at, updated_at, deleted_at
 		FROM permissions
-		WHERE tenant_id = $1 AND deleted_at IS NULL
+		WHERE deleted_at IS NULL
 	`
-	args := []interface{}{tenantID}
-	argPos := 2
+	args := []interface{}{}
+	argPos := 1
 
 	if filters.Resource != nil {
 		query += fmt.Sprintf(" AND resource = $%d", argPos)
@@ -229,7 +235,7 @@ func (r *permissionRepository) List(ctx context.Context, tenantID uuid.UUID, fil
 		var deletedAt sql.NullTime
 
 		err := rows.Scan(
-			&permission.ID, &permission.TenantID, &permission.Name, &description,
+			&permission.ID, &permission.Name, &description,
 			&permission.Resource, &permission.Action, &permission.CreatedAt,
 			&permission.UpdatedAt, &deletedAt,
 		)
@@ -255,9 +261,10 @@ func (r *permissionRepository) List(ctx context.Context, tenantID uuid.UUID, fil
 }
 
 // GetRolePermissions retrieves all permissions for a role
+// Note: permissions table doesn't have tenant_id column - permissions are global
 func (r *permissionRepository) GetRolePermissions(ctx context.Context, roleID uuid.UUID) ([]*models.Permission, error) {
 	query := `
-		SELECT p.id, p.tenant_id, p.name, p.description, p.resource, p.action, p.created_at, p.updated_at, p.deleted_at
+		SELECT p.id, p.name, p.description, p.resource, p.action, p.created_at, p.updated_at, p.deleted_at
 		FROM permissions p
 		INNER JOIN role_permissions rp ON p.id = rp.permission_id
 		WHERE rp.role_id = $1 AND p.deleted_at IS NULL
@@ -276,7 +283,7 @@ func (r *permissionRepository) GetRolePermissions(ctx context.Context, roleID uu
 		var deletedAt sql.NullTime
 
 		err := rows.Scan(
-			&permission.ID, &permission.TenantID, &permission.Name, &description,
+			&permission.ID, &permission.Name, &description,
 			&permission.Resource, &permission.Action, &permission.CreatedAt,
 			&permission.UpdatedAt, &deletedAt,
 		)

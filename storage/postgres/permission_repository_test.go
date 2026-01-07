@@ -89,13 +89,10 @@ func TestPermissionRepository_List(t *testing.T) {
 
 	repo := NewPermissionRepository(db)
 
-	tenantID := uuid.New()
-
 	// Create multiple permissions
 	for i := 0; i < 3; i++ {
 		permission := &models.Permission{
 			ID:        uuid.New(),
-			TenantID:  tenantID,
 			Name:      "resource" + string(rune(i+'0')) + ":action",
 			Resource:  "resource" + string(rune(i+'0')),
 			Action:    "action",
@@ -111,7 +108,7 @@ func TestPermissionRepository_List(t *testing.T) {
 		Page:     1,
 		PageSize: 10,
 	}
-	permissions, err := repo.List(context.Background(), tenantID, filters)
+	permissions, err := repo.List(context.Background(), uuid.Nil, filters)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(permissions), 3)
 }
