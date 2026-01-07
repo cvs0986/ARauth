@@ -193,18 +193,13 @@ func TestService_Delete(t *testing.T) {
 	service := NewService(mockRepo)
 
 	userID := uuid.New()
-	existingUser := &models.User{
-		ID: userID,
-	}
 
-	mockRepo.On("GetByID", mock.Anything, userID).Return(existingUser, nil)
 	mockRepo.On("Delete", mock.Anything, userID).Return(nil)
 
 	err := service.Delete(context.Background(), userID)
 	require.NoError(t, err)
 
 	mockRepo.AssertExpectations(t)
-	mockRepo.AssertNumberOfCalls(t, "GetByID", 1)
 	mockRepo.AssertNumberOfCalls(t, "Delete", 1)
 }
 
