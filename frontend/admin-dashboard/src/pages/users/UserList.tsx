@@ -13,10 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CreateUserDialog } from './CreateUserDialog';
 import { EditUserDialog } from './EditUserDialog';
 import { DeleteUserDialog } from './DeleteUserDialog';
+import { SearchInput } from '@/components/SearchInput';
 import type { User } from '@shared/types/api';
 
 export function UserList() {
@@ -24,11 +25,29 @@ export function UserList() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: users, isLoading, error } = useQuery({
     queryKey: ['users'],
     queryFn: () => userApi.list(),
   });
+
+  // Filter users based on search and status
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    
+    return users.filter((user) => {
+      const matchesSearch =
+        user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [users, searchQuery, statusFilter]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => userApi.delete(id),
@@ -57,6 +76,30 @@ export function UserList() {
         <Button onClick={() => setCreateOpen(true)}>Create User</Button>
       </div>
 
+      <div className="flex items-center gap-4">
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search by username, email, or name..."
+        />
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Status</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md"
+          >
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="locked">Locked</option>
+          </select>
+        </div>
+        <div className="text-sm text-gray-500">
+          Showing {filteredUsers.length} of {users?.length || 0} users
+        </div>
+      </div>
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -70,7 +113,7 @@ export function UserList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users?.map((user) => (
+            {filteredUsers.map((user) => (
               <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.username}</TableCell>
                 <TableCell>{user.email}</TableCell>
@@ -115,6 +158,13 @@ export function UserList() {
                 </TableCell>
               </TableRow>
             ))}
+            {filteredUsers.length === 0 && users && users.length > 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-gray-500">
+                  No users match your search criteria.
+                </TableCell>
+              </TableRow>
+            )}
             {users?.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-gray-500">

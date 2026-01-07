@@ -13,10 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CreateTenantDialog } from './CreateTenantDialog';
 import { EditTenantDialog } from './EditTenantDialog';
 import { DeleteTenantDialog } from './DeleteTenantDialog';
+import { SearchInput } from '@/components/SearchInput';
 import type { Tenant } from '@shared/types/api';
 
 export function TenantList() {
@@ -24,11 +25,28 @@ export function TenantList() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editTenant, setEditTenant] = useState<Tenant | null>(null);
   const [deleteTenant, setDeleteTenant] = useState<Tenant | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: tenants, isLoading, error } = useQuery({
     queryKey: ['tenants'],
     queryFn: () => tenantApi.list(),
   });
+
+  // Filter tenants based on search and status
+  const filteredTenants = useMemo(() => {
+    if (!tenants) return [];
+    
+    return tenants.filter((tenant) => {
+      const matchesSearch =
+        tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        tenant.domain.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all' || tenant.status === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [tenants, searchQuery, statusFilter]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => tenantApi.delete(id),
@@ -57,6 +75,30 @@ export function TenantList() {
         <Button onClick={() => setCreateOpen(true)}>Create Tenant</Button>
       </div>
 
+      <div className="flex items-center gap-4">
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search by name or domain..."
+        />
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Status</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md"
+          >
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </div>
+        <div className="text-sm text-gray-500">
+          Showing {filteredTenants.length} of {tenants?.length || 0} tenants
+        </div>
+      </div>
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -69,7 +111,7 @@ export function TenantList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tenants?.map((tenant) => (
+            {filteredTenants.map((tenant) => (
               <TableRow key={tenant.id}>
                 <TableCell className="font-medium">{tenant.name}</TableCell>
                 <TableCell>{tenant.domain}</TableCell>
@@ -107,6 +149,13 @@ export function TenantList() {
                 </TableCell>
               </TableRow>
             ))}
+            {filteredTenants.length === 0 && tenants && tenants.length > 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-gray-500">
+                  No tenants match your search criteria.
+                </TableCell>
+              </TableRow>
+            )}
             {tenants?.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-gray-500">
