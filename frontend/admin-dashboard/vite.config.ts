@@ -11,4 +11,10 @@ export default defineConfig({
       '@shared': path.resolve(__dirname, '../shared'),
     },
   },
+  optimizeDeps: {
+    include: ['axios'],
+  },
+  server: {
+    port: 5173, // Admin Dashboard runs on 5173
+  },
 })
