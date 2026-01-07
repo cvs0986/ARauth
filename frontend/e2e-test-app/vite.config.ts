@@ -11,4 +11,10 @@ export default defineConfig({
       '@shared': path.resolve(__dirname, '../shared'),
     },
   },
+  optimizeDeps: {
+    include: ['axios'],
+  },
+  server: {
+    port: 5174, // E2E Test App runs on 5174
+  },
 })
