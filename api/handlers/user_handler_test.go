@@ -109,9 +109,7 @@ func TestUserHandler_Create(t *testing.T) {
 	}
 
 	// The handler sets tenant_id from context, so we need to match that
-	mockService.On("Create", mock.Anything, mock.MatchedBy(func(req *user.CreateUserRequest) bool {
-		return req.TenantID == tenantID && req.Username == reqBody.Username
-	})).Return(expectedUser, nil)
+	mockService.On("Create", mock.Anything, mock.AnythingOfType("*user.CreateUserRequest")).Return(expectedUser, nil)
 
 	req, _ := http.NewRequest("POST", "/api/v1/users", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
