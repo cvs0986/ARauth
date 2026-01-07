@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nuage-identity/iam/auth/token"
+	"github.com/arauth-identity/iam/auth/token"
 )
 
 // JWTAuthMiddleware creates middleware for JWT token validation

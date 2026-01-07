@@ -159,7 +159,7 @@ If you want to connect this project (`nuage-indentity`) to GitHub:
 cd /home/eshwar/Documents/Veer/nuage-indentity
 
 # Add remote (replace YOUR_USERNAME)
-git remote add origin https://github.com/YOUR_USERNAME/nuage-identity.git
+git remote add origin https://github.com/YOUR_USERNAME/arauth-identity.git
 
 # Push to GitHub
 git push -u origin main

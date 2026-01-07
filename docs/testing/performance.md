@@ -1,6 +1,6 @@
 # Performance Testing Guide
 
-This document describes how to run performance benchmarks and load tests for the Nuage Identity IAM platform.
+This document describes how to run performance benchmarks and load tests for the ARauth Identity IAM platform.
 
 ## Benchmarks
 

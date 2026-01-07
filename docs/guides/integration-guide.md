@@ -1,6 +1,6 @@
 # Client Integration Guide
 
-This guide helps client applications integrate with Nuage Identity.
+This guide helps client applications integrate with ARauth Identity.
 
 ## 🎯 Integration Options
 

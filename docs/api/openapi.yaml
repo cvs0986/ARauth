@@ -1,13 +1,13 @@
 openapi: 3.0.3
 info:
-  title: Nuage Identity IAM API
+  title: ARauth Identity IAM API
   description: |
     A headless Identity & Access Management (IAM) platform powered by ORY Hydra.
     Applications bring their own login UI, and the platform provides OAuth2/OIDC functionality.
   version: 0.1.0
   contact:
-    name: Nuage Identity Team
-    url: https://github.com/nuage-identity/iam
+    name: ARauth Identity Team
+    url: https://github.com/arauth-identity/iam
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT

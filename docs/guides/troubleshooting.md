@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide helps troubleshoot common issues with Nuage Identity.
+This guide helps troubleshoot common issues with ARauth Identity.
 
 ## 🔍 Common Issues
 

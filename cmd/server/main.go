@@ -10,25 +10,25 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nuage-identity/iam/api/handlers"
-	"github.com/nuage-identity/iam/api/routes"
-	"github.com/nuage-identity/iam/auth/hydra"
-	"github.com/nuage-identity/iam/auth/claims"
-	"github.com/nuage-identity/iam/auth/login"
-	"github.com/nuage-identity/iam/auth/mfa"
-	"github.com/nuage-identity/iam/auth/token"
-	"github.com/nuage-identity/iam/config/loader"
-	"github.com/nuage-identity/iam/config/validator"
-	"github.com/nuage-identity/iam/identity/permission"
-	"github.com/nuage-identity/iam/identity/role"
-	"github.com/nuage-identity/iam/identity/tenant"
-	"github.com/nuage-identity/iam/identity/user"
-	"github.com/nuage-identity/iam/internal/audit"
-	"github.com/nuage-identity/iam/internal/cache"
-	"github.com/nuage-identity/iam/internal/logger"
-	"github.com/nuage-identity/iam/security/encryption"
-	"github.com/nuage-identity/iam/security/totp"
-	"github.com/nuage-identity/iam/storage/postgres"
+	"github.com/arauth-identity/iam/api/handlers"
+	"github.com/arauth-identity/iam/api/routes"
+	"github.com/arauth-identity/iam/auth/hydra"
+	"github.com/arauth-identity/iam/auth/claims"
+	"github.com/arauth-identity/iam/auth/login"
+	"github.com/arauth-identity/iam/auth/mfa"
+	"github.com/arauth-identity/iam/auth/token"
+	"github.com/arauth-identity/iam/config/loader"
+	"github.com/arauth-identity/iam/config/validator"
+	"github.com/arauth-identity/iam/identity/permission"
+	"github.com/arauth-identity/iam/identity/role"
+	"github.com/arauth-identity/iam/identity/tenant"
+	"github.com/arauth-identity/iam/identity/user"
+	"github.com/arauth-identity/iam/internal/audit"
+	"github.com/arauth-identity/iam/internal/cache"
+	"github.com/arauth-identity/iam/internal/logger"
+	"github.com/arauth-identity/iam/security/encryption"
+	"github.com/arauth-identity/iam/security/totp"
+	"github.com/arauth-identity/iam/storage/postgres"
 	"go.uber.org/zap"
 )
 
@@ -68,7 +68,7 @@ func main() {
 		_ = logger.Sync() // Ignore sync errors on shutdown
 	}()
 
-	logger.Logger.Info("Starting Nuage Identity IAM API",
+	logger.Logger.Info("Starting ARauth Identity IAM API",
 		zap.String("version", "0.1.0"),
 		zap.String("port", fmt.Sprintf("%d", cfg.Server.Port)),
 	)
@@ -126,7 +126,7 @@ func main() {
 	// Initialize TOTP generator
 	totpIssuer := cfg.Security.TOTPIssuer
 	if totpIssuer == "" {
-		totpIssuer = "Nuage Identity"
+		totpIssuer = "ARauth Identity"
 	}
 	totpGenerator := totp.NewGenerator(totpIssuer)
 

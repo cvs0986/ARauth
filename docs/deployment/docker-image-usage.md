@@ -1,6 +1,6 @@
-# Using Nuage Identity Docker Image
+# Using ARauth Identity Docker Image
 
-This guide shows how to use Nuage Identity IAM as a Docker image, similar to using Keycloak or other IAM solutions.
+This guide shows how to use ARauth Identity IAM as a Docker image, similar to using Keycloak or other IAM solutions.
 
 ## 🐳 Quick Start
 
@@ -8,7 +8,7 @@ This guide shows how to use Nuage Identity IAM as a Docker image, similar to usi
 
 ```bash
 # Pull the image
-docker pull nuage-identity/iam-api:latest
+docker pull arauth-identity/iam-api:latest
 
 # Run with minimal configuration
 docker run -d \
@@ -21,7 +21,7 @@ docker run -d \
   -e DATABASE_PASSWORD=your_password \
   -e JWT_SECRET=your-jwt-secret \
   -e ENCRYPTION_KEY=your-32-byte-encryption-key \
-  nuage-identity/iam-api:latest
+  arauth-identity/iam-api:latest
 ```
 
 ## 📋 Complete Example
@@ -57,7 +57,7 @@ services:
       - "5432:5432"
 
   iam-api:
-    image: nuage-identity/iam-api:latest
+    image: arauth-identity/iam-api:latest
     ports:
       - "8080:8080"
     environment:
@@ -159,7 +159,7 @@ docker run -d \
   -p 8080:8080 \
   -v $(pwd)/config.yaml:/config/config.yaml \
   -e CONFIG_PATH=/config/config.yaml \
-  nuage-identity/iam-api:latest
+  arauth-identity/iam-api:latest
 ```
 
 ## 🔌 Integration Examples
@@ -177,7 +177,7 @@ docker run -d \
   -e DATABASE_USER=your_user \
   -e DATABASE_PASSWORD=your_password \
   -e JWT_SECRET=your-secret \
-  nuage-identity/iam-api:latest
+  arauth-identity/iam-api:latest
 ```
 
 ### Example 2: Use in Docker Network
@@ -192,7 +192,7 @@ docker run -d \
   --network iam-network \
   -e DATABASE_HOST=postgres \
   -e DATABASE_PORT=5432 \
-  nuage-identity/iam-api:latest
+  arauth-identity/iam-api:latest
 
 # Your app can connect via network
 docker run -d \
@@ -220,7 +220,7 @@ services:
       - iam-api
 
   iam-api:
-    image: nuage-identity/iam-api:latest
+    image: arauth-identity/iam-api:latest
     environment:
       DATABASE_HOST: postgres
       # ... other config
@@ -234,24 +234,24 @@ services:
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/nuage-identity.git
-cd nuage-identity
+git clone https://github.com/your-org/arauth-identity.git
+cd arauth-identity
 
 # Build image
-docker build -t nuage-identity/iam-api:latest .
+docker build -t arauth-identity/iam-api:latest .
 
 # Tag for your registry
-docker tag nuage-identity/iam-api:latest your-registry/nuage-identity:latest
+docker tag arauth-identity/iam-api:latest your-registry/arauth-identity:latest
 
 # Push
-docker push your-registry/nuage-identity:latest
+docker push your-registry/arauth-identity:latest
 ```
 
 ### Custom Build
 
 ```dockerfile
 # Custom Dockerfile
-FROM nuage-identity/iam-api:latest
+FROM arauth-identity/iam-api:latest
 
 # Add custom migrations
 COPY custom-migrations /migrations/custom
@@ -272,7 +272,7 @@ version: '3.8'
 
 services:
   iam-api:
-    image: nuage-identity/iam-api:latest
+    image: arauth-identity/iam-api:latest
     deploy:
       replicas: 3
       update_config:
@@ -309,7 +309,7 @@ spec:
     spec:
       containers:
       - name: iam-api
-        image: nuage-identity/iam-api:latest
+        image: arauth-identity/iam-api:latest
         ports:
         - containerPort: 8080
         env:
@@ -364,7 +364,7 @@ curl http://localhost:8080/health/live
 2. **Port Already in Use**
    ```bash
    # Change port
-   docker run -p 8081:8080 nuage-identity/iam-api:latest
+   docker run -p 8081:8080 arauth-identity/iam-api:latest
    ```
 
 3. **Migration Issues**

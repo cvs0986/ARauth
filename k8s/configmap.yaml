@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: iam-config
-  namespace: nuage-identity
+  namespace: arauth-identity
 data:
   config.yaml: |
     server:
@@ -37,5 +37,5 @@ data:
     
     security:
       encryption_key: "CHANGE_ME_IN_PRODUCTION_32_BYTES_KEY"
-      totp_issuer: "Nuage Identity"
+      totp_issuer: "ARauth Identity"
 

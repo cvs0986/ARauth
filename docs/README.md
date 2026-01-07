@@ -1,6 +1,6 @@
-# 📚 Nuage Identity Documentation
+# 📚 ARauth Identity Documentation
 
-This directory contains all documentation for the Nuage Identity IAM system, organized by purpose and category for easy discovery.
+This directory contains all documentation for the ARauth Identity IAM system, organized by purpose and category for easy discovery.
 
 ---
 
@@ -51,7 +51,7 @@ docs/
 │   │   ├── QUICK_PUSH_GUIDE.md
 │   │   └── verify-github-connection.md
 │   ├── deployment/                 # Deployment guides
-│   │   └── using-as-iam-service.md # Using Nuage Identity as IAM service
+│   │   └── using-as-iam-service.md # Using ARauth Identity as IAM service
 │   ├── integration/                # Integration guides
 │   │   └── integration-guide.md    # Integration examples
 │   ├── USAGE_GUIDE.md              # General usage guide

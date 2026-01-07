@@ -31,7 +31,7 @@ hydra:
 
 security:
   encryption_key: "01234567890123456789012345678901" # 32 bytes - MUST be changed in production!
-  totp_issuer: "Nuage Identity"
+  totp_issuer: "ARauth Identity"
   jwt:
     issuer: "https://iam.example.com"
     access_token_ttl: 15m
@@ -52,7 +52,7 @@ security:
     require_number: true
     require_special: true
   mfa:
-    issuer: "Nuage Identity"
+    issuer: "ARauth Identity"
     period: 30
     digits: 6
   rate_limit:

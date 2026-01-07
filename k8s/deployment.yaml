@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: iam-api
-  namespace: nuage-identity
+  namespace: arauth-identity
   labels:
     app: iam-api
     version: v1
@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: iam-api
-        image: nuage-identity/iam-api:latest
+        image: arauth-identity/iam-api:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080

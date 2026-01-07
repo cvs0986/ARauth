@@ -1,6 +1,6 @@
 # Hydra Integration Patterns
 
-This document describes how Nuage Identity integrates with ORY Hydra.
+This document describes how ARauth Identity integrates with ORY Hydra.
 
 ## 🎯 Integration Philosophy
 

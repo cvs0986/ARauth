@@ -2,7 +2,7 @@
 
 ## 🎯 System Purpose
 
-Nuage Identity is a **headless Identity & Access Management (IAM) platform** that provides OAuth2/OIDC capabilities without a hosted login UI. Applications bring their own authentication UI and integrate with the IAM API to obtain tokens.
+ARauth Identity is a **headless Identity & Access Management (IAM) platform** that provides OAuth2/OIDC capabilities without a hosted login UI. Applications bring their own authentication UI and integrate with the IAM API to obtain tokens.
 
 ## 🏗️ High-Level Architecture
 

@@ -1,6 +1,6 @@
 # Kubernetes Deployment Guide
 
-This document describes how to deploy Nuage Identity on Kubernetes.
+This document describes how to deploy ARauth Identity on Kubernetes.
 
 ## 🎯 Prerequisites
 
@@ -37,7 +37,7 @@ helm/
 replicaCount: 2
 
 image:
-  repository: nuage-identity
+  repository: arauth-identity
   tag: latest
   pullPolicy: IfNotPresent
 

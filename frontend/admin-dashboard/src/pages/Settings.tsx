@@ -109,7 +109,7 @@ export function Settings() {
   } = useForm<SystemSettings>({
     resolver: zodResolver(systemSettingsSchema),
     defaultValues: {
-      jwtIssuer: 'nuage-identity',
+      jwtIssuer: 'arauth-identity',
       sessionTimeout: 3600,
       maxLoginAttempts: 5,
       lockoutDuration: 900,
@@ -508,7 +508,7 @@ export function Settings() {
                         id="jwtIssuer"
                         {...registerSystem('jwtIssuer')}
                         disabled={isLoading}
-                        placeholder="nuage-identity"
+                        placeholder="arauth-identity"
                       />
                     </div>
 

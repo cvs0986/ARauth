@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/identity/models"
 )
 
 // createTestTenant creates a test tenant for use in tests

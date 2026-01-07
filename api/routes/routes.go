@@ -4,10 +4,10 @@ import (
 	"database/sql"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nuage-identity/iam/api/handlers"
-	"github.com/nuage-identity/iam/api/middleware"
-	"github.com/nuage-identity/iam/internal/cache"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/api/handlers"
+	"github.com/arauth-identity/iam/api/middleware"
+	"github.com/arauth-identity/iam/internal/cache"
+	"github.com/arauth-identity/iam/storage/interfaces"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )

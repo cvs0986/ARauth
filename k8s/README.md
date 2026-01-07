@@ -1,6 +1,6 @@
 # Kubernetes Deployment
 
-This directory contains Kubernetes manifests for deploying Nuage Identity IAM API.
+This directory contains Kubernetes manifests for deploying ARauth Identity IAM API.
 
 ## Prerequisites
 
@@ -63,16 +63,16 @@ kubectl apply -f hpa.yaml
 
 ```bash
 # Check pods
-kubectl get pods -n nuage-identity
+kubectl get pods -n arauth-identity
 
 # Check services
-kubectl get svc -n nuage-identity
+kubectl get svc -n arauth-identity
 
 # Check deployment status
-kubectl get deployment -n nuage-identity
+kubectl get deployment -n arauth-identity
 
 # View logs
-kubectl logs -f deployment/iam-api -n nuage-identity
+kubectl logs -f deployment/iam-api -n arauth-identity
 ```
 
 ## Health Checks
@@ -99,10 +99,10 @@ Configuration is managed through:
 
 ```bash
 # Check pod status
-kubectl describe pod <pod-name> -n nuage-identity
+kubectl describe pod <pod-name> -n arauth-identity
 
 # Check logs
-kubectl logs <pod-name> -n nuage-identity
+kubectl logs <pod-name> -n arauth-identity
 ```
 
 ### Database connection issues

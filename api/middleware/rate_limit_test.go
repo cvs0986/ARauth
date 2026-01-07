@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nuage-identity/iam/internal/cache"
+	"github.com/arauth-identity/iam/internal/cache"
 	"github.com/stretchr/testify/assert"
 )
 

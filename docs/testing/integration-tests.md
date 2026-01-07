@@ -1,6 +1,6 @@
 # Integration Tests Guide
 
-This document describes how to write and run integration tests for the Nuage Identity IAM platform.
+This document describes how to write and run integration tests for the ARauth Identity IAM platform.
 
 ## Overview
 

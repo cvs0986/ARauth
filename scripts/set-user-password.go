@@ -11,9 +11,9 @@ import (
 
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/identity/credential"
-	"github.com/nuage-identity/iam/security/password"
-	"github.com/nuage-identity/iam/storage/postgres"
+	"github.com/arauth-identity/iam/identity/credential"
+	"github.com/arauth-identity/iam/security/password"
+	"github.com/arauth-identity/iam/storage/postgres"
 )
 
 func main() {

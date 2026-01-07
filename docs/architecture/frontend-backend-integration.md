@@ -211,7 +211,7 @@ npm run dev
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: nuage-identity-ingress
+  name: arauth-identity-ingress
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /$1
 spec:

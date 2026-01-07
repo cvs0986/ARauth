@@ -2,7 +2,7 @@
 
 ## 📋 What Has Been Created
 
-This document summarizes the comprehensive plan for frontend development and testing that has been created for Nuage Identity IAM.
+This document summarizes the comprehensive plan for frontend development and testing that has been created for ARauth Identity IAM.
 
 ## 📚 Documentation Created
 

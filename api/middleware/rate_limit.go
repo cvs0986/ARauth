@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nuage-identity/iam/internal/cache"
+	"github.com/arauth-identity/iam/internal/cache"
 )
 
 // RateLimitConfig configures rate limiting behavior

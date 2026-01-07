@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/auth/claims"
-	"github.com/nuage-identity/iam/identity/credential"
-	"github.com/nuage-identity/iam/identity/models"
-	"github.com/nuage-identity/iam/internal/testutil"
-	"github.com/nuage-identity/iam/security/password"
-	"github.com/nuage-identity/iam/storage/postgres"
+	"github.com/arauth-identity/iam/auth/claims"
+	"github.com/arauth-identity/iam/identity/credential"
+	"github.com/arauth-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/internal/testutil"
+	"github.com/arauth-identity/iam/security/password"
+	"github.com/arauth-identity/iam/storage/postgres"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

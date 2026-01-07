@@ -9,7 +9,7 @@ Should frontend and IAM backend be in one repository (monorepo) or separate repo
 
 **Structure:**
 ```
-nuage-identity/
+arauth-identity/
 ├── cmd/server/          # IAM API backend
 ├── api/                 # API handlers
 ├── frontend/
@@ -39,9 +39,9 @@ nuage-identity/
 
 **Structure:**
 ```
-nuage-identity-api/      # Backend repository
-nuage-identity-admin/   # Admin dashboard repository
-nuage-identity-e2e/      # E2E test app repository
+arauth-identity-api/      # Backend repository
+arauth-identity-admin/   # Admin dashboard repository
+arauth-identity-e2e/      # E2E test app repository
 ```
 
 **Pros:**
@@ -88,7 +88,7 @@ nuage-identity-e2e/      # E2E test app repository
 
 **Current Structure (Monorepo):**
 ```
-nuage-identity/
+arauth-identity/
 ├── cmd/server/          # IAM API
 ├── api/                 # API layer
 ├── frontend/            # Frontend apps
@@ -112,8 +112,8 @@ nuage-identity/
 Even with monorepo, we can deploy independently:
 
 1. **Docker Images**:
-   - `nuage-identity/iam-api:latest` - Backend only
-   - `nuage-identity/admin-dashboard:latest` - Frontend only
+   - `arauth-identity/iam-api:latest` - Backend only
+   - `arauth-identity/admin-dashboard:latest` - Frontend only
    - Built from same repo, different Dockerfiles
 
 2. **Kubernetes**:

@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/config"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/config"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // LifetimeResolver resolves token lifetimes from multiple sources

@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/identity/models"
-	"github.com/nuage-identity/iam/internal/cache"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/internal/cache"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // cachedTenantRepository wraps TenantRepository with caching

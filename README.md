@@ -1,10 +1,10 @@
-# Nuage Identity - Headless IAM Platform
+# ARauth Identity - Headless IAM Platform
 
 A lightweight, headless Identity & Access Management (IAM) platform powered by ORY Hydra, designed for modern applications that bring their own login UI.
 
 ## 🎯 Overview
 
-Nuage Identity is a production-grade, API-first IAM solution that provides:
+ARauth Identity is a production-grade, API-first IAM solution that provides:
 - **Headless Authentication** - No hosted login UI, apps bring their own
 - **OAuth2/OIDC Compliance** - Powered by ORY Hydra
 - **Stateless & Scalable** - Horizontally scalable architecture
@@ -29,11 +29,11 @@ Client App (Web/Mobile)
 
 ### Option 1: Docker Image (Recommended)
 
-Use Nuage Identity like Keycloak - just pull and run:
+Use ARauth Identity like Keycloak - just pull and run:
 
 ```bash
 # Pull the image
-docker pull nuage-identity/iam-api:latest
+docker pull arauth-identity/iam-api:latest
 
 # Run with your database
 docker run -d \
@@ -46,7 +46,7 @@ docker run -d \
   -e DATABASE_PASSWORD=your_password \
   -e JWT_SECRET=your-jwt-secret \
   -e ENCRYPTION_KEY=your-32-byte-key \
-  nuage-identity/iam-api:latest
+  arauth-identity/iam-api:latest
 
 # Test
 curl http://localhost:8080/health

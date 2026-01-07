@@ -6,9 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/api/middleware"
-	"github.com/nuage-identity/iam/identity/permission"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/api/middleware"
+	"github.com/arauth-identity/iam/identity/permission"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // PermissionHandler handles permission-related HTTP requests

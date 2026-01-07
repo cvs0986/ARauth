@@ -1,6 +1,6 @@
 # Technology Stack
 
-This document details the technology choices, rationale, and alternatives considered for Nuage Identity.
+This document details the technology choices, rationale, and alternatives considered for ARauth Identity.
 
 ## 🎯 Technology Selection Criteria
 
@@ -382,7 +382,7 @@ go tool cover -html=coverage.out
 ### Go Modules
 
 ```go
-module github.com/your-org/nuage-identity
+module github.com/your-org/arauth-identity
 
 go 1.21
 

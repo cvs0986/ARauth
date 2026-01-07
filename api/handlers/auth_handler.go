@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nuage-identity/iam/api/middleware"
-	"github.com/nuage-identity/iam/auth/login"
-	"github.com/nuage-identity/iam/auth/token"
+	"github.com/arauth-identity/iam/api/middleware"
+	"github.com/arauth-identity/iam/auth/login"
+	"github.com/arauth-identity/iam/auth/token"
 )
 
 // AuthHandler handles authentication-related HTTP requests

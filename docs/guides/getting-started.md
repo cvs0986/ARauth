@@ -1,6 +1,6 @@
 # Getting Started Guide
 
-This guide will help you get started with Nuage Identity development.
+This guide will help you get started with ARauth Identity development.
 
 ## 🎯 Prerequisites
 
@@ -16,7 +16,7 @@ This guide will help you get started with Nuage Identity development.
 
 ```bash
 git clone <repository-url>
-cd nuage-identity
+cd arauth-identity
 ```
 
 ### 2. Set Up Environment

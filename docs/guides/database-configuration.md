@@ -2,7 +2,7 @@
 
 ## ✅ Confirmation: Database is NOT Hardcoded
 
-The Nuage Identity IAM application uses a **fully configurable** database connection. Nothing is hardcoded!
+The ARauth Identity IAM application uses a **fully configurable** database connection. Nothing is hardcoded!
 
 ## 🔧 Configuration Methods
 

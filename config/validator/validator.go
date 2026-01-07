@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nuage-identity/iam/config"
+	"github.com/arauth-identity/iam/config"
 )
 
 // Validate validates the configuration

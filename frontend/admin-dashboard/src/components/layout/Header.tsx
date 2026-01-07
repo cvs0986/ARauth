@@ -23,7 +23,7 @@ export function Header() {
     <header className="border-b bg-white">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-bold text-gray-900">Nuage Identity Admin</h1>
+          <h1 className="text-xl font-bold text-gray-900">ARauth Identity Admin</h1>
         </div>
         <div className="flex items-center space-x-4">
           <Button variant="outline" onClick={handleLogout}>

@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "nuage-identity.fullname" . }}
+  name: {{ include "arauth-identity.fullname" . }}
   labels:
-    {{- include "nuage-identity.labels" . | nindent 4 }}
+    {{- include "arauth-identity.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -15,7 +15,7 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      {{- include "nuage-identity.selectorLabels" . | nindent 6 }}
+      {{- include "arauth-identity.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
@@ -23,13 +23,13 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
-        {{- include "nuage-identity.selectorLabels" . | nindent 8 }}
+        {{- include "arauth-identity.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "nuage-identity.serviceAccountName" . }}
+      serviceAccountName: {{ include "arauth-identity.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -48,17 +48,17 @@ spec:
         - name: DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "nuage-identity.fullname" . }}-secrets
+              name: {{ include "arauth-identity.fullname" . }}-secrets
               key: database-password
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "nuage-identity.fullname" . }}-secrets
+              name: {{ include "arauth-identity.fullname" . }}-secrets
               key: redis-password
         - name: ENCRYPTION_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ include "nuage-identity.fullname" . }}-secrets
+              name: {{ include "arauth-identity.fullname" . }}-secrets
               key: encryption-key
         - name: HYDRA_ADMIN_URL
           value: {{ .Values.hydra.adminURL | quote }}
@@ -87,5 +87,5 @@ spec:
       volumes:
       - name: config
         configMap:
-          name: {{ include "nuage-identity.fullname" . }}-config
+          name: {{ include "arauth-identity.fullname" . }}-config
 

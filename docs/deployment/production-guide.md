@@ -1,6 +1,6 @@
 # Production Deployment Guide
 
-This guide covers deploying Nuage Identity IAM Platform to production environments.
+This guide covers deploying ARauth Identity IAM Platform to production environments.
 
 ## Prerequisites
 
@@ -42,7 +42,7 @@ This guide covers deploying Nuage Identity IAM Platform to production environmen
 replicaCount: 5
 
 image:
-  repository: your-registry/nuage-identity/iam-api
+  repository: your-registry/arauth-identity/iam-api
   tag: "v0.1.0"
 
 database:
@@ -82,11 +82,11 @@ resources:
 
 ```bash
 # Using kubectl
-kubectl create secret generic nuage-identity-secrets \
+kubectl create secret generic arauth-identity-secrets \
   --from-literal=database-password='secure-password' \
   --from-literal=encryption-key='32-byte-encryption-key-here' \
   --from-literal=redis-password='redis-password' \
-  -n nuage-identity
+  -n arauth-identity
 
 # Or use sealed-secrets, vault, etc.
 ```
@@ -94,9 +94,9 @@ kubectl create secret generic nuage-identity-secrets \
 3. **Deploy**:
 
 ```bash
-helm install nuage-identity ./helm/nuage-identity \
+helm install arauth-identity ./helm/arauth-identity \
   -f production-values.yaml \
-  -n nuage-identity \
+  -n arauth-identity \
   --create-namespace
 ```
 
@@ -145,7 +145,7 @@ GRANT ALL PRIVILEGES ON DATABASE iam_db TO iam_user;
 migrate -path migrations -database "postgres://iam_user:password@host:5432/iam_db?sslmode=require" up
 
 # Or using kubectl
-kubectl run migrate --image=your-registry/nuage-identity/migrate:latest \
+kubectl run migrate --image=your-registry/arauth-identity/migrate:latest \
   --env="DATABASE_URL=postgres://iam_user:password@postgres:5432/iam_db" \
   --command -- migrate up
 ```
@@ -226,7 +226,7 @@ spec:
 kubectl create secret tls iam-tls \
   --cert=cert.pem \
   --key=key.pem \
-  -n nuage-identity
+  -n arauth-identity
 ```
 
 ## Monitoring Setup
@@ -239,7 +239,7 @@ kubectl create secret tls iam-tls \
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: nuage-identity
+  name: arauth-identity
 spec:
   selector:
     matchLabels:
@@ -253,7 +253,7 @@ spec:
 
 ```yaml
 groups:
-- name: nuage-identity
+- name: arauth-identity
   rules:
   - alert: HighErrorRate
     expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
@@ -407,8 +407,8 @@ autoscaling:
 1. **Pods not starting**:
 
 ```bash
-kubectl describe pod <pod-name> -n nuage-identity
-kubectl logs <pod-name> -n nuage-identity
+kubectl describe pod <pod-name> -n arauth-identity
+kubectl logs <pod-name> -n arauth-identity
 ```
 
 2. **Database connection issues**:
@@ -440,7 +440,7 @@ curl https://iam.yourdomain.com/metrics
 1. **Rolling updates**:
 
 ```bash
-helm upgrade nuage-identity ./helm/nuage-identity \
+helm upgrade arauth-identity ./helm/arauth-identity \
   -f production-values.yaml \
   --set image.tag=v0.2.0
 ```
@@ -460,6 +460,6 @@ helm upgrade nuage-identity ./helm/nuage-identity \
 ## Support
 
 For issues and questions:
-- GitHub Issues: https://github.com/nuage-identity/iam/issues
-- Documentation: https://docs.nuage-identity.com
+- GitHub Issues: https://github.com/arauth-identity/iam/issues
+- Documentation: https://docs.arauth-identity.com
 

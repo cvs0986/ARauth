@@ -1,6 +1,6 @@
 # Configuration Management
 
-This document describes configuration management for Nuage Identity.
+This document describes configuration management for ARauth Identity.
 
 ## 🎯 Configuration Principles
 
@@ -59,7 +59,7 @@ security:
     require_number: true
     require_special: true
   mfa:
-    issuer: "Nuage Identity"
+    issuer: "ARauth Identity"
     period: 30
     digits: 6
   rate_limit:

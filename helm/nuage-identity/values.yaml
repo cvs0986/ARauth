@@ -1,8 +1,8 @@
-# Default values for nuage-identity
+# Default values for arauth-identity
 replicaCount: 3
 
 image:
-  repository: nuage-identity/iam-api
+  repository: arauth-identity/iam-api
   pullPolicy: Always
   tag: "latest"
 
@@ -86,7 +86,7 @@ hydra:
 # Security configuration
 security:
   encryptionKey: "" # Must be set via secret
-  totpIssuer: "Nuage Identity"
+  totpIssuer: "ARauth Identity"
 
 # Logging configuration
 logging:

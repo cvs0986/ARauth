@@ -41,7 +41,7 @@
 
 **Structure:**
 ```
-nuage-identity/
+arauth-identity/
 ├── cmd/server/          # IAM API backend
 ├── api/                 # API handlers
 ├── frontend/            # Frontend apps

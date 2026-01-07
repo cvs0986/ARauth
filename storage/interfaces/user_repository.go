@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/identity/models"
 )
 
 // UserRepository defines the interface for user data access

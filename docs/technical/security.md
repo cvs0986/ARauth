@@ -1,6 +1,6 @@
 # Security Documentation
 
-This document describes the security architecture, implementation, and best practices for Nuage Identity.
+This document describes the security architecture, implementation, and best practices for ARauth Identity.
 
 ## 🎯 Security Principles
 
@@ -101,7 +101,7 @@ func ValidatePassword(password string, username string) error {
 import "github.com/pquerna/otp"
 
 key, err := totp.Generate(totp.GenerateOpts{
-    Issuer:      "Nuage Identity",
+    Issuer:      "ARauth Identity",
     AccountName: user.Email,
     Period:      30,
     Digits:      otp.DigitsSix,

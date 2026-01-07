@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/identity/models"
-	"github.com/nuage-identity/iam/security/password"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/security/password"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // Service provides user management business logic

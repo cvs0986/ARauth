@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nuage-identity/iam/auth/claims"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/auth/claims"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // RefreshService handles token refresh operations

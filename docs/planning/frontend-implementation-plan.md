@@ -41,7 +41,7 @@ This document outlines the comprehensive plan for building two frontend applicat
            └───────────────┬───────────────┘
                            │
            ┌───────────────▼───────────────┐
-           │    Nuage Identity IAM API     │
+           │    ARauth Identity IAM API     │
            │    (Go + Gin)                 │
            │    Port: 8080                 │
            └───────────────┬───────────────┘
@@ -86,7 +86,7 @@ This document outlines the comprehensive plan for building two frontend applicat
 ## 📁 Project Structure
 
 ```
-nuage-identity/
+arauth-identity/
 ├── frontend/
 │   ├── admin-dashboard/          # Admin management UI
 │   │   ├── src/

@@ -1,6 +1,6 @@
 # Testing Strategy
 
-This document describes the testing approach, strategies, and best practices for Nuage Identity.
+This document describes the testing approach, strategies, and best practices for ARauth Identity.
 
 ## 🎯 Testing Principles
 

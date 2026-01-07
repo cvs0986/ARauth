@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: nuage-identity
+  name: arauth-identity
   labels:
-    name: nuage-identity
+    name: arauth-identity
     app: iam
 

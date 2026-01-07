@@ -1,6 +1,6 @@
 # API Documentation
 
-This directory contains the OpenAPI/Swagger specification for the Nuage Identity IAM API.
+This directory contains the OpenAPI/Swagger specification for the ARauth Identity IAM API.
 
 ## OpenAPI Specification
 

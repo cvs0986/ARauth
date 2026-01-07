@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/nuage-identity/iam/config"
+	"github.com/arauth-identity/iam/config"
 	"gopkg.in/yaml.v3"
 )
 

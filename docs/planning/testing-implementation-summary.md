@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-This document provides a high-level summary of the testing and frontend implementation plan for Nuage Identity IAM. It serves as a quick reference for the development team.
+This document provides a high-level summary of the testing and frontend implementation plan for ARauth Identity IAM. It serves as a quick reference for the development team.
 
 ## 🎯 Goals
 
@@ -24,7 +24,7 @@ This document provides a high-level summary of the testing and frontend implemen
            └──────────────┬───────────┘
                           │
            ┌──────────────▼───────────┐
-           │   Nuage Identity API     │
+           │   ARauth Identity API     │
            │   (Port: 8080)            │
            └──────────────┬───────────┘
                           │

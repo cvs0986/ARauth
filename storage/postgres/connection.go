@@ -7,7 +7,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq" // PostgreSQL driver
-	"github.com/nuage-identity/iam/config"
+	"github.com/arauth-identity/iam/config"
 )
 
 // NewConnection creates a new PostgreSQL database connection

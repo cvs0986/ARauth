@@ -1,6 +1,6 @@
 # Testing Guide
 
-This document describes the testing strategy and how to run tests for the Nuage Identity IAM platform.
+This document describes the testing strategy and how to run tests for the ARauth Identity IAM platform.
 
 ## Test Structure
 

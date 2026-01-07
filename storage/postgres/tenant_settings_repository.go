@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // tenantSettingsRepository implements TenantSettingsRepository for PostgreSQL

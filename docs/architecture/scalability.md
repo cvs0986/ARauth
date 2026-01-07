@@ -1,6 +1,6 @@
 # Scalability Design
 
-This document describes the scalability architecture and design decisions for Nuage Identity.
+This document describes the scalability architecture and design decisions for ARauth Identity.
 
 ## 🎯 Scalability Goals
 

@@ -1,6 +1,6 @@
 # Monitoring & Observability
 
-This document describes monitoring and observability setup for Nuage Identity.
+This document describes monitoring and observability setup for ARauth Identity.
 
 ## 🎯 Monitoring Strategy
 

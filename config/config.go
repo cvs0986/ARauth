@@ -57,7 +57,7 @@ type HydraConfig struct {
 // SecurityConfig holds security configuration
 type SecurityConfig struct {
 	EncryptionKey string         `yaml:"encryption_key" env:"ENCRYPTION_KEY"` // 32-byte key for AES-256
-	TOTPIssuer    string         `yaml:"totp_issuer" env:"TOTP_ISSUER" envDefault:"Nuage Identity"`
+	TOTPIssuer    string         `yaml:"totp_issuer" env:"TOTP_ISSUER" envDefault:"ARauth Identity"`
 	JWT           JWTConfig      `yaml:"jwt"`
 	Password      PasswordConfig `yaml:"password"`
 	MFA           MFAConfig      `yaml:"mfa"`
@@ -95,7 +95,7 @@ type PasswordConfig struct {
 
 // MFAConfig holds MFA configuration
 type MFAConfig struct {
-	Issuer string `yaml:"issuer" env:"MFA_ISSUER" envDefault:"Nuage Identity"`
+	Issuer string `yaml:"issuer" env:"MFA_ISSUER" envDefault:"ARauth Identity"`
 	Period int    `yaml:"period" env:"MFA_PERIOD" envDefault:"30"`
 	Digits int    `yaml:"digits" env:"MFA_DIGITS" envDefault:"6"`
 }

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the step-by-step implementation of secure JWT token issuance for the Nuage Identity IAM system.
+This document outlines the step-by-step implementation of secure JWT token issuance for the ARauth Identity IAM system.
 
 ---
 

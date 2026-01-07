@@ -2,13 +2,13 @@
 
 **Date**: 2026-01-08
 
-This document explains how both authentication flows work in Nuage Identity.
+This document explains how both authentication flows work in ARauth Identity.
 
 ---
 
 ## 🎯 Two Authentication Flows
 
-Nuage Identity supports **two authentication flows**:
+ARauth Identity supports **two authentication flows**:
 
 1. **Direct JWT Flow** ✅ **FULLY IMPLEMENTED**
 2. **OAuth2/OIDC Flow** ⚠️ **PARTIALLY IMPLEMENTED** (Hydra integration exists)

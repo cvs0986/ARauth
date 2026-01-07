@@ -1,6 +1,6 @@
 # 📚 Documentation Index
 
-Quick reference guide to all documentation in Nuage Identity.
+Quick reference guide to all documentation in ARauth Identity.
 
 ---
 
@@ -30,7 +30,7 @@ Quick reference guide to all documentation in Nuage Identity.
 - **Performance**: [`testing/performance.md`](testing/performance.md) - Performance testing
 
 ### 🚀 Deployment
-- **Using as IAM Service**: [`guides/deployment/using-as-iam-service.md`](guides/deployment/using-as-iam-service.md) - How to use Nuage Identity like Keycloak
+- **Using as IAM Service**: [`guides/deployment/using-as-iam-service.md`](guides/deployment/using-as-iam-service.md) - How to use ARauth Identity like Keycloak
 - **Docker Compose**: [`deployment/docker-compose.md`](deployment/docker-compose.md) - Docker Compose setup
 - **Kubernetes**: [`deployment/kubernetes.md`](deployment/kubernetes.md) - Kubernetes deployment
 - **Production Guide**: [`deployment/production-guide.md`](deployment/production-guide.md) - Production deployment

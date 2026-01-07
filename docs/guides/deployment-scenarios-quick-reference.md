@@ -112,7 +112,7 @@ cd frontend/admin-dashboard && npm run dev
 kubectl apply -f k8s/
 
 # Or with Helm
-helm install nuage-identity ./helm/nuage-identity
+helm install arauth-identity ./helm/arauth-identity
 ```
 
 ### Cloud

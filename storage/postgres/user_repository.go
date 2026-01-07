@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/identity/models"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // userRepository implements UserRepository for PostgreSQL

@@ -5,12 +5,12 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/auth/claims"
-	"github.com/nuage-identity/iam/auth/hydra"
-	"github.com/nuage-identity/iam/auth/token"
-	"github.com/nuage-identity/iam/identity/models"
-	"github.com/nuage-identity/iam/security/password"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/auth/claims"
+	"github.com/arauth-identity/iam/auth/hydra"
+	"github.com/arauth-identity/iam/auth/token"
+	"github.com/arauth-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/security/password"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // Service provides login functionality

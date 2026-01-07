@@ -1,6 +1,6 @@
 # Database Design
 
-This document describes the database schema, relationships, and design decisions for Nuage Identity.
+This document describes the database schema, relationships, and design decisions for ARauth Identity.
 
 ## 🎯 Design Principles
 

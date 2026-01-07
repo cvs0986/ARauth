@@ -1,6 +1,6 @@
 # Docker Compose Deployment
 
-This document describes how to deploy Nuage Identity using Docker Compose for local development and on-premise deployments.
+This document describes how to deploy ARauth Identity using Docker Compose for local development and on-premise deployments.
 
 ## 🎯 Prerequisites
 
@@ -163,7 +163,7 @@ HYDRA_SECRETS_SYSTEM=change-me-to-random-secret
 
 ```bash
 git clone <repository-url>
-cd nuage-identity
+cd arauth-identity
 ```
 
 ### 2. Configure Environment

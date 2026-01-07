@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/internal/cache"
+	"github.com/arauth-identity/iam/internal/cache"
 )
 
 // SessionManager manages MFA sessions

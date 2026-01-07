@@ -2,7 +2,7 @@
 
 ## Overview
 
-Testing phase for Nuage Identity IAM Platform. All core development phases (1-6) are complete. This phase focuses on comprehensive testing to ensure production readiness.
+Testing phase for ARauth Identity IAM Platform. All core development phases (1-6) are complete. This phase focuses on comprehensive testing to ensure production readiness.
 
 ## Test Infrastructure ✅
 

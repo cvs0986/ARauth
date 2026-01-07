@@ -1,7 +1,7 @@
 package token
 
 import (
-	"github.com/nuage-identity/iam/auth/claims"
+	"github.com/arauth-identity/iam/auth/claims"
 	"time"
 )
 

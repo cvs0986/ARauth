@@ -1,6 +1,6 @@
 # Testing Quick Reference
 
-Quick reference guide for testing Nuage Identity IAM locally.
+Quick reference guide for testing ARauth Identity IAM locally.
 
 ## 🚀 Quick Start
 

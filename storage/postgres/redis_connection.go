@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nuage-identity/iam/config"
+	"github.com/arauth-identity/iam/config"
 	"github.com/redis/go-redis/v9"
 )
 

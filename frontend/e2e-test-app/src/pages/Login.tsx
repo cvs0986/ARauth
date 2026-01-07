@@ -76,7 +76,7 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Nuage Identity</CardTitle>
+          <CardTitle>ARauth Identity</CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>

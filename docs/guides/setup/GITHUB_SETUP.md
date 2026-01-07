@@ -14,7 +14,7 @@ This guide will help you connect your GitHub account to enable seamless developm
 
 1. Go to [GitHub](https://github.com) and sign in
 2. Click the **"+"** icon in the top right → **"New repository"**
-3. Name it: `nuage-identity` (or your preferred name)
+3. Name it: `arauth-identity` (or your preferred name)
 4. Choose **Public** or **Private**
 5. **DO NOT** initialize with README, .gitignore, or license (we already have files)
 6. Click **"Create repository"**
@@ -27,10 +27,10 @@ Run these commands in your terminal:
 cd /home/eshwar/Documents/Veer/nuage-indentity
 
 # Add remote (replace YOUR_USERNAME with your GitHub username)
-git remote add origin https://github.com/YOUR_USERNAME/nuage-identity.git
+git remote add origin https://github.com/YOUR_USERNAME/arauth-identity.git
 
 # Or if using SSH (recommended for better security):
-# git remote add origin git@github.com:YOUR_USERNAME/nuage-identity.git
+# git remote add origin git@github.com:YOUR_USERNAME/arauth-identity.git
 
 # Verify remote is added
 git remote -v

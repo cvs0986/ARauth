@@ -1,6 +1,6 @@
 # Component Architecture
 
-This document provides detailed documentation of each component in the Nuage Identity system.
+This document provides detailed documentation of each component in the ARauth Identity system.
 
 ## 📦 Component Overview
 

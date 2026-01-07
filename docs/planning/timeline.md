@@ -1,6 +1,6 @@
 # Development Timeline
 
-This document provides a detailed timeline for Nuage Identity development.
+This document provides a detailed timeline for ARauth Identity development.
 
 ## 📅 Timeline Overview
 

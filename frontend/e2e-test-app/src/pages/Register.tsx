@@ -74,7 +74,7 @@ export function Register() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Create Account</CardTitle>
-          <CardDescription>Register for Nuage Identity</CardDescription>
+          <CardDescription>Register for ARauth Identity</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

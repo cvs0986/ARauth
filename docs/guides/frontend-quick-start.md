@@ -1,6 +1,6 @@
 # Frontend Quick Start Guide
 
-This guide will help you set up and start developing the frontend applications for Nuage Identity.
+This guide will help you set up and start developing the frontend applications for ARauth Identity.
 
 ## Prerequisites
 
@@ -93,11 +93,11 @@ Create `.env` files in each frontend project:
 ```bash
 # frontend/admin-dashboard/.env
 VITE_API_BASE_URL=http://localhost:8080
-VITE_APP_NAME=Nuage Identity Admin
+VITE_APP_NAME=ARauth Identity Admin
 
 # frontend/e2e-test-app/.env
 VITE_API_BASE_URL=http://localhost:8080
-VITE_APP_NAME=Nuage Identity Test App
+VITE_APP_NAME=ARauth Identity Test App
 ```
 
 ## Testing Scenarios

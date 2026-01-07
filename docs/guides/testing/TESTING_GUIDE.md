@@ -1,4 +1,4 @@
-# Complete Testing Guide - Nuage Identity IAM
+# Complete Testing Guide - ARauth Identity IAM
 
 ## 📋 Prerequisites
 

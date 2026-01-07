@@ -6,9 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/api/middleware"
-	"github.com/nuage-identity/iam/identity/user"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/api/middleware"
+	"github.com/arauth-identity/iam/identity/user"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // UserHandler handles user-related HTTP requests

@@ -1,6 +1,6 @@
 # Data Flow Documentation
 
-This document describes the authentication and authorization flows in Nuage Identity.
+This document describes the authentication and authorization flows in ARauth Identity.
 
 ## 🔐 Authentication Flows
 

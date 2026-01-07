@@ -1,6 +1,6 @@
-# Nuage Identity Frontend Applications
+# ARauth Identity Frontend Applications
 
-This directory contains the frontend applications for Nuage Identity IAM.
+This directory contains the frontend applications for ARauth Identity IAM.
 
 ## Projects
 

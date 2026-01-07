@@ -2,7 +2,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: iam-api-hpa
-  namespace: nuage-identity
+  namespace: arauth-identity
 spec:
   scaleTargetRef:
     apiVersion: apps/v1

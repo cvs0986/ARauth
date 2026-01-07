@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/identity/credential"
+	"github.com/arauth-identity/iam/identity/credential"
 )
 
 // CredentialRepository defines the interface for credential data access

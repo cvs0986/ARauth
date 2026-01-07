@@ -20,7 +20,7 @@ export function Dashboard() {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold">Nuage Identity - E2E Testing</h1>
+          <h1 className="text-xl font-bold">ARauth Identity - E2E Testing</h1>
           <Button variant="outline" onClick={handleLogout}>
             Logout
           </Button>
@@ -32,7 +32,7 @@ export function Dashboard() {
           <div>
             <h2 className="text-2xl font-bold mb-4">Welcome to E2E Testing Dashboard</h2>
             <p className="text-gray-600">
-              This app is designed for end-to-end testing of all Nuage Identity features.
+              This app is designed for end-to-end testing of all ARauth Identity features.
             </p>
           </div>
 

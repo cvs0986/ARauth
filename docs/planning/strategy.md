@@ -1,6 +1,6 @@
 # Development Strategy
 
-This document outlines the strategic approach, decisions, and methodology for developing Nuage Identity.
+This document outlines the strategic approach, decisions, and methodology for developing ARauth Identity.
 
 ## 🎯 Strategic Overview
 

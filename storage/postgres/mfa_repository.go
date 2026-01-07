@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // mfaRecoveryCodeRepository implements MFARecoveryCodeRepository for PostgreSQL

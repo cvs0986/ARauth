@@ -11,8 +11,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/auth/claims"
-	"github.com/nuage-identity/iam/config"
+	"github.com/arauth-identity/iam/auth/claims"
+	"github.com/arauth-identity/iam/config"
 	"golang.org/x/crypto/bcrypt"
 )
 

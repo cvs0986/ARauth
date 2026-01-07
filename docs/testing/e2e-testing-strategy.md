@@ -1,6 +1,6 @@
 # End-to-End Testing Strategy
 
-This document outlines the comprehensive testing strategy for Nuage Identity IAM, covering both backend API testing and frontend application testing.
+This document outlines the comprehensive testing strategy for ARauth Identity IAM, covering both backend API testing and frontend application testing.
 
 ## 🎯 Testing Objectives
 

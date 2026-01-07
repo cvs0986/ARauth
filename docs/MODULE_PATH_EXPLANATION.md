@@ -1,14 +1,14 @@
 # Go Module Path Explanation
 
-## Why `github.com/nuage-identity/iam` in imports?
+## Why `github.com/arauth-identity/iam` in imports?
 
-The `github.com/nuage-identity/iam/...` import paths in our code are **not** actual GitHub URLs. They are our **module identifier**.
+The `github.com/arauth-identity/iam/...` import paths in our code are **not** actual GitHub URLs. They are our **module identifier**.
 
 ### What is a Go Module Path?
 
 When we initialized the Go module with:
 ```bash
-go mod init github.com/nuage-identity/iam
+go mod init github.com/arauth-identity/iam
 ```
 
 This created a module identifier. All packages within our module use this base path for imports.
@@ -16,9 +16,9 @@ This created a module identifier. All packages within our module use this base p
 ### Examples
 
 **Internal packages** (our code):
-- `github.com/nuage-identity/iam/api/handlers` → `api/handlers/` directory
-- `github.com/nuage-identity/iam/auth/login` → `auth/login/` directory
-- `github.com/nuage-identity/iam/storage/postgres` → `storage/postgres/` directory
+- `github.com/arauth-identity/iam/api/handlers` → `api/handlers/` directory
+- `github.com/arauth-identity/iam/auth/login` → `auth/login/` directory
+- `github.com/arauth-identity/iam/storage/postgres` → `storage/postgres/` directory
 
 **External packages** (dependencies):
 - `github.com/gin-gonic/gin` → Real external library from GitHub
@@ -43,7 +43,7 @@ Then update all imports. But it's **not necessary** - the current path works fin
 
 ### Current Status
 
-- Module path: `github.com/nuage-identity/iam`
+- Module path: `github.com/arauth-identity/iam`
 - Actual repo: `github.com/cvs0986/ARauth`
 - **This is fine!** The module path is just an identifier.
 

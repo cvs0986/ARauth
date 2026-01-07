@@ -1,6 +1,6 @@
 # API Design
 
-This document describes the API design, endpoints, request/response formats, and authentication for Nuage Identity.
+This document describes the API design, endpoints, request/response formats, and authentication for ARauth Identity.
 
 ## 🎯 API Design Principles
 

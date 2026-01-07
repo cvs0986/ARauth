@@ -1,8 +1,8 @@
-# Nuage Identity - Usage Guide
+# ARauth Identity - Usage Guide
 
 ## 🎯 How Others Can Use This IAM Solution
 
-Nuage Identity can be used in your applications just like **Keycloak**, **Auth0**, or other IAM solutions.
+ARauth Identity can be used in your applications just like **Keycloak**, **Auth0**, or other IAM solutions.
 
 ## 🚀 Quick Start Methods
 
@@ -10,7 +10,7 @@ Nuage Identity can be used in your applications just like **Keycloak**, **Auth0*
 
 ```bash
 # Pull and run - just like Keycloak!
-docker pull nuage-identity/iam-api:latest
+docker pull arauth-identity/iam-api:latest
 
 docker run -d \
   --name nuage-iam \
@@ -21,15 +21,15 @@ docker run -d \
   -e DATABASE_USER=iam_user \
   -e DATABASE_PASSWORD=your_password \
   -e JWT_SECRET=your-secret \
-  nuage-identity/iam-api:latest
+  arauth-identity/iam-api:latest
 ```
 
 ### Method 2: Docker Compose
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/nuage-identity.git
-cd nuage-identity
+git clone https://github.com/your-org/arauth-identity.git
+cd arauth-identity
 
 # Start everything
 docker-compose up -d
@@ -39,7 +39,7 @@ docker-compose up -d
 
 ```bash
 # Install via Helm
-helm install nuage-iam nuage-identity/nuage-identity \
+helm install nuage-iam arauth-identity/arauth-identity \
   --set database.host=postgres \
   --set database.password=your_password
 ```
@@ -48,16 +48,16 @@ helm install nuage-iam nuage-identity/nuage-identity \
 
 ```bash
 # Clone and build
-git clone https://github.com/your-org/nuage-identity.git
-cd nuage-identity
-docker build -t nuage-identity/iam-api:latest .
+git clone https://github.com/your-org/arauth-identity.git
+cd arauth-identity
+docker build -t arauth-identity/iam-api:latest .
 ```
 
 ## 📊 Comparison with Keycloak
 
-| Feature | Nuage Identity | Keycloak |
+| Feature | ARauth Identity | Keycloak |
 |---------|---------------|----------|
-| **Docker Image** | ✅ `docker pull nuage-identity/iam-api` | ✅ `docker pull quay.io/keycloak` |
+| **Docker Image** | ✅ `docker pull arauth-identity/iam-api` | ✅ `docker pull quay.io/keycloak` |
 | **Kubernetes** | ✅ Helm chart | ✅ Operator |
 | **OAuth2/OIDC** | ✅ (via Hydra) | ✅ |
 | **Multi-tenant** | ✅ Native | ⚠️ Realm-based |
@@ -110,36 +110,36 @@ const authUrl = `http://hydra:4444/oauth2/auth?` +
 ### 1. Docker Hub
 ```bash
 # Publish
-docker push your-org/nuage-identity:latest
+docker push your-org/arauth-identity:latest
 
 # Others use
-docker pull your-org/nuage-identity:latest
+docker pull your-org/arauth-identity:latest
 ```
 
 ### 2. GitHub Container Registry
 ```bash
 # Publish
-docker push ghcr.io/your-org/nuage-identity:latest
+docker push ghcr.io/your-org/arauth-identity:latest
 
 # Others use
-docker pull ghcr.io/your-org/nuage-identity:latest
+docker pull ghcr.io/your-org/arauth-identity:latest
 ```
 
 ### 3. Helm Chart Repository
 ```bash
 # Package
-helm package helm/nuage-identity
+helm package helm/arauth-identity
 
 # Publish
-helm push nuage-identity-1.0.0.tgz oci://your-registry/charts
+helm push arauth-identity-1.0.0.tgz oci://your-registry/charts
 ```
 
 ### 4. Source Code
 ```bash
 # Others clone and build
-git clone https://github.com/your-org/nuage-identity.git
-cd nuage-identity
-docker build -t nuage-identity:latest .
+git clone https://github.com/your-org/arauth-identity.git
+cd arauth-identity
+docker build -t arauth-identity:latest .
 ```
 
 ## 🎯 Use Cases
@@ -148,7 +148,7 @@ docker build -t nuage-identity:latest .
 ```yaml
 services:
   iam-api:
-    image: nuage-identity/iam-api:latest
+    image: arauth-identity/iam-api:latest
   
   your-service:
     environment:

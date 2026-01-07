@@ -1,6 +1,6 @@
 # Risk Analysis
 
-This document identifies potential risks, their impact, and mitigation strategies for Nuage Identity.
+This document identifies potential risks, their impact, and mitigation strategies for ARauth Identity.
 
 ## 🎯 Risk Categories
 

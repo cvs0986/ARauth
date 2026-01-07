@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/identity/models"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // ServiceInterface defines the interface for permission service operations

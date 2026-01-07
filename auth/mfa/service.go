@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/nuage-identity/iam/security/encryption"
-	"github.com/nuage-identity/iam/security/totp"
-	"github.com/nuage-identity/iam/storage/interfaces"
+	"github.com/arauth-identity/iam/security/encryption"
+	"github.com/arauth-identity/iam/security/totp"
+	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // Service provides MFA functionality
