@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/nuage-identity/iam/api/handlers"
 	"github.com/nuage-identity/iam/api/middleware"
+	"github.com/nuage-identity/iam/internal/cache"
 	"github.com/nuage-identity/iam/storage/interfaces"
 	"go.uber.org/zap"
 )
