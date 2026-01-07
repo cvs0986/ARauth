@@ -13,12 +13,14 @@ import { handleApiError } from '../services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
   password: z.string().min(1, 'Password is required'),
   tenantId: z.string().optional(),
+  rememberMe: z.boolean().optional(),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -32,10 +34,17 @@ export function Login() {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      rememberMe: false,
+    },
   });
+
+  const rememberMe = watch('rememberMe');
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -46,6 +55,7 @@ export function Login() {
         username: data.username,
         password: data.password,
         tenant_id: data.tenantId,
+        remember_me: data.rememberMe || false,
       });
 
       setTokens(response.access_token, response.refresh_token);
@@ -114,6 +124,23 @@ export function Login() {
                 placeholder="Enter tenant ID"
                 disabled={isLoading}
               />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="rememberMe"
+                checked={rememberMe}
+                onCheckedChange={(checked) => {
+                  setValue('rememberMe', checked === true);
+                }}
+                disabled={isLoading}
+              />
+              <Label
+                htmlFor="rememberMe"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Remember me
+              </Label>
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>

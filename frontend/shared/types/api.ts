@@ -24,6 +24,7 @@ export interface LoginRequest {
   username: string;
   password: string;
   tenant_id?: string;
+  remember_me?: boolean;
 }
 
 export interface LoginResponse {
@@ -32,6 +33,8 @@ export interface LoginResponse {
   id_token?: string;
   token_type: string;
   expires_in: number;
+  refresh_expires_in?: number;
+  remember_me?: boolean;
 }
 
 // Tenant types
