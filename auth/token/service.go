@@ -237,7 +237,10 @@ func loadRSAKeyPair(keyPath string) (*rsa.PrivateKey, *rsa.PublicKey, error) {
 }
 
 // GetPublicKey returns the public key for JWKS endpoint
-func (s *Service) GetPublicKey() *rsa.PublicKey {
-	return s.publicKey
+func (s *Service) GetPublicKey() interface{} {
+	if s.publicKey != nil {
+		return s.publicKey
+	}
+	return nil
 }
 
