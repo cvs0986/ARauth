@@ -6,7 +6,7 @@ DROP INDEX IF EXISTS idx_audit_logs_action;
 DROP INDEX IF EXISTS idx_audit_logs_actor_id;
 DROP INDEX IF EXISTS idx_audit_logs_tenant_id;
 
-DROP INDEX IF EXISTS idx_mfa_recovery_codes_user_used;
+-- Note: idx_mfa_recovery_codes_used created in migration 000008, not dropped here
 DROP INDEX IF EXISTS idx_mfa_recovery_codes_user_id;
 
 DROP INDEX IF EXISTS idx_role_permissions_unique;

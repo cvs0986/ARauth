@@ -34,8 +34,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_role_permissions_unique ON role_permission
 
 -- MFA recovery codes table indexes
 CREATE INDEX IF NOT EXISTS idx_mfa_recovery_codes_user_id ON mfa_recovery_codes(user_id);
--- Note: mfa_recovery_codes table has 'used' as boolean, index on (user_id, used) for filtering
-CREATE INDEX IF NOT EXISTS idx_mfa_recovery_codes_user_used ON mfa_recovery_codes(user_id, used);
+-- Note: mfa_recovery_codes table has 'used_at' (timestamp), index already exists in migration 000008
+-- Index idx_mfa_recovery_codes_used already created: (user_id, used_at) WHERE used_at IS NULL
 
 -- Audit logs table indexes
 -- Note: audit_logs table uses 'actor_id' instead of 'user_id' and 'action' instead of 'event_type'
