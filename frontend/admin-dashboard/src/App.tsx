@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
 import { TenantList } from './pages/tenants/TenantList';
+import { UserList } from './pages/users/UserList';
 
 // Create QueryClient instance
 const queryClient = new QueryClient({
@@ -44,6 +45,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <TenantList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UserList />
                 </Layout>
               </ProtectedRoute>
             }
