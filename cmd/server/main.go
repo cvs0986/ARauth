@@ -27,6 +27,7 @@ import (
 	"github.com/nuage-identity/iam/internal/logger"
 	"github.com/nuage-identity/iam/security/encryption"
 	"github.com/nuage-identity/iam/security/totp"
+	"github.com/nuage-identity/iam/storage/interfaces"
 	"github.com/nuage-identity/iam/storage/postgres"
 	"go.uber.org/zap"
 )

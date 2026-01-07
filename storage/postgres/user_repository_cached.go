@@ -175,8 +175,8 @@ func (r *cachedUserRepository) List(ctx context.Context, tenantID uuid.UUID, fil
 }
 
 // Count returns the total number of users (not cached)
-func (r *cachedUserRepository) Count(ctx context.Context, tenantID uuid.UUID) (int64, error) {
-	return r.repo.Count(ctx, tenantID)
+func (r *cachedUserRepository) Count(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) (int, error) {
+	return r.repo.Count(ctx, tenantID, filters)
 }
 
 // invalidateUserCache invalidates all cache entries for a user
