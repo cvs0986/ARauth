@@ -138,8 +138,8 @@ func TestTenantRepository_List(t *testing.T) {
 
 	// List tenants
 	filters := &interfaces.TenantFilters{
-		Limit:  10,
-		Offset: 0,
+		Page:     1,
+		PageSize: 10,
 	}
 	tenants, err := repo.List(context.Background(), filters)
 	require.NoError(t, err)

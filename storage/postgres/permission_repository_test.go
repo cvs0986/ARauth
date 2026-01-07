@@ -115,11 +115,10 @@ func TestPermissionRepository_List(t *testing.T) {
 
 	// List permissions
 	filters := &interfaces.PermissionFilters{
-		TenantID: &tenantID,
-		Limit:    10,
-		Offset:   0,
+		Page:     1,
+		PageSize: 10,
 	}
-	permissions, err := repo.List(context.Background(), filters)
+	permissions, err := repo.List(context.Background(), tenantID, filters)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(permissions), 3)
 }

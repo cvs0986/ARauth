@@ -143,11 +143,10 @@ func TestRoleRepository_List(t *testing.T) {
 
 	// List roles
 	filters := &interfaces.RoleFilters{
-		TenantID: &tenantID,
-		Limit:    10,
-		Offset:   0,
+		Page:     1,
+		PageSize: 10,
 	}
-	roles, err := repo.List(context.Background(), filters)
+	roles, err := repo.List(context.Background(), tenantID, filters)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(roles), 3)
 }
