@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -79,7 +78,7 @@ func (r *cachedUserRepository) GetByID(ctx context.Context, id uuid.UUID) (*mode
 }
 
 // GetByUsername retrieves a user by username with caching
-func (r *cachedUserRepository) GetByUsername(ctx context.Context, tenantID uuid.UUID, username string) (*models.User, error) {
+func (r *cachedUserRepository) GetByUsername(ctx context.Context, username string, tenantID uuid.UUID) (*models.User, error) {
 	cacheKey := r.cacheKey("username", tenantID.String(), username)
 
 	// Try to get from cache
@@ -90,7 +89,7 @@ func (r *cachedUserRepository) GetByUsername(ctx context.Context, tenantID uuid.
 	}
 
 	// Get from database
-	user, err := r.repo.GetByUsername(ctx, tenantID, username)
+	user, err := r.repo.GetByUsername(ctx, username, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +105,7 @@ func (r *cachedUserRepository) GetByUsername(ctx context.Context, tenantID uuid.
 }
 
 // GetByEmail retrieves a user by email with caching
-func (r *cachedUserRepository) GetByEmail(ctx context.Context, tenantID uuid.UUID, email string) (*models.User, error) {
+func (r *cachedUserRepository) GetByEmail(ctx context.Context, email string, tenantID uuid.UUID) (*models.User, error) {
 	cacheKey := r.cacheKey("email", tenantID.String(), email)
 
 	// Try to get from cache
@@ -117,7 +116,7 @@ func (r *cachedUserRepository) GetByEmail(ctx context.Context, tenantID uuid.UUI
 	}
 
 	// Get from database
-	user, err := r.repo.GetByEmail(ctx, tenantID, email)
+	user, err := r.repo.GetByEmail(ctx, email, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -173,6 +172,11 @@ func (r *cachedUserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 func (r *cachedUserRepository) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) ([]*models.User, error) {
 	// List operations are not cached due to pagination and filtering complexity
 	return r.repo.List(ctx, tenantID, filters)
+}
+
+// Count returns the total number of users (not cached)
+func (r *cachedUserRepository) Count(ctx context.Context, tenantID uuid.UUID) (int64, error) {
+	return r.repo.Count(ctx, tenantID)
 }
 
 // invalidateUserCache invalidates all cache entries for a user
