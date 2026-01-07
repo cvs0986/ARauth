@@ -41,7 +41,7 @@ func NewService(
 type LoginRequest struct {
 	Username      string    `json:"username" binding:"required"`
 	Password      string    `json:"password" binding:"required"`
-	TenantID      uuid.UUID `json:"tenant_id" binding:"required"`
+	TenantID      uuid.UUID `json:"tenant_id"` // Set from context, not from request body
 	LoginChallenge *string  `json:"login_challenge,omitempty"` // For OAuth2 flow
 }
 
