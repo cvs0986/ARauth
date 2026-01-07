@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/identity/models"
+	"github.com/nuage-identity/iam/storage/interfaces"
 )
 
 // ServiceInterface defines the interface for tenant service operations
@@ -14,6 +15,6 @@ type ServiceInterface interface {
 	GetByDomain(ctx context.Context, domain string) (*models.Tenant, error)
 	Update(ctx context.Context, id uuid.UUID, req *UpdateTenantRequest) (*models.Tenant, error)
 	Delete(ctx context.Context, id uuid.UUID) error
-	List(ctx context.Context, filters interface{}) ([]*models.Tenant, error)
+	List(ctx context.Context, filters *interfaces.TenantFilters) ([]*models.Tenant, error)
 }
 
