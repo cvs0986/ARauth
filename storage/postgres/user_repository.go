@@ -46,9 +46,11 @@ func (r *userRepository) Create(ctx context.Context, u *models.User) error {
 		u.Status = models.UserStatusActive
 	}
 
-	var metadataJSON []byte
+	var metadataJSON interface{}
 	if u.Metadata != nil {
 		metadataJSON, _ = json.Marshal(u.Metadata)
+	} else {
+		metadataJSON = nil
 	}
 
 	_, err := r.db.ExecContext(ctx, query,
@@ -230,9 +232,11 @@ func (r *userRepository) Update(ctx context.Context, u *models.User) error {
 
 	u.UpdatedAt = time.Now()
 
-	var metadataJSON []byte
+	var metadataJSON interface{}
 	if u.Metadata != nil {
 		metadataJSON, _ = json.Marshal(u.Metadata)
+	} else {
+		metadataJSON = nil
 	}
 
 	_, err := r.db.ExecContext(ctx, query,

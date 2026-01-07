@@ -203,7 +203,7 @@ func (r *permissionRepository) List(ctx context.Context, tenantID uuid.UUID, fil
 
 	if filters.Search != nil {
 		if len(args) == 0 {
-			query += fmt.Sprintf(" WHERE (name ILIKE $1 OR description ILIKE $1 OR resource ILIKE $1)")
+			query += " WHERE (name ILIKE $1 OR description ILIKE $1 OR resource ILIKE $1)"
 		} else {
 			query += fmt.Sprintf(" AND (name ILIKE $%d OR description ILIKE $%d OR resource ILIKE $%d)", argPos, argPos, argPos)
 		}
@@ -212,7 +212,7 @@ func (r *permissionRepository) List(ctx context.Context, tenantID uuid.UUID, fil
 		argPos++
 	}
 
-	query += " ORDER BY resource, action LIMIT $" + fmt.Sprintf("%d", argPos) + " OFFSET $" + fmt.Sprintf("%d", argPos+1)
+	query += fmt.Sprintf(" ORDER BY resource, action LIMIT $%d OFFSET $%d", argPos, argPos+1)
 	args = append(args, filters.PageSize, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
