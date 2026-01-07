@@ -2,27 +2,57 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"os"
 	"testing"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/identity/models"
+	"github.com/nuage-identity/iam/internal/testutil"
 	"github.com/nuage-identity/iam/storage/interfaces"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // setupTestDB creates a test database connection
-// In a real scenario, this would use a test database
-func setupTestDB(t *testing.T) *DB {
-	// TODO: Set up test database connection
-	// For now, this is a placeholder
-	t.Skip("Test database setup required")
-	return nil
+func setupTestDB(t *testing.T) (*DB, func()) {
+	// Use test database URL from environment or skip
+	testDBURL := os.Getenv("TEST_DATABASE_URL")
+	if testDBURL == "" {
+		t.Skip("TEST_DATABASE_URL not set, skipping integration test")
+		return nil, func() {}
+	}
+
+	// Create DB connection using sql.Open directly for testing
+	import _ "github.com/lib/pq"
+	dbConn, err := sql.Open("postgres", testDBURL)
+	if err != nil {
+		t.Fatalf("Failed to open test database: %v", err)
+	}
+
+	db := &DB{DB: dbConn}
+	if err != nil {
+		t.Fatalf("Failed to connect to test database: %v", err)
+	}
+
+	// Clean up before test
+	testutil.CleanupTestDB(t, db.DB)
+
+	// Return cleanup function
+	cleanup := func() {
+		testutil.CleanupTestDB(t, db.DB)
+		testutil.TeardownTestDB(t, db.DB)
+	}
+
+	return db, cleanup
 }
 
 func TestUserRepository_Create(t *testing.T) {
-	db := setupTestDB(t)
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
@@ -42,7 +72,9 @@ func TestUserRepository_Create(t *testing.T) {
 }
 
 func TestUserRepository_GetByID(t *testing.T) {
-	db := setupTestDB(t)
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
@@ -67,7 +99,9 @@ func TestUserRepository_GetByID(t *testing.T) {
 }
 
 func TestUserRepository_GetByUsername(t *testing.T) {
-	db := setupTestDB(t)
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
@@ -91,7 +125,9 @@ func TestUserRepository_GetByUsername(t *testing.T) {
 }
 
 func TestUserRepository_GetByEmail(t *testing.T) {
-	db := setupTestDB(t)
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
@@ -115,7 +151,9 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 }
 
 func TestUserRepository_Update(t *testing.T) {
-	db := setupTestDB(t)
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
@@ -143,7 +181,9 @@ func TestUserRepository_Update(t *testing.T) {
 }
 
 func TestUserRepository_Delete(t *testing.T) {
-	db := setupTestDB(t)
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
@@ -163,14 +203,16 @@ func TestUserRepository_Delete(t *testing.T) {
 	err = repo.Delete(context.Background(), user.ID)
 	require.NoError(t, err)
 
-	// Verify soft delete
+	// Verify soft delete - GetByID should return error
 	deleted, err := repo.GetByID(context.Background(), user.ID)
 	assert.Error(t, err)
 	assert.Nil(t, deleted)
 }
 
 func TestUserRepository_List(t *testing.T) {
-	db := setupTestDB(t)
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
@@ -180,8 +222,8 @@ func TestUserRepository_List(t *testing.T) {
 		user := &models.User{
 			ID:        uuid.New(),
 			TenantID:  tenantID,
-			Username:  "testuser" + string(rune(i)),
-			Email:     "test" + string(rune(i)) + "@example.com",
+			Username:  "testuser" + string(rune(i+'0')),
+			Email:     "test" + string(rune(i+'0')) + "@example.com",
 			Status:    models.UserStatusActive,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
