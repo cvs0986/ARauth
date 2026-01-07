@@ -52,7 +52,7 @@
   - ✅ CORS
   - ✅ Logging
   - ✅ Recovery
-  - ✅ Rate limiting (placeholder)
+  - ✅ Rate limiting (Redis-based)
   - ✅ Validation
   - ✅ Tenant context
 
