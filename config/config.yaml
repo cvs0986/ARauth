@@ -35,7 +35,7 @@ security:
   jwt:
     issuer: "https://iam.example.com"
     access_token_ttl: 15m
-    refresh_token_ttl: 30d
+    refresh_token_ttl: 720h
     id_token_ttl: 1h
     signing_key_path: ""
     secret: "${JWT_SECRET}"
