@@ -131,7 +131,7 @@ func TestUserRepository_GetByUsername(t *testing.T) {
 	err := repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
-	retrieved, err := repo.GetByUsername(context.Background(), user.Username, tenantID)
+	retrieved, err = repo.GetByUsername(context.Background(), user.Username, tenantID)
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, retrieved.ID)
 	assert.Equal(t, user.Username, retrieved.Username)
@@ -168,7 +168,7 @@ func TestUserRepository_Update(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify update
-	retrieved, err := repo.GetByID(context.Background(), user.ID)
+	retrieved, err = repo.GetByID(context.Background(), user.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "updated@example.com", retrieved.Email)
 }
@@ -233,7 +233,7 @@ func TestUserRepository_List_WithFilters(t *testing.T) {
 	err := repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
-	retrieved, err := repo.GetByID(context.Background(), user.ID)
+	retrieved, err = repo.GetByID(context.Background(), user.ID)
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, retrieved.ID)
 	assert.Equal(t, user.Username, retrieved.Username)
@@ -264,7 +264,7 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 	err := repo.Create(context.Background(), user)
 	require.NoError(t, err)
 
-	retrieved, err := repo.GetByEmail(context.Background(), user.Email, tenantID)
+	retrieved, err = repo.GetByEmail(context.Background(), user.Email, tenantID)
 	require.NoError(t, err)
 	assert.Equal(t, user.ID, retrieved.ID)
 	assert.Equal(t, user.Email, retrieved.Email)
@@ -298,7 +298,7 @@ func TestUserRepository_Delete(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify soft delete - GetByID should return error
-	deleted, err := repo.GetByID(context.Background(), user.ID)
+	deleted, err = repo.GetByID(context.Background(), user.ID)
 	assert.Error(t, err)
 	assert.Nil(t, deleted)
 }

@@ -90,7 +90,7 @@ func TestRoleRepository_GetByName(t *testing.T) {
 	err := repo.Create(context.Background(), role)
 	require.NoError(t, err)
 
-	retrieved, err := repo.GetByName(context.Background(), tenantID, role.Name)
+	retrieved, err = repo.GetByName(context.Background(), tenantID, role.Name)
 	require.NoError(t, err)
 	assert.Equal(t, role.ID, retrieved.ID)
 	assert.Equal(t, role.Name, retrieved.Name)
@@ -127,7 +127,7 @@ func TestRoleRepository_Update(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify update
-	retrieved, err := repo.GetByID(context.Background(), role.ID)
+	retrieved, err = repo.GetByID(context.Background(), role.ID)
 	require.NoError(t, err)
 	assert.Equal(t, newName, retrieved.Name)
 }
