@@ -26,13 +26,13 @@ func setupTestDB(t *testing.T) (*DB, func()) {
 	}
 
 	// Create DB connection using sql.Open directly for testing
-	import _ "github.com/lib/pq"
 	dbConn, err := sql.Open("postgres", testDBURL)
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
 	}
 
-	db := &DB{DB: dbConn}
+	// Wrap in DB struct (userRepository expects *sql.DB)
+	db := dbConn
 	if err != nil {
 		t.Fatalf("Failed to connect to test database: %v", err)
 	}
@@ -42,8 +42,8 @@ func setupTestDB(t *testing.T) (*DB, func()) {
 
 	// Return cleanup function
 	cleanup := func() {
-		testutil.CleanupTestDB(t, db.DB)
-		testutil.TeardownTestDB(t, db.DB)
+		testutil.CleanupTestDB(t, db)
+		testutil.TeardownTestDB(t, db)
 	}
 
 	return db, cleanup
