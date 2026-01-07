@@ -16,6 +16,7 @@ import (
 	"github.com/nuage-identity/iam/auth/claims"
 	"github.com/nuage-identity/iam/auth/login"
 	"github.com/nuage-identity/iam/auth/mfa"
+	"github.com/nuage-identity/iam/auth/token"
 	"github.com/nuage-identity/iam/config/loader"
 	"github.com/nuage-identity/iam/config/validator"
 	"github.com/nuage-identity/iam/identity/permission"
