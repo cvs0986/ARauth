@@ -1,11 +1,11 @@
 -- Add indexes for performance optimization
 
 -- Users table indexes
--- Note: idx_users_tenant_id already created in 000002_create_users.up.sql
--- Note: idx_users_username_tenant already created in 000002_create_users.up.sql
--- Note: idx_users_email_tenant already created in 000002_create_users.up.sql
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(tenant_id, email) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_users_username ON users(tenant_id, username) WHERE deleted_at IS NULL;
+-- Note: idx_users_tenant_id, idx_users_username_tenant, and idx_users_email_tenant 
+-- already created in 000002_create_users.up.sql
+-- Creating additional filtered indexes for soft-deleted records
+CREATE INDEX IF NOT EXISTS idx_users_email_filtered ON users(tenant_id, email) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_users_username_filtered ON users(tenant_id, username) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC);
 
 -- Credentials table indexes
