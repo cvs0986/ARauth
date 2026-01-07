@@ -1,139 +1,51 @@
-.PHONY: build run test lint clean migrate-up migrate-down docker-up docker-down help
+.PHONY: help build run test test-unit test-integration test-coverage lint clean docker-build docker-up docker-down migrate-up migrate-down
 
-# Variables
-BINARY_NAME=iam-api
-MAIN_PATH=./cmd/server
-MIGRATIONS_PATH=./migrations
-DATABASE_URL?=postgres://iam_user:change-me@localhost:5432/iam?sslmode=disable
+help: ## Show this help message
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Available targets:'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-20s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-# Go parameters
-GOCMD=go
-GOBUILD=$(GOCMD) build
-GOTEST=$(GOCMD) test
-GOMOD=$(GOCMD) mod
+build: ## Build the application
+	go build -o bin/iam-api ./cmd/server
 
-# Build the application
-build:
-	@echo "Building $(BINARY_NAME)..."
-	$(GOBUILD) -o bin/$(BINARY_NAME) $(MAIN_PATH)
-	@echo "Build complete: bin/$(BINARY_NAME)"
+run: ## Run the application
+	go run ./cmd/server
 
-# Run the application
-run:
-	@echo "Running $(BINARY_NAME)..."
-	$(GOCMD) run $(MAIN_PATH)
+test: ## Run all tests
+	go test ./... -v
 
-# Run tests
-test:
-	@echo "Running tests..."
-	$(GOTEST) -v ./...
+test-unit: ## Run unit tests only
+	go test ./... -v -short
 
-# Run tests with coverage
-test-coverage:
-	@echo "Running tests with coverage..."
-	$(GOTEST) -v -coverprofile=coverage.out ./...
-	$(GOCMD) tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
+test-integration: ## Run integration tests
+	go test ./... -v -tags=integration
 
-# Run linters
-lint:
-	@echo "Running linters..."
-	@if command -v golangci-lint > /dev/null; then \
-		golangci-lint run; \
-	else \
-		echo "golangci-lint not found. Install it with: make install-tools"; \
-	fi
+test-coverage: ## Run tests with coverage
+	go test ./... -coverprofile=coverage.out
+	go tool cover -html=coverage.out -o coverage.html
 
-# Format code
-fmt:
-	@echo "Formatting code..."
-	$(GOCMD) fmt ./...
-	@if command -v goimports > /dev/null; then \
-		goimports -w .; \
-	fi
+lint: ## Run linter
+	golangci-lint run
 
-# Run database migrations up
-migrate-up:
-	@echo "Running database migrations up..."
-	@if command -v migrate > /dev/null; then \
-		migrate -path $(MIGRATIONS_PATH) -database "$(DATABASE_URL)" up; \
-	else \
-		echo "migrate tool not found. Install it with: make install-tools"; \
-	fi
-
-# Run database migrations down
-migrate-down:
-	@echo "Rolling back database migrations..."
-	@if command -v migrate > /dev/null; then \
-		migrate -path $(MIGRATIONS_PATH) -database "$(DATABASE_URL)" down; \
-	else \
-		echo "migrate tool not found. Install it with: make install-tools"; \
-	fi
-
-# Create new migration
-migrate-create:
-	@read -p "Enter migration name: " name; \
-	migrate create -ext sql -dir $(MIGRATIONS_PATH) -seq $$name
-
-# Start Docker Compose services
-docker-up:
-	@echo "Starting Docker Compose services..."
-	docker-compose up -d
-	@echo "Services started. Waiting for health checks..."
-	@sleep 5
-	@echo "Services are ready!"
-
-# Stop Docker Compose services
-docker-down:
-	@echo "Stopping Docker Compose services..."
-	docker-compose down
-
-# Stop and remove volumes
-docker-clean:
-	@echo "Stopping Docker Compose services and removing volumes..."
-	docker-compose down -v
-
-# Install development tools
-install-tools:
-	@echo "Installing development tools..."
-	@bash scripts/install-dev-tools.sh
-
-# Clean build artifacts
-clean:
-	@echo "Cleaning build artifacts..."
+clean: ## Clean build artifacts
 	rm -rf bin/
 	rm -f coverage.out coverage.html
-	$(GOCMD) clean
 
-# Download dependencies
-deps:
-	@echo "Downloading dependencies..."
-	$(GOMOD) download
-	$(GOMOD) tidy
+docker-build: ## Build Docker image
+	docker build -t nuage-identity/iam-api:latest .
 
-# Verify dependencies
-verify:
-	@echo "Verifying dependencies..."
-	$(GOMOD) verify
+docker-up: ## Start Docker Compose services
+	docker-compose up -d
 
-# Help
-help:
-	@echo "Available targets:"
-	@echo "  build          - Build the application"
-	@echo "  run            - Run the application"
-	@echo "  test           - Run tests"
-	@echo "  test-coverage  - Run tests with coverage report"
-	@echo "  lint           - Run linters"
-	@echo "  fmt            - Format code"
-	@echo "  migrate-up     - Run database migrations up"
-	@echo "  migrate-down   - Rollback database migrations"
-	@echo "  migrate-create - Create a new migration"
-	@echo "  docker-up      - Start Docker Compose services"
-	@echo "  docker-down    - Stop Docker Compose services"
-	@echo "  docker-clean   - Stop services and remove volumes"
-	@echo "  install-tools  - Install development tools"
-	@echo "  clean          - Clean build artifacts"
-	@echo "  deps           - Download dependencies"
-	@echo "  verify         - Verify dependencies"
-	@echo "  help           - Show this help message"
+docker-down: ## Stop Docker Compose services
+	docker-compose down
 
+migrate-up: ## Run database migrations up
+	migrate -path migrations -database "$$DATABASE_URL" up
+
+migrate-down: ## Run database migrations down
+	migrate -path migrations -database "$$DATABASE_URL" down
+
+benchmark: ## Run benchmarks
+	go test ./... -bench=. -benchmem
