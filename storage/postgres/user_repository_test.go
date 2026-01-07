@@ -303,6 +303,7 @@ func TestUserRepository_Delete(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify soft delete - GetByID should return error
+	var deleted *models.User
 	deleted, err = repo.GetByID(context.Background(), user.ID)
 	assert.Error(t, err)
 	assert.Nil(t, deleted)
