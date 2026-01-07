@@ -35,6 +35,7 @@
    - Integrated token service
    - Token issuance after authentication
    - Refresh token storage
+   - Remember Me support
 
 ---
 
@@ -71,13 +72,13 @@
 
 ## 🔗 GitHub Issues
 
-- #25: JWT Token Service ✅
-- #26: PostgreSQL Repositories ✅
-- #27: Update Login Service ✅
-- #28: Token Endpoints 🚧 (to be created)
-- #29: JWT Middleware 📋 (to be created)
-- #30: Remember Me UI 📋 (to be created)
-- #31: Admin Dashboard Token Settings 📋 (to be created)
+- #25: JWT Token Service ✅ CLOSED
+- #26: PostgreSQL Repositories ✅ CLOSED
+- #27: Update Login Service ✅ CLOSED
+- #28: Token Endpoints 📋 OPEN
+- #29: JWT Middleware 📋 OPEN
+- #30: Remember Me UI 📋 OPEN
+- #31: Admin Dashboard Token Settings 📋 OPEN
 
 ---
 
@@ -93,6 +94,7 @@
 
 ## 📝 Recent Commits
 
+- `fix(auth): fix compilation errors in login service`
 - `feat(auth): update login service to issue JWT tokens`
 - `feat(auth): implement token repositories and JWT service`
 - `feat(auth): add token lifetime configuration system`
