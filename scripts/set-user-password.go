@@ -85,7 +85,7 @@ func main() {
 			UserID:       userID,
 			PasswordHash: passwordHash,
 		}
-		if err := credRepo.Create(ctx, cred); err != nil {
+		if err = credRepo.Create(ctx, cred); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to create credential: %v\n", err)
 			os.Exit(1)
 		}
@@ -93,7 +93,7 @@ func main() {
 	} else {
 		// Credential exists, update it
 		existingCred.PasswordHash = passwordHash
-		if err := credRepo.Update(ctx, existingCred); err != nil {
+		if err = credRepo.Update(ctx, existingCred); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to update credential: %v\n", err)
 			os.Exit(1)
 		}
