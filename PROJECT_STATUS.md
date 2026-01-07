@@ -333,7 +333,7 @@
 | Performance | ✅ 100% |
 | Deployment | ✅ 100% |
 | Documentation | ✅ 95% |
-| Tests | 🟡 30% |
+| Tests | 🟡 50% |
 
 ---
 
