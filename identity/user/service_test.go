@@ -56,7 +56,7 @@ func (m *MockUserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return args.Error(0)
 }
 
-func (m *MockUserRepository) List(ctx context.Context, tenantID uuid.UUID, filters interface{}) ([]*models.User, error) {
+func (m *MockUserRepository) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) ([]*models.User, error) {
 	args := m.Called(ctx, tenantID, filters)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
