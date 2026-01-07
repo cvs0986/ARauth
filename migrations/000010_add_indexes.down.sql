@@ -32,7 +32,7 @@ DROP INDEX IF EXISTS idx_credentials_last_attempt_at;
 DROP INDEX IF EXISTS idx_credentials_user_id;
 
 DROP INDEX IF EXISTS idx_users_created_at;
-DROP INDEX IF EXISTS idx_users_username;
-DROP INDEX IF EXISTS idx_users_email;
+DROP INDEX IF EXISTS idx_users_username_filtered;
+DROP INDEX IF EXISTS idx_users_email_filtered;
 DROP INDEX IF EXISTS idx_users_tenant_id;
 
