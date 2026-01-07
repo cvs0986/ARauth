@@ -64,11 +64,11 @@ export function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Roles & Permissions</CardTitle>
-                <CardDescription>View your roles and permissions</CardDescription>
+                <CardDescription>View your assigned roles and permissions</CardDescription>
               </CardHeader>
               <CardContent>
                 <Button onClick={() => navigate('/roles')} className="w-full">
-                  View Roles
+                  View Roles & Permissions
                 </Button>
               </CardContent>
             </Card>

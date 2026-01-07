@@ -10,6 +10,7 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { MFA } from './pages/MFA';
 import { Profile } from './pages/Profile';
+import { Roles } from './pages/Roles';
 
 // Create QueryClient instance
 const queryClient = new QueryClient({
@@ -49,6 +50,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/roles"
+            element={
+              <ProtectedRoute>
+                <Roles />
               </ProtectedRoute>
             }
           />
