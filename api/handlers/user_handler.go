@@ -124,7 +124,7 @@ func (h *UserHandler) List(c *gin.Context) {
 	// Get total count
 	total, err := h.userService.Count(c.Request.Context(), tenantID, filters)
 	if err != nil {
-		total = len(users) // Fallback
+		total = int64(len(users)) // Fallback
 	}
 
 	c.JSON(http.StatusOK, gin.H{
