@@ -125,14 +125,6 @@ func TestUserHandler_GetByID(t *testing.T) {
 	mockService := new(MockUserService)
 	handler := NewUserHandler(mockService)
 
-	router := gin.New()
-	router.Use(func(c *gin.Context) {
-		tenantID := uuid.New()
-		c.Set("tenant_id", tenantID)
-		c.Next()
-	})
-	router.GET("/api/v1/users/:id", handler.GetByID)
-
 	userID := uuid.New()
 	tenantID := uuid.New()
 	expectedUser := &models.User{
@@ -142,10 +134,17 @@ func TestUserHandler_GetByID(t *testing.T) {
 		Email:    "test@example.com",
 	}
 
+	router := gin.New()
+	router.Use(func(c *gin.Context) {
+		// Set tenant ID in context to match user's tenant ID
+		c.Set("tenant_id", tenantID)
+		c.Next()
+	})
+	router.GET("/api/v1/users/:id", handler.GetByID)
+
 	mockService.On("GetByID", mock.Anything, userID).Return(expectedUser, nil)
 
 	req, _ := http.NewRequest("GET", "/api/v1/users/"+userID.String(), nil)
-	req.Header.Set("X-Tenant-ID", tenantID.String())
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
