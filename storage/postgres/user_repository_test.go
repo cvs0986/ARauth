@@ -17,7 +17,7 @@ import (
 )
 
 // setupTestDB creates a test database connection
-func setupTestDB(t *testing.T) (*DB, func()) {
+func setupTestDB(t *testing.T) (*sql.DB, func()) {
 	// Use test database URL from environment or skip
 	testDBURL := os.Getenv("TEST_DATABASE_URL")
 	if testDBURL == "" {
@@ -42,11 +42,11 @@ func setupTestDB(t *testing.T) (*DB, func()) {
 
 	// Return cleanup function
 	cleanup := func() {
-		testutil.CleanupTestDB(t, db)
-		testutil.TeardownTestDB(t, db)
+		testutil.CleanupTestDB(t, dbConn)
+		testutil.TeardownTestDB(t, dbConn)
 	}
 
-	return db, cleanup
+	return dbConn, cleanup
 }
 
 func TestUserRepository_Create(t *testing.T) {
