@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/identity/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestService_Create_EmptyName(t *testing.T) {
@@ -49,7 +50,7 @@ func TestService_Create_InvalidDomain(t *testing.T) {
 	assert.Contains(t, err.Error(), "domain")
 }
 
-func TestService_Create_DuplicateDomain(t *testing.T) {
+func TestService_Create_DuplicateDomain_Error(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
 	service := NewService(mockRepo)
 

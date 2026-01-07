@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/identity/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestService_Create_EmptyName(t *testing.T) {
@@ -32,11 +33,12 @@ func TestService_Create_DuplicateName(t *testing.T) {
 	roleName := "Admin"
 
 	// Mock existing role
-	mockRoleRepo.On("GetByName", mock.Anything, tenantID, roleName).Return(&struct {
-		ID       uuid.UUID
-		TenantID uuid.UUID
-		Name     string
-	}{ID: uuid.New(), TenantID: tenantID, Name: roleName}, nil)
+	existingRole := &models.Role{
+		ID:       uuid.New(),
+		TenantID: tenantID,
+		Name:     roleName,
+	}
+	mockRoleRepo.On("GetByName", mock.Anything, tenantID, roleName).Return(existingRole, nil)
 
 	req := &CreateRoleRequest{
 		TenantID: tenantID,
