@@ -43,9 +43,11 @@ func (r *tenantRepository) Create(ctx context.Context, tenant *models.Tenant) er
 		tenant.Status = models.TenantStatusActive
 	}
 
-	var metadataJSON []byte
+	var metadataJSON interface{}
 	if tenant.Metadata != nil {
 		metadataJSON, _ = json.Marshal(tenant.Metadata)
+	} else {
+		metadataJSON = nil
 	}
 
 	_, err := r.db.ExecContext(ctx, query,

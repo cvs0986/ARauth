@@ -20,6 +20,10 @@ func TestRoleRepository_Create(t *testing.T) {
 	repo := NewRoleRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
+
 	role := &models.Role{
 		ID:        uuid.New(),
 		TenantID:  tenantID,
@@ -29,7 +33,7 @@ func TestRoleRepository_Create(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	err := repo.Create(context.Background(), role)
+	err = repo.Create(context.Background(), role)
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, role.ID)
 }

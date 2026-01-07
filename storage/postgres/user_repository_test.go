@@ -57,6 +57,10 @@ func TestUserRepository_Create(t *testing.T) {
 	repo := NewUserRepository(db)
 
 	tenantID := uuid.New()
+	// Create test tenant first
+	err := createTestTenant(context.Background(), db, tenantID)
+	require.NoError(t, err)
+
 	user := &models.User{
 		ID:        uuid.New(),
 		TenantID:  tenantID,
@@ -67,7 +71,7 @@ func TestUserRepository_Create(t *testing.T) {
 		UpdatedAt: time.Now(),
 	}
 
-	err := repo.Create(context.Background(), user)
+	err = repo.Create(context.Background(), user)
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, user.ID)
 }
