@@ -53,22 +53,31 @@ func (h *UserHandler) Create(c *gin.Context) {
 
 // GetByID handles GET /api/v1/users/:id
 func (h *UserHandler) GetByID(c *gin.Context) {
+	// Get tenant ID from context
+	tenantID, ok := middleware.RequireTenant(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid_id",
-			"message": "Invalid user ID format",
-		})
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_id",
+			"Invalid user ID format", nil)
 		return
 	}
 
 	u, err := h.userService.GetByID(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":   "not_found",
-			"message": "User not found",
-		})
+		middleware.RespondWithError(c, http.StatusNotFound, "not_found",
+			"User not found", nil)
+		return
+	}
+
+	// Verify user belongs to tenant
+	if u.TenantID != tenantID {
+		middleware.RespondWithError(c, http.StatusForbidden, "access_denied",
+			"User does not belong to this tenant", nil)
 		return
 	}
 

@@ -169,7 +169,8 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, req *UpdateTenantReq
 
 // Delete soft deletes a tenant
 func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
-	tenant, err := s.repo.GetByID(ctx, id)
+	// Verify tenant exists
+	_, err := s.repo.GetByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("tenant not found: %w", err)
 	}
