@@ -102,6 +102,8 @@ func main() {
 	tenantRepo := postgres.NewTenantRepository(db)
 	userRepo := postgres.NewUserRepository(db)
 	credentialRepo := postgres.NewCredentialRepository(db)
+	refreshTokenRepo := postgres.NewRefreshTokenRepository(db)
+	tenantSettingsRepo := postgres.NewTenantSettingsRepository(db)
 	mfaRecoveryCodeRepo := postgres.NewMFARecoveryCodeRepository(db)
 	auditRepo := postgres.NewAuditRepository(db)
 	roleRepo := postgres.NewRoleRepository(db)
@@ -144,10 +146,19 @@ func main() {
 	// Initialize claims builder
 	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo)
 
+	// Initialize token lifetime resolver
+	lifetimeResolver := token.NewLifetimeResolver(&cfg.Security, tenantSettingsRepo)
+
+	// Initialize token service
+	tokenService, err := token.NewService(&cfg.Security, lifetimeResolver)
+	if err != nil {
+		logger.Logger.Fatal("Failed to initialize token service", zap.Error(err))
+	}
+
 	// Initialize services
 	tenantService := tenant.NewService(tenantRepo)
 	userService := user.NewService(userRepo)
-	loginService := login.NewService(userRepo, credentialRepo, hydraClient, claimsBuilder)
+	loginService := login.NewService(userRepo, credentialRepo, refreshTokenRepo, hydraClient, claimsBuilder, tokenService, lifetimeResolver)
 	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, mfaSessionManager)
 	roleService := role.NewService(roleRepo, permissionRepo)
 	permissionService := permission.NewService(permissionRepo)

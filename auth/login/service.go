@@ -14,47 +14,59 @@ import (
 
 // Service provides login functionality
 type Service struct {
-	userRepo       interfaces.UserRepository
-	credentialRepo interfaces.CredentialRepository
-	hydraClient    *hydra.Client
-	passwordHasher *password.Hasher
-	claimsBuilder  *claims.Builder
+	userRepo         interfaces.UserRepository
+	credentialRepo   interfaces.CredentialRepository
+	refreshTokenRepo interfaces.RefreshTokenRepository
+	hydraClient      *hydra.Client
+	passwordHasher   *password.Hasher
+	claimsBuilder    *claims.Builder
+	tokenService     TokenServiceInterface
+	lifetimeResolver *token.LifetimeResolver
 }
 
 // NewService creates a new login service
 func NewService(
 	userRepo interfaces.UserRepository,
 	credentialRepo interfaces.CredentialRepository,
+	refreshTokenRepo interfaces.RefreshTokenRepository,
 	hydraClient *hydra.Client,
 	claimsBuilder *claims.Builder,
+	tokenService token.ServiceInterface,
+	lifetimeResolver *token.LifetimeResolver,
 ) *Service {
 	return &Service{
-		userRepo:       userRepo,
-		credentialRepo: credentialRepo,
-		hydraClient:    hydraClient,
-		passwordHasher: password.NewHasher(),
-		claimsBuilder:  claimsBuilder,
+		userRepo:         userRepo,
+		credentialRepo:   credentialRepo,
+		refreshTokenRepo: refreshTokenRepo,
+		hydraClient:      hydraClient,
+		passwordHasher:   password.NewHasher(),
+		claimsBuilder:    claimsBuilder,
+		tokenService:     tokenService,
+		lifetimeResolver: lifetimeResolver,
 	}
 }
 
 // LoginRequest represents a login request
 type LoginRequest struct {
-	Username      string    `json:"username" binding:"required"`
-	Password      string    `json:"password" binding:"required"`
-	TenantID      uuid.UUID `json:"tenant_id"` // Set from context, not from request body
-	LoginChallenge *string  `json:"login_challenge,omitempty"` // For OAuth2 flow
+	Username       string    `json:"username" binding:"required"`
+	Password       string    `json:"password" binding:"required"`
+	TenantID       uuid.UUID `json:"tenant_id"` // Set from context, not from request body
+	RememberMe    bool      `json:"remember_me,omitempty"` // Remember Me option
+	LoginChallenge *string   `json:"login_challenge,omitempty"` // For OAuth2 flow
 }
 
 // LoginResponse represents a login response
 type LoginResponse struct {
-	AccessToken  string `json:"access_token,omitempty"`
-	RefreshToken string `json:"refresh_token,omitempty"`
-	IDToken      string `json:"id_token,omitempty"`
-	TokenType    string `json:"token_type,omitempty"`
-	ExpiresIn    int    `json:"expires_in,omitempty"`
-	MFARequired  bool   `json:"mfa_required"`
-	MFASessionID string `json:"mfa_session_id,omitempty"`
-	RedirectTo   string `json:"redirect_to,omitempty"` // For OAuth2 flow
+	AccessToken      string `json:"access_token,omitempty"`
+	RefreshToken     string `json:"refresh_token,omitempty"`
+	IDToken          string `json:"id_token,omitempty"`
+	TokenType        string `json:"token_type,omitempty"`
+	ExpiresIn        int    `json:"expires_in,omitempty"`         // Access token expiry in seconds
+	RefreshExpiresIn int    `json:"refresh_expires_in,omitempty"` // Refresh token expiry in seconds
+	RememberMe       bool   `json:"remember_me,omitempty"`
+	MFARequired      bool   `json:"mfa_required"`
+	MFASessionID     string `json:"mfa_session_id,omitempty"`
+	RedirectTo       string `json:"redirect_to,omitempty"` // For OAuth2 flow
 }
 
 // Login authenticates a user and returns tokens
@@ -126,12 +138,8 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 		return s.handleOAuth2Login(ctx, *req.LoginChallenge, user)
 	}
 
-	// TODO: Direct token issuance (simplified flow)
-	// For now, return success but tokens need to be issued via Hydra
-	return &LoginResponse{
-		TokenType: "Bearer",
-		// Tokens will be issued via Hydra
-	}, nil
+	// Direct token issuance (simplified flow)
+	return s.issueDirectTokens(ctx, user, req.TenantID, req.RememberMe)
 }
 
 // handleOAuth2Login handles OAuth2 login flow with Hydra

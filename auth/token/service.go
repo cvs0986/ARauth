@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/auth/claims"
 	"github.com/nuage-identity/iam/config"
-	"github.com/nuage-identity/iam/identity/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -218,22 +217,23 @@ func loadRSAKeyPair(keyPath string) (*rsa.PrivateKey, *rsa.PublicKey, error) {
 		return nil, nil, fmt.Errorf("failed to decode PEM block")
 	}
 
-	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	parsedKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
 		// Try PKCS8 format
 		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to parse private key: %w", err)
 		}
-		privateKey, ok := key.(*rsa.PrivateKey)
+		var ok bool
+		parsedKey, ok = key.(*rsa.PrivateKey)
 		if !ok {
 			return nil, nil, fmt.Errorf("key is not RSA private key")
 		}
 	}
 
-	publicKey := &privateKey.PublicKey
+	publicKey := &parsedKey.PublicKey
 
-	return privateKey, publicKey, nil
+	return parsedKey, publicKey, nil
 }
 
 // GetPublicKey returns the public key for JWKS endpoint
