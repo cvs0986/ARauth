@@ -9,12 +9,12 @@ import (
 )
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, tenantRepo interfaces.TenantRepository) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
 	router.Use(middleware.Recovery(logger))
-	router.Use(middleware.RateLimit())
+	router.Use(middleware.RateLimit(cacheClient))
 
 	// Health check
 	healthHandler := handlers.NewHealthHandler()
