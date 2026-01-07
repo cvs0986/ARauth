@@ -61,7 +61,7 @@ func TestRoleRepository_GetByID(t *testing.T) {
 	err := repo.Create(context.Background(), role)
 	require.NoError(t, err)
 
-	retrieved, err := repo.GetByID(context.Background(), role.ID)
+	retrieved, err = repo.GetByID(context.Background(), role.ID)
 	require.NoError(t, err)
 	assert.Equal(t, role.ID, retrieved.ID)
 	assert.Equal(t, role.Name, retrieved.Name)
