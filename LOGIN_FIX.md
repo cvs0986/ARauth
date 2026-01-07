@@ -76,11 +76,45 @@ curl 'http://localhost:8080/api/v1/auth/login' \
 }
 ```
 
+## Backend Fix
+
+The backend also needed to be updated to extract tenant ID from context instead of request body:
+
+**File**: `auth/login/service.go`
+```go
+// Before
+TenantID uuid.UUID `json:"tenant_id" binding:"required"`
+
+// After
+TenantID uuid.UUID `json:"tenant_id"` // Set from context, not from request body
+```
+
+**File**: `api/handlers/auth_handler.go`
+```go
+// Get tenant ID from context (set by tenant middleware)
+tenantID, ok := middleware.RequireTenant(c)
+if !ok {
+    return
+}
+
+// ... bind request ...
+
+// Set tenant ID from context (always override any tenant_id in request body for security)
+req.TenantID = tenantID
+```
+
 ## Status
 ✅ **FIXED** - Login now works with `X-Tenant-ID` header
 
+Both frontend and backend have been updated:
+- Frontend sends `X-Tenant-ID` header
+- Backend extracts tenant ID from context (set by tenant middleware)
+- Tenant ID is no longer required in request body
+
 ---
 
-**Commit**: `fix(frontend): send X-Tenant-ID header for login requests`  
+**Commits**: 
+- `fix(frontend): send X-Tenant-ID header for login requests`
+- `fix(api): extract tenant ID from context for login`
 **Date**: 2024-01-08
 
