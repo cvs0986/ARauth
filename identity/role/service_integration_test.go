@@ -64,6 +64,7 @@ func TestService_AssignRoleToUser_Integration(t *testing.T) {
 	roleRepo := postgres.NewRoleRepository(db)
 	permissionRepo := postgres.NewPermissionRepository(db)
 	tenantRepo := postgres.NewTenantRepository(db)
+	userRepo := postgres.NewUserRepository(db)
 
 	// Create tenant
 	tenantID := uuid.New()
