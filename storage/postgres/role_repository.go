@@ -300,7 +300,7 @@ func (r *roleRepository) GetUserRoles(ctx context.Context, userID uuid.UUID) ([]
 // AssignRoleToUser assigns a role to a user
 func (r *roleRepository) AssignRoleToUser(ctx context.Context, userID, roleID uuid.UUID) error {
 	query := `
-		INSERT INTO user_roles (id, user_id, role_id, created_at)
+		INSERT INTO user_roles (id, user_id, role_id, assigned_at)
 		VALUES (gen_random_uuid(), $1, $2, NOW())
 		ON CONFLICT (user_id, role_id) DO NOTHING
 	`

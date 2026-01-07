@@ -28,8 +28,8 @@ func (r *mfaRecoveryCodeRepository) CreateRecoveryCodes(ctx context.Context, use
 
 	// Insert new codes
 	query := `
-		INSERT INTO mfa_recovery_codes (id, user_id, code_hash, used, created_at)
-		VALUES (gen_random_uuid(), $1, encode(digest($2, 'sha256'), 'hex'), false, NOW())
+		INSERT INTO mfa_recovery_codes (id, user_id, code_hash, created_at)
+		VALUES (gen_random_uuid(), $1, encode(digest($2, 'sha256'), 'hex'), NOW())
 	`
 
 	for _, code := range codes {
@@ -47,7 +47,7 @@ func (r *mfaRecoveryCodeRepository) GetRecoveryCodes(ctx context.Context, userID
 	// We don't return actual codes for security, only check if they exist
 	query := `
 		SELECT COUNT(*) FROM mfa_recovery_codes
-		WHERE user_id = $1 AND used = false
+		WHERE user_id = $1 AND used_at IS NULL
 	`
 
 	var count int
@@ -64,10 +64,10 @@ func (r *mfaRecoveryCodeRepository) GetRecoveryCodes(ctx context.Context, userID
 func (r *mfaRecoveryCodeRepository) VerifyAndDeleteRecoveryCode(ctx context.Context, userID uuid.UUID, code string) (bool, error) {
 	query := `
 		UPDATE mfa_recovery_codes
-		SET used = true, used_at = NOW()
+		SET used_at = NOW()
 		WHERE user_id = $1 
 		  AND code_hash = encode(digest($2, 'sha256'), 'hex')
-		  AND used = false
+		  AND used_at IS NULL
 		RETURNING id
 	`
 
