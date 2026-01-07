@@ -87,7 +87,8 @@ func TestService_Delete_NotFound(t *testing.T) {
 	service := NewService(mockRepo)
 
 	nonExistentID := uuid.New()
-	mockRepo.On("GetByID", mock.Anything, nonExistentID).Return(nil, assert.AnError)
+	// Service directly calls repo.Delete without checking existence
+	mockRepo.On("Delete", mock.Anything, nonExistentID).Return(assert.AnError)
 
 	err := service.Delete(context.Background(), nonExistentID)
 	assert.Error(t, err)
