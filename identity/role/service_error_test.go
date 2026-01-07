@@ -87,10 +87,13 @@ func TestService_AssignPermissionToRole_PermissionNotFound(t *testing.T) {
 	roleID := uuid.New()
 	permissionID := uuid.New()
 
+	// Service checks role first, then permission
+	mockRoleRepo.On("GetByID", mock.Anything, roleID).Return(&models.Role{ID: roleID}, nil)
 	mockPermRepo.On("GetByID", mock.Anything, permissionID).Return(nil, assert.AnError)
 
 	err := service.AssignPermissionToRole(context.Background(), roleID, permissionID)
 	assert.Error(t, err)
+	mockRoleRepo.AssertExpectations(t)
 	mockPermRepo.AssertExpectations(t)
 }
 
