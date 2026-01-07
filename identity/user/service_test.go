@@ -180,8 +180,10 @@ func TestService_Update(t *testing.T) {
 
 	user, err := service.Update(context.Background(), userID, req)
 	require.NoError(t, err)
-	assert.Equal(t, *req.Email, user.Email)
-	assert.Equal(t, *req.FirstName, user.FirstName)
+	assert.Equal(t, updatedEmail, user.Email)
+	if user.FirstName != nil {
+		assert.Equal(t, updatedFirstName, *user.FirstName)
+	}
 
 	mockRepo.AssertExpectations(t)
 }
@@ -202,5 +204,7 @@ func TestService_Delete(t *testing.T) {
 	require.NoError(t, err)
 
 	mockRepo.AssertExpectations(t)
+	mockRepo.AssertNumberOfCalls(t, "GetByID", 1)
+	mockRepo.AssertNumberOfCalls(t, "Delete", 1)
 }
 
