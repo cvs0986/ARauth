@@ -126,11 +126,12 @@ func TestService_Create_DuplicateName(t *testing.T) {
 	permissionName := "users:read"
 
 	// Mock existing permission
-	mockRepo.On("GetByName", mock.Anything, tenantID, permissionName).Return(&struct {
-		ID       uuid.UUID
-		TenantID uuid.UUID
-		Name     string
-	}{ID: uuid.New(), TenantID: tenantID, Name: permissionName}, nil)
+	existingPermission := &models.Permission{
+		ID:       uuid.New(),
+		TenantID: tenantID,
+		Name:     permissionName,
+	}
+	mockRepo.On("GetByName", mock.Anything, tenantID, permissionName).Return(existingPermission, nil)
 
 	req := &CreatePermissionRequest{
 		TenantID: tenantID,

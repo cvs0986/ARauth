@@ -102,10 +102,11 @@ func TestService_Create_DuplicateDomain(t *testing.T) {
 	domain := "test.example.com"
 
 	// Mock existing tenant
-	mockRepo.On("GetByDomain", mock.Anything, domain).Return(&struct {
-		ID     uuid.UUID
-		Domain string
-	}{ID: uuid.New(), Domain: domain}, nil)
+	existingTenant := &models.Tenant{
+		ID:     uuid.New(),
+		Domain: domain,
+	}
+	mockRepo.On("GetByDomain", mock.Anything, domain).Return(existingTenant, nil)
 
 	req := &CreateTenantRequest{
 		Name:   "Test Tenant",
