@@ -47,6 +47,9 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 	router.GET("/health/live", healthHandler.Liveness)
 	router.GET("/health/ready", healthHandler.Readiness)
 
+	// Metrics endpoint
+	SetupMetricsRoutes(router)
+
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
