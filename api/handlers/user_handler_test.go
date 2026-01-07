@@ -174,6 +174,7 @@ func TestUserHandler_List(t *testing.T) {
 	}
 
 	mockService.On("List", mock.Anything, mock.Anything, mock.Anything).Return(expectedUsers, nil)
+	mockService.On("Count", mock.Anything, mock.Anything, mock.Anything).Return(len(expectedUsers), nil)
 
 	req, _ := http.NewRequest("GET", "/api/v1/users", nil)
 	w := httptest.NewRecorder()
