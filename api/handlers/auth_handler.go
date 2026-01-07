@@ -11,7 +11,8 @@ import (
 
 // AuthHandler handles authentication-related HTTP requests
 type AuthHandler struct {
-	loginService login.ServiceInterface
+	loginService   login.ServiceInterface
+	refreshService *token.RefreshService
 }
 
 // NewAuthHandler creates a new auth handler
@@ -99,12 +100,9 @@ func (h *AuthHandler) RevokeToken(c *gin.Context) {
 	// Determine token type
 	if req.TokenType == "refresh_token" || req.TokenType == "" {
 		// Try to revoke as refresh token
-		refreshTokenHash, err := h.refreshService.tokenService.HashRefreshToken(req.Token)
-		if err == nil {
-			if err := h.refreshService.refreshTokenRepo.RevokeByTokenHash(c.Request.Context(), refreshTokenHash); err == nil {
-				c.JSON(http.StatusOK, gin.H{"message": "Token revoked successfully"})
-				return
-			}
+		if err := h.refreshService.RevokeRefreshToken(c.Request.Context(), req.Token); err == nil {
+			c.JSON(http.StatusOK, gin.H{"message": "Token revoked successfully"})
+			return
 		}
 	}
 
