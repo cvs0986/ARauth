@@ -42,13 +42,13 @@ func TestRequirePermission(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			router := gin.New()
-			router.Use(func(c *gin.Context) {
-				if tt.userPermissions != nil {
-					c.Set("permissions", tt.userPermissions)
-				}
-				c.Next()
-			})
+		router := gin.New()
+		router.Use(func(c *gin.Context) {
+			if tt.userPermissions != nil {
+				c.Set("user_permissions", tt.userPermissions)
+			}
+			c.Next()
+		})
 			// RequirePermission takes resource and action
 			parts := strings.Split(tt.requiredPerm, ":")
 			resource := parts[0]
