@@ -72,6 +72,16 @@ type JWTConfig struct {
 	IDTokenTTL      time.Duration `yaml:"id_token_ttl" env:"JWT_ID_TOKEN_TTL" envDefault:"1h"`
 	SigningKeyPath  string        `yaml:"signing_key_path" env:"JWT_SIGNING_KEY_PATH"`
 	Secret          string        `yaml:"secret" env:"JWT_SECRET"`
+	RememberMe      RememberMeConfig `yaml:"remember_me"`
+	TokenRotation   bool          `yaml:"token_rotation" env:"JWT_TOKEN_ROTATION" envDefault:"true"`
+	RequireMFAForExtendedSessions bool `yaml:"require_mfa_for_extended_sessions" env:"JWT_REQUIRE_MFA_EXTENDED" envDefault:"false"`
+}
+
+// RememberMeConfig holds Remember Me configuration
+type RememberMeConfig struct {
+	Enabled          bool          `yaml:"enabled" env:"JWT_REMEMBER_ME_ENABLED" envDefault:"true"`
+	RefreshTokenTTL time.Duration `yaml:"refresh_token_ttl" env:"JWT_REMEMBER_ME_REFRESH_TTL" envDefault:"90d"`
+	AccessTokenTTL  time.Duration `yaml:"access_token_ttl" env:"JWT_REMEMBER_ME_ACCESS_TTL" envDefault:"60m"`
 }
 
 // PasswordConfig holds password policy configuration

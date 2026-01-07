@@ -39,6 +39,12 @@ security:
     id_token_ttl: 1h
     signing_key_path: ""
     secret: "${JWT_SECRET}"
+    remember_me:
+      enabled: true
+      refresh_token_ttl: 2160h  # 90 days
+      access_token_ttl: 60m
+    token_rotation: true
+    require_mfa_for_extended_sessions: false
   password:
     min_length: 12
     require_uppercase: true
