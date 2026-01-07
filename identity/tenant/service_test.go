@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/identity/models"
+	"github.com/nuage-identity/iam/storage/interfaces"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -47,7 +48,7 @@ func (m *MockTenantRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return args.Error(0)
 }
 
-func (m *MockTenantRepository) List(ctx context.Context, filters interface{}) ([]*models.Tenant, error) {
+func (m *MockTenantRepository) List(ctx context.Context, filters *interfaces.TenantFilters) ([]*models.Tenant, error) {
 	args := m.Called(ctx, filters)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -62,14 +63,13 @@ func TestService_Create(t *testing.T) {
 	req := &CreateTenantRequest{
 		Name:   "Test Tenant",
 		Domain: "test.example.com",
-		Status: models.TenantStatusActive,
 	}
 
 	expectedTenant := &models.Tenant{
 		ID:     uuid.New(),
 		Name:   req.Name,
 		Domain: req.Domain,
-		Status: req.Status,
+		Status: models.TenantStatusActive,
 	}
 
 	mockRepo.On("GetByDomain", mock.Anything, req.Domain).Return(nil, assert.AnError)

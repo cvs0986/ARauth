@@ -25,20 +25,23 @@ func TestHasher_Verify(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify correct password
-	err = hasher.Verify(password, hash)
-	assert.NoError(t, err)
+	valid, err := hasher.Verify(password, hash)
+	require.NoError(t, err)
+	assert.True(t, valid)
 
 	// Verify incorrect password
-	err = hasher.Verify("WrongPassword", hash)
-	assert.Error(t, err)
+	valid, err = hasher.Verify("WrongPassword", hash)
+	require.NoError(t, err)
+	assert.False(t, valid)
 }
 
 func TestHasher_Verify_InvalidHash(t *testing.T) {
 	hasher := NewHasher()
 	password := "TestPassword123!"
 
-	err := hasher.Verify(password, "invalid-hash")
+	valid, err := hasher.Verify(password, "invalid-hash")
 	assert.Error(t, err)
+	assert.False(t, valid)
 }
 
 func TestHasher_Consistency(t *testing.T) {
@@ -55,10 +58,12 @@ func TestHasher_Consistency(t *testing.T) {
 	assert.NotEqual(t, hash1, hash2)
 
 	// But both should verify correctly
-	err := hasher.Verify(password, hash1)
-	assert.NoError(t, err)
+	valid, err := hasher.Verify(password, hash1)
+	require.NoError(t, err)
+	assert.True(t, valid)
 
-	err = hasher.Verify(password, hash2)
-	assert.NoError(t, err)
+	valid, err = hasher.Verify(password, hash2)
+	require.NoError(t, err)
+	assert.True(t, valid)
 }
 

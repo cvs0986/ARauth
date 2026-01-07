@@ -3,7 +3,7 @@ package totp
 import (
 	"testing"
 
-	"github.com/pquerna/otp"
+	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,23 +35,22 @@ func TestGenerator_ValidateCode(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate a valid code using the same secret
-	// Use time.Now() directly since ValidateCode uses it internally
-	code, err := otp.GenerateCode(secret, nil)
+	code, err := totp.GenerateCode(secret, nil)
 	require.NoError(t, err)
 
 	// Validate the code
-	valid := generator.ValidateCode(secret, code)
+	valid := generator.Validate(secret, code)
 	assert.True(t, valid)
 
 	// Validate invalid code
-	valid = generator.ValidateCode(secret, "000000")
+	valid = generator.Validate(secret, "000000")
 	assert.False(t, valid)
 }
 
 func TestGenerator_ValidateCode_InvalidSecret(t *testing.T) {
 	generator := NewGenerator("TestApp")
 
-	valid := generator.ValidateCode("invalid-secret", "123456")
+	valid := generator.Validate("invalid-secret", "123456")
 	assert.False(t, valid)
 }
 
