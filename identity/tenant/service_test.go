@@ -120,6 +120,7 @@ func TestService_GetByID(t *testing.T) {
 		ID:     tenantID,
 		Name:   "Test Tenant",
 		Domain: "test.example.com",
+		Status: models.TenantStatusActive,
 	}
 
 	mockRepo.On("GetByID", mock.Anything, tenantID).Return(expectedTenant, nil)

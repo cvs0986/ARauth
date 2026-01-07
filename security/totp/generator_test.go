@@ -35,7 +35,7 @@ func TestGenerator_ValidateCode(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate a valid code using the same secret
-	code, err := totp.GenerateCode(secret, nil)
+	code, err := totp.GenerateCode(secret, totp.Now())
 	require.NoError(t, err)
 
 	// Validate the code
