@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,9 +10,7 @@ import (
 )
 
 // createTestTenant creates a test tenant for use in tests
-func createTestTenant(ctx context.Context, db interface {
-	ExecContext(ctx context.Context, query string, args ...interface{}) error
-}, tenantID uuid.UUID) error {
+func createTestTenant(ctx context.Context, db *sql.DB, tenantID uuid.UUID) error {
 	query := `
 		INSERT INTO tenants (id, name, domain, status, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
