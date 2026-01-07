@@ -81,6 +81,123 @@ func TestUserRepository_GetByID(t *testing.T) {
 	user := &models.User{
 		ID:        uuid.New(),
 		TenantID:  tenantID,
+		Username:  "getuser",
+		Email:     "get@example.com",
+		Status:    models.UserStatusActive,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	err := repo.Create(context.Background(), user)
+	require.NoError(t, err)
+
+	retrieved, err := repo.GetByID(context.Background(), user.ID)
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, retrieved.ID)
+	assert.Equal(t, user.Username, retrieved.Username)
+	assert.Equal(t, user.Email, retrieved.Email)
+}
+
+func TestUserRepository_GetByUsername(t *testing.T) {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	repo := NewUserRepository(db)
+
+	tenantID := uuid.New()
+	user := &models.User{
+		ID:        uuid.New(),
+		TenantID:  tenantID,
+		Username:  "usernameuser",
+		Email:     "username@example.com",
+		Status:    models.UserStatusActive,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	err := repo.Create(context.Background(), user)
+	require.NoError(t, err)
+
+	retrieved, err := repo.GetByUsername(context.Background(), user.Username, tenantID)
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, retrieved.ID)
+	assert.Equal(t, user.Username, retrieved.Username)
+}
+
+func TestUserRepository_Update(t *testing.T) {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	repo := NewUserRepository(db)
+
+	tenantID := uuid.New()
+	user := &models.User{
+		ID:        uuid.New(),
+		TenantID:  tenantID,
+		Username:  "updateuser",
+		Email:     "update@example.com",
+		Status:    models.UserStatusActive,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	err := repo.Create(context.Background(), user)
+	require.NoError(t, err)
+
+	// Update user
+	user.Email = "updated@example.com"
+	user.UpdatedAt = time.Now()
+	err = repo.Update(context.Background(), user)
+	require.NoError(t, err)
+
+	// Verify update
+	retrieved, err := repo.GetByID(context.Background(), user.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "updated@example.com", retrieved.Email)
+}
+
+func TestUserRepository_List(t *testing.T) {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	repo := NewUserRepository(db)
+
+	tenantID := uuid.New()
+	
+	// Create multiple users
+	for i := 0; i < 3; i++ {
+		user := &models.User{
+			ID:        uuid.New(),
+			TenantID:  tenantID,
+			Username:  fmt.Sprintf("listuser%d", i),
+			Email:     fmt.Sprintf("list%d@example.com", i),
+			Status:    models.UserStatusActive,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		err := repo.Create(context.Background(), user)
+		require.NoError(t, err)
+	}
+
+	// List users
+	filters := &interfaces.UserFilters{
+		TenantID: &tenantID,
+		Limit:    10,
+		Offset:   0,
+	}
+	users, err := repo.List(context.Background(), filters)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(users), 3)
+} {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	repo := NewUserRepository(db)
+
+	tenantID := uuid.New()
+	user := &models.User{
+		ID:        uuid.New(),
+		TenantID:  tenantID,
 		Username:  "testuser",
 		Email:     "test@example.com",
 		Status:    models.UserStatusActive,
