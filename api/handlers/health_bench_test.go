@@ -30,7 +30,7 @@ func BenchmarkHealthLive(b *testing.B) {
 	handler := NewHealthHandler()
 
 	router := gin.New()
-	router.GET("/health/live", handler.Live)
+	router.GET("/health/live", handler.Liveness)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -46,7 +46,7 @@ func BenchmarkHealthReady(b *testing.B) {
 	handler := NewHealthHandler()
 
 	router := gin.New()
-	router.GET("/health/ready", handler.Ready)
+	router.GET("/health/ready", handler.Readiness)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

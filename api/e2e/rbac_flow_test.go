@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nuage-identity/iam/identity/models"
+	"github.com/nuage-identity/iam/identity/role"
 	"github.com/nuage-identity/iam/internal/cache"
 	"github.com/nuage-identity/iam/internal/testutil"
 	"github.com/nuage-identity/iam/storage/postgres"

@@ -25,10 +25,8 @@ func BenchmarkValidate(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	code, err := generator.GenerateCode(secret)
-	if err != nil {
-		b.Fatal(err)
-	}
+	// Generate a valid code for testing
+	code := generator.GenerateCodeNow(secret)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
