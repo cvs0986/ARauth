@@ -95,6 +95,7 @@ func TestUserHandler_Create(t *testing.T) {
 	router.POST("/api/v1/users", handler.Create)
 
 	reqBody := user.CreateUserRequest{
+		TenantID: tenantID, // Required by binding, but handler will override from context
 		Username: "testuser",
 		Email:    "test@example.com",
 	}
