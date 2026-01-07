@@ -1,0 +1,109 @@
+# Default values for nuage-identity
+replicaCount: 3
+
+image:
+  repository: nuage-identity/iam-api
+  pullPolicy: Always
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: iam.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Database configuration
+database:
+  host: postgres-iam
+  port: 5432
+  user: iam_user
+  name: iam_db
+  sslmode: disable
+  maxOpenConns: 25
+  maxIdleConns: 5
+  connMaxLifetime: "5m"
+
+# Redis configuration
+redis:
+  host: redis
+  port: 6379
+  db: 0
+  password: ""
+
+# Hydra configuration
+hydra:
+  adminURL: "http://hydra:4445"
+
+# Security configuration
+security:
+  encryptionKey: "" # Must be set via secret
+  totpIssuer: "Nuage Identity"
+
+# Logging configuration
+logging:
+  level: info
+  format: json
+  output: stdout
+
+# Server configuration
+server:
+  host: "0.0.0.0"
+  port: 8080
+  readTimeout: "30s"
+  writeTimeout: "30s"
+
+# Secrets (should be provided via external secret management)
+secrets:
+  databasePassword: ""
+  redisPassword: ""
+  encryptionKey: "" # Must be 32 bytes for AES-256
+

@@ -1,0 +1,19 @@
+apiVersion: v2
+name: nuage-identity
+description: A Helm chart for Nuage Identity IAM Platform
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - iam
+  - identity
+  - authentication
+  - authorization
+  - oauth2
+  - oidc
+maintainers:
+  - name: Nuage Identity Team
+home: https://github.com/nuage-identity/iam
+sources:
+  - https://github.com/nuage-identity/iam
+
