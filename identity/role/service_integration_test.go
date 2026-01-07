@@ -26,7 +26,6 @@ func TestService_Create_Integration(t *testing.T) {
 	roleRepo := postgres.NewRoleRepository(db)
 	permissionRepo := postgres.NewPermissionRepository(db)
 	tenantRepo := postgres.NewTenantRepository(db)
-	userRepo := postgres.NewUserRepository(db)
 
 	// Create tenant
 	tenantID := uuid.New()
@@ -65,7 +64,6 @@ func TestService_AssignRoleToUser_Integration(t *testing.T) {
 	roleRepo := postgres.NewRoleRepository(db)
 	permissionRepo := postgres.NewPermissionRepository(db)
 	tenantRepo := postgres.NewTenantRepository(db)
-	userRepo := postgres.NewUserRepository(db)
 
 	// Create tenant
 	tenantID := uuid.New()
@@ -148,7 +146,7 @@ func TestService_AssignPermissionToRole_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create permission
-	createPermReq := &CreatePermissionRequest{
+	createPermReq := &permission.CreatePermissionRequest{
 		TenantID: tenantID,
 		Name:     "users:write",
 		Resource: "users",
