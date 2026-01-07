@@ -18,7 +18,7 @@ Testing phase for Nuage Identity IAM Platform. All core development phases (1-6)
 
 **Overall Test Coverage: 50%** (up from 30%)
 
-**Total Tests: 33+ unit tests passing**
+**Total Tests: 40+ unit tests passing**
 
 ### Unit Tests
 
@@ -77,11 +77,12 @@ make benchmark
 ## Next Steps
 
 1. ✅ Complete service unit tests (DONE)
-2. 🟡 Complete repository unit tests (structure ready, needs test DB)
-3. ⚠️ Add handler unit tests
-4. ⚠️ Implement integration tests
-5. ⚠️ Add E2E tests for critical flows
-6. ⚠️ Achieve 80%+ code coverage (currently 50%)
+2. ✅ Add handler unit tests (IN PROGRESS - Health handler done)
+3. 🟡 Complete repository unit tests (structure ready, needs test DB)
+4. 🟡 Add more middleware tests
+5. ⚠️ Implement integration tests
+6. ⚠️ Add E2E tests for critical flows
+7. ⚠️ Achieve 80%+ code coverage (currently 50%)
 
 ## Completed Test Suites
 
@@ -96,10 +97,18 @@ make benchmark
 - Encryption: 4 tests
 
 ### Middleware Tests 🟡
-- Authorization middleware: 3 test suites
+- Authorization middleware: 3 test suites (7 tests)
   - RequirePermission tests
   - HasPermission tests
   - GetTenantID tests
+- Rate limiting middleware: 3 tests
+- Tenant middleware: 2 tests
+
+### Handler Tests 🟡
+- Health handler: 3 tests
+  - Check endpoint
+  - Live endpoint
+  - Ready endpoint
 
 ### Repository Tests 🟡
 - User repository: Structure ready (6 tests, requires test DB)
