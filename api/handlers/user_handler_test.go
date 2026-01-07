@@ -86,9 +86,9 @@ func TestUserHandler_Create(t *testing.T) {
 	mockService := new(MockUserService)
 	handler := NewUserHandler(mockService)
 
+	tenantID := uuid.New()
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
-		tenantID := uuid.New()
 		c.Set("tenant_id", tenantID)
 		c.Next()
 	})
@@ -102,12 +102,16 @@ func TestUserHandler_Create(t *testing.T) {
 
 	expectedUser := &models.User{
 		ID:       uuid.New(),
+		TenantID: tenantID,
 		Username: reqBody.Username,
 		Email:    reqBody.Email,
 		Status:   "active",
 	}
 
-	mockService.On("Create", mock.Anything, mock.AnythingOfType("*user.CreateUserRequest")).Return(expectedUser, nil)
+	// The handler sets tenant_id from context, so we need to match that
+	mockService.On("Create", mock.Anything, mock.MatchedBy(func(req *user.CreateUserRequest) bool {
+		return req.TenantID == tenantID && req.Username == reqBody.Username
+	})).Return(expectedUser, nil)
 
 	req, _ := http.NewRequest("POST", "/api/v1/users", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
