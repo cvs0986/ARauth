@@ -164,10 +164,13 @@ func main() {
 	roleService := role.NewService(roleRepo, permissionRepo)
 	permissionService := permission.NewService(permissionRepo)
 
+	// Initialize refresh service
+	refreshService := token.NewRefreshService(tokenService, refreshTokenRepo, userRepo, claimsBuilder, lifetimeResolver)
+
 	// Initialize handlers
 	tenantHandler := handlers.NewTenantHandler(tenantService)
 	userHandler := handlers.NewUserHandler(userService)
-	authHandler := handlers.NewAuthHandler(loginService)
+	authHandler := handlers.NewAuthHandler(loginService, refreshService)
 	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger)
 	roleHandler := handlers.NewRoleHandler(roleService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)

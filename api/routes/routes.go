@@ -83,6 +83,8 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			auth := tenantScoped.Group("/auth")
 			{
 				auth.POST("/login", authHandler.Login)
+				auth.POST("/refresh", authHandler.RefreshToken)
+				auth.POST("/revoke", authHandler.RevokeToken)
 			}
 
 			// MFA routes (tenant-scoped)
