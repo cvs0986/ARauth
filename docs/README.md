@@ -1,95 +1,160 @@
-# Nuage Identity Documentation
+# 📚 Nuage Identity Documentation
 
-Welcome to the Nuage Identity documentation. This directory contains comprehensive documentation for the headless IAM platform.
+This directory contains all documentation for the Nuage Identity IAM system, organized by purpose and category.
 
-## 📚 Documentation Structure
+---
+
+## 📁 Directory Structure
 
 ```
 docs/
-├── README.md                    # This file
-├── architecture/                # Architecture documentation
-│   ├── overview.md             # High-level architecture overview
-│   ├── components.md           # Detailed component documentation
-│   ├── data-flow.md            # Authentication and authorization flows
-│   ├── integration-patterns.md # Integration patterns with Hydra
-│   └── scalability.md          # Scalability and performance design
-├── planning/                    # Development planning
-│   ├── strategy.md             # Development strategy and approach
-│   ├── roadmap.md              # Development roadmap and phases
-│   ├── risk-analysis.md        # Risk assessment and mitigation
-│   └── timeline.md             # Development timeline
-├── technical/                   # Technical specifications
-│   ├── tech-stack.md           # Technology stack decisions
-│   ├── database-design.md      # Database schema and design
-│   ├── api-design.md           # API specifications
-│   ├── security.md             # Security implementation details
-│   └── testing-strategy.md     # Testing approach and strategy
-├── deployment/                  # Deployment documentation
-│   ├── kubernetes.md           # Kubernetes deployment guide
-│   ├── docker-compose.md       # Docker Compose setup
-│   ├── configuration.md        # Configuration management
-│   └── monitoring.md           # Monitoring and observability
-└── guides/                      # How-to guides
-    ├── getting-started.md      # Getting started guide
-    ├── integration-guide.md    # Client integration guide
-    └── troubleshooting.md      # Common issues and solutions
+├── README.md (this file)
+│
+├── status/                          # Implementation status and progress tracking
+│   ├── IMPLEMENTATION_STATUS.md    # Current implementation status (100% complete)
+│   ├── COMPLETION_STATUS.md        # Hybrid auth completion summary
+│   ├── SECURE_AUTH_IMPLEMENTATION_STATUS.md  # Secure auth recommendation status
+│   └── HYBRID_AUTH_IMPLEMENTATION.md         # Hybrid auth implementation progress
+│
+├── guides/                          # How-to guides and tutorials
+│   ├── authentication/             # Authentication flow guides
+│   │   └── AUTHENTICATION_FLOWS_GUIDE.md  # Complete guide for Direct JWT and OAuth2/OIDC flows
+│   ├── testing/                    # Testing guides
+│   │   ├── TESTING_GUIDE.md        # Comprehensive testing guide
+│   │   └── QUICK_START_TESTING.md  # Quick start for testing
+│   ├── deployment/                 # Deployment guides
+│   │   └── using-as-iam-service.md # Using Nuage Identity as IAM service
+│   └── integration/                # Integration guides
+│       └── integration-guide.md    # Integration examples
+│
+├── architecture/                   # Architecture and design documents
+│   └── authentication/             # Authentication architecture
+│       └── SECURE_AUTH_RECOMMENDATION.md  # Secure authentication recommendation
+│
+├── security/                       # Security documentation
+│   ├── authentication-flow-recommendation.md  # Detailed auth flow recommendations
+│   ├── implementation-plan.md      # Security implementation plan
+│   └── token-lifetime-configuration.md  # Token lifetime configuration guide
+│
+├── planning/                       # Planning and decisions
+│   └── repository-structure-decision.md  # Monorepo vs polyrepo decision
+│
+├── technical/                      # Technical documentation
+│   ├── api-design.md              # API design specifications
+│   ├── security.md                # Security technical details
+│   └── database-schema.md         # Database schema documentation
+│
+└── api/                           # API documentation
+    └── README.md                  # API endpoints reference
 ```
 
-## 🚀 Quick Start
+---
 
-1. **New to the project?** Start with [Architecture Overview](./architecture/overview.md)
-2. **Planning development?** Read [Development Strategy](./planning/strategy.md)
-3. **Need technical details?** Check [Technical Stack](./technical/tech-stack.md)
-4. **Deploying?** See [Kubernetes Deployment](./deployment/kubernetes.md)
+## 🎯 Quick Navigation
 
-## 📖 Document Index
+### For Developers
 
-### Architecture
-- [Architecture Overview](./architecture/overview.md) - High-level system architecture
-- [Components](./architecture/components.md) - Detailed component breakdown
-- [Data Flow](./architecture/data-flow.md) - Authentication and authorization flows
-- [Integration Patterns](./architecture/integration-patterns.md) - Hydra integration patterns
-- [Scalability](./architecture/scalability.md) - Scalability design
+- **Getting Started**: `guides/testing/QUICK_START_TESTING.md`
+- **Authentication Flows**: `guides/authentication/AUTHENTICATION_FLOWS_GUIDE.md`
+- **API Reference**: `api/README.md`
+- **Testing**: `guides/testing/TESTING_GUIDE.md`
 
-### Planning
-- [Development Strategy](./planning/strategy.md) - Strategic approach and decisions
-- [Roadmap](./planning/roadmap.md) - Development phases and milestones
-- [Risk Analysis](./planning/risk-analysis.md) - Risks and mitigation strategies
-- [Timeline](./planning/timeline.md) - Development timeline
+### For Architects
 
-### Technical
-- [Technology Stack](./technical/tech-stack.md) - Technology choices and rationale
-- [Database Design](./technical/database-design.md) - Database schema and design
-- [API Design](./technical/api-design.md) - API specifications and contracts
-- [Security](./technical/security.md) - Security implementation
-- [Testing Strategy](./technical/testing-strategy.md) - Testing approach
+- **Architecture Overview**: `architecture/overview.md`
+- **Security Architecture**: `security/authentication-flow-recommendation.md`
+- **API Design**: `technical/api-design.md`
 
-### Deployment
-- [Kubernetes](./deployment/kubernetes.md) - Kubernetes deployment
-- [Docker Compose](./deployment/docker-compose.md) - Local development setup
-- [Configuration](./deployment/configuration.md) - Configuration management
-- [Monitoring](./deployment/monitoring.md) - Monitoring and observability
+### For DevOps
 
-### Guides
-- [Getting Started](./guides/getting-started.md) - Quick start guide
-- [Integration Guide](./guides/integration-guide.md) - Client application integration
-- [Troubleshooting](./guides/troubleshooting.md) - Common issues and solutions
+- **Deployment Guide**: `guides/deployment/using-as-iam-service.md`
+- **Configuration**: `security/token-lifetime-configuration.md`
 
-## 🔄 Document Status
+### For Project Managers
 
-- ✅ Complete
-- 🚧 In Progress
-- 📋 Planned
+- **Implementation Status**: `status/IMPLEMENTATION_STATUS.md`
+- **Completion Status**: `status/COMPLETION_STATUS.md`
 
-## 📝 Contributing
+---
 
-When updating documentation:
-1. Keep documentation up-to-date with code changes
-2. Use clear, concise language
-3. Include code examples where relevant
-4. Update the status indicators above
+## 📖 Document Categories
 
-## 📧 Questions?
+### Status Documents (`status/`)
+Track implementation progress, completion status, and what's been done.
 
-For questions or clarifications, please refer to the relevant documentation section or create an issue.
+### Guides (`guides/`)
+Step-by-step instructions for common tasks:
+- **Authentication**: How authentication flows work
+- **Testing**: How to test the system
+- **Deployment**: How to deploy and use the system
+- **Integration**: How to integrate with other systems
 
+### Architecture (`architecture/`)
+High-level design decisions and architectural patterns.
+
+### Security (`security/`)
+Security-related documentation, recommendations, and implementation details.
+
+### Planning (`planning/`)
+Project planning documents and architectural decisions.
+
+### Technical (`technical/`)
+Technical specifications and detailed documentation.
+
+### API (`api/`)
+API endpoint documentation and reference.
+
+---
+
+## 🔍 Finding Documents
+
+### By Purpose
+
+- **"How do I...?"** → Check `guides/`
+- **"What's the status?"** → Check `status/`
+- **"How does X work?"** → Check `architecture/` or `technical/`
+- **"How do I secure...?"** → Check `security/`
+- **"What API endpoints exist?"** → Check `api/`
+
+### By Topic
+
+- **Authentication** → `guides/authentication/`, `architecture/authentication/`, `security/`
+- **Testing** → `guides/testing/`
+- **Deployment** → `guides/deployment/`
+- **API** → `api/`, `technical/api-design.md`
+- **Database** → `technical/database-schema.md`
+
+---
+
+## 📝 Document Naming Convention
+
+- **Status docs**: `*_STATUS.md` or `*_IMPLEMENTATION.md`
+- **Guides**: Descriptive names like `AUTHENTICATION_FLOWS_GUIDE.md`
+- **Architecture**: `*_RECOMMENDATION.md` or `*_DESIGN.md`
+- **Technical**: Topic-based names like `api-design.md`, `security.md`
+
+---
+
+## 🆕 Adding New Documentation
+
+When adding new documentation:
+
+1. **Status updates** → `docs/status/`
+2. **How-to guides** → `docs/guides/<category>/`
+3. **Architecture decisions** → `docs/architecture/`
+4. **Security docs** → `docs/security/`
+5. **Technical specs** → `docs/technical/`
+6. **API docs** → `docs/api/`
+
+Update this README when adding new major sections!
+
+---
+
+## 🔗 Related Documentation
+
+- **Root README**: `../README.md` - Project overview
+- **Frontend Status**: `../frontend/FRONTEND_STATUS.md` - Frontend implementation status
+
+---
+
+**Last Updated**: 2026-01-08
