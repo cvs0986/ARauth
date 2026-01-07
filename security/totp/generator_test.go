@@ -2,6 +2,7 @@ package totp
 
 import (
 	"testing"
+	"time"
 
 	"github.com/pquerna/otp/totp"
 	"github.com/stretchr/testify/assert"
@@ -35,7 +36,7 @@ func TestGenerator_ValidateCode(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate a valid code using the same secret
-	code, err := totp.GenerateCode(secret, totp.Now())
+	code, err := totp.GenerateCode(secret, time.Now())
 	require.NoError(t, err)
 
 	// Validate the code
