@@ -32,7 +32,7 @@ func TestService_Create_Integration(t *testing.T) {
 	tenant := &models.Tenant{
 		ID:     tenantID,
 		Name:   "Test Tenant",
-		Domain: "test.example.com",
+		Domain: "test-" + tenantID.String() + ".example.com",
 		Status: "active",
 	}
 	err := tenantRepo.Create(context.Background(), tenant)
@@ -71,7 +71,7 @@ func TestService_AssignRoleToUser_Integration(t *testing.T) {
 	tenant := &models.Tenant{
 		ID:     tenantID,
 		Name:   "Test Tenant",
-		Domain: "test.example.com",
+		Domain: "test-" + tenantID.String() + ".example.com",
 		Status: "active",
 	}
 	err := tenantRepo.Create(context.Background(), tenant)
@@ -127,7 +127,7 @@ func TestService_AssignPermissionToRole_Integration(t *testing.T) {
 	tenant := &models.Tenant{
 		ID:     tenantID,
 		Name:   "Test Tenant",
-		Domain: "test.example.com",
+		Domain: "test-" + tenantID.String() + ".example.com",
 		Status: "active",
 	}
 	err := tenantRepo.Create(context.Background(), tenant)
