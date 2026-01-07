@@ -4,24 +4,48 @@ import (
 	"testing"
 )
 
-func BenchmarkHasher_Hash(b *testing.B) {
+// BenchmarkHash benchmarks password hashing performance
+func BenchmarkHash(b *testing.B) {
 	hasher := NewHasher()
-	password := "TestPassword123!"
+	password := "SecurePassword123!@#$"
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = hasher.Hash(password)
+		_, err := hasher.Hash(password)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
-func BenchmarkHasher_Verify(b *testing.B) {
+// BenchmarkVerify benchmarks password verification performance
+func BenchmarkVerify(b *testing.B) {
 	hasher := NewHasher()
-	password := "TestPassword123!"
-	hash, _ := hasher.Hash(password)
+	password := "SecurePassword123!@#$"
+	hash, err := hasher.Hash(password)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = hasher.Verify(password, hash)
+		_, err := hasher.Verify(password, hash)
+		if err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
+// BenchmarkHashLongPassword benchmarks hashing with longer passwords
+func BenchmarkHashLongPassword(b *testing.B) {
+	hasher := NewHasher()
+	password := "ThisIsAVeryLongPasswordThatExceedsTypicalLengthRequirements123!@#$%^&*()"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := hasher.Hash(password)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
