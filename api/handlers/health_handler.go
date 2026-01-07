@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"time"
@@ -50,42 +51,22 @@ func (h *HealthHandler) Check(c *gin.Context) {
 
 	// Check database connection
 	if h.db != nil {
-		ctx, cancel := c.Request.Context(), func() {}
-		if ctx == nil {
-			ctx, cancel = c.Request.Context(), func() {}
-		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 		defer cancel()
 
-		ctx, cancel = c.Request.Context(), func() {}
-		if ctx == nil {
-			ctx, cancel = c.Request.Context(), func() {}
-		}
-		defer cancel()
-
-		dbCtx, cancel := c.Request.Context(), func() {}
-		if dbCtx == nil {
-			dbCtx, cancel = c.Request.Context(), func() {}
-		}
-		defer cancel()
-
-		ctx, cancel = c.Request.Context(), func() {}
 		if err := h.db.PingContext(ctx); err != nil {
 			response.Status = "unhealthy"
 			response.Checks["database"] = "unhealthy: " + err.Error()
 		} else {
 			response.Checks["database"] = "healthy"
 		}
-		cancel()
 	} else {
 		response.Checks["database"] = "not_configured"
 	}
 
 	// Check Redis connection
 	if h.redisClient != nil {
-		ctx, cancel := c.Request.Context(), func() {}
-		if ctx == nil {
-			ctx, cancel = c.Request.Context(), func() {}
-		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 		defer cancel()
 
 		if err := h.redisClient.Ping(ctx).Err(); err != nil {
@@ -122,10 +103,7 @@ func (h *HealthHandler) Readiness(c *gin.Context) {
 
 	// Check database
 	if h.db != nil {
-		ctx, cancel := c.Request.Context(), func() {}
-		if ctx == nil {
-			ctx, cancel = c.Request.Context(), func() {}
-		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 		defer cancel()
 
 		if err := h.db.PingContext(ctx); err != nil {
@@ -139,10 +117,7 @@ func (h *HealthHandler) Readiness(c *gin.Context) {
 
 	// Check Redis (optional for readiness)
 	if h.redisClient != nil {
-		ctx, cancel := c.Request.Context(), func() {}
-		if ctx == nil {
-			ctx, cancel = c.Request.Context(), func() {}
-		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 		defer cancel()
 
 		if err := h.redisClient.Ping(ctx).Err(); err != nil {
