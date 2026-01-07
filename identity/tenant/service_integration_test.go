@@ -28,7 +28,6 @@ func TestService_Create_Integration(t *testing.T) {
 	req := &CreateTenantRequest{
 		Name:   "Integration Tenant",
 		Domain: "integration.example.com",
-		Status: "active",
 	}
 
 	tenant, err := service.Create(context.Background(), req)
@@ -54,7 +53,6 @@ func TestService_GetByID_Integration(t *testing.T) {
 	createReq := &CreateTenantRequest{
 		Name:   "Get Tenant",
 		Domain: "get.example.com",
-		Status: "active",
 	}
 	createdTenant, err := service.Create(context.Background(), createReq)
 	require.NoError(t, err)
@@ -82,7 +80,6 @@ func TestService_GetByDomain_Integration(t *testing.T) {
 	createReq := &CreateTenantRequest{
 		Name:   "Domain Tenant",
 		Domain: "domain.example.com",
-		Status: "active",
 	}
 	createdTenant, err := service.Create(context.Background(), createReq)
 	require.NoError(t, err)
@@ -111,7 +108,6 @@ func TestService_Isolation_Integration(t *testing.T) {
 	tenant1Req := &CreateTenantRequest{
 		Name:   "Tenant 1",
 		Domain: "tenant1.example.com",
-		Status: "active",
 	}
 	tenant1, err := tenantService.Create(context.Background(), tenant1Req)
 	require.NoError(t, err)
@@ -119,7 +115,6 @@ func TestService_Isolation_Integration(t *testing.T) {
 	tenant2Req := &CreateTenantRequest{
 		Name:   "Tenant 2",
 		Domain: "tenant2.example.com",
-		Status: "active",
 	}
 	tenant2, err := tenantService.Create(context.Background(), tenant2Req)
 	require.NoError(t, err)
