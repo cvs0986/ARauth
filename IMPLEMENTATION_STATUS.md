@@ -94,7 +94,7 @@
 
 ## 📝 Recent Commits
 
+- `fix(auth): fix import statements in login service`
 - `fix(auth): fix compilation errors in login service`
 - `feat(auth): update login service to issue JWT tokens`
 - `feat(auth): implement token repositories and JWT service`
-- `feat(auth): add token lifetime configuration system`
