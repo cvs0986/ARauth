@@ -55,7 +55,7 @@ func (m *MockPermissionRepository) List(ctx context.Context, tenantID uuid.UUID,
 	return args.Get(0).([]*models.Permission), args.Error(1)
 }
 
-func (m *MockPermissionRepository) AssignToRole(ctx context.Context, roleID, permissionID uuid.UUID) error {
+func (m *MockPermissionRepository) AssignPermissionToRole(ctx context.Context, roleID, permissionID uuid.UUID) error {
 	args := m.Called(ctx, roleID, permissionID)
 	return args.Error(0)
 }
@@ -125,16 +125,18 @@ func TestService_GetByID(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestService_AssignToRole(t *testing.T) {
+func TestService_AssignPermissionToRole(t *testing.T) {
 	mockRepo := new(MockPermissionRepository)
 	service := NewService(mockRepo)
 
 	roleID := uuid.New()
 	permissionID := uuid.New()
+	expectedPermission := &models.Permission{ID: permissionID}
 
-	mockRepo.On("AssignToRole", mock.Anything, roleID, permissionID).Return(nil)
+	mockRepo.On("GetByID", mock.Anything, permissionID).Return(expectedPermission, nil)
+	mockRepo.On("AssignPermissionToRole", mock.Anything, roleID, permissionID).Return(nil)
 
-	err := service.AssignToRole(context.Background(), roleID, permissionID)
+	err := service.AssignPermissionToRole(context.Background(), roleID, permissionID)
 	require.NoError(t, err)
 
 	mockRepo.AssertExpectations(t)

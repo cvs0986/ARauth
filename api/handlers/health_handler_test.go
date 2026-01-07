@@ -28,7 +28,7 @@ func TestHealthHandler_Live(t *testing.T) {
 
 	router := gin.New()
 	handler := &HealthHandler{}
-	router.GET("/health/live", handler.Live)
+	router.GET("/health/live", handler.Liveness)
 
 	req, _ := http.NewRequest("GET", "/health/live", nil)
 	w := httptest.NewRecorder()
@@ -42,7 +42,7 @@ func TestHealthHandler_Ready(t *testing.T) {
 
 	router := gin.New()
 	handler := &HealthHandler{}
-	router.GET("/health/ready", handler.Ready)
+	router.GET("/health/ready", handler.Readiness)
 
 	req, _ := http.NewRequest("GET", "/health/ready", nil)
 	w := httptest.NewRecorder()

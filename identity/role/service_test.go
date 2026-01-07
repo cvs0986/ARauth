@@ -29,12 +29,17 @@ func (m *MockRoleRepository) GetByID(ctx context.Context, id uuid.UUID) (*models
 	return args.Get(0).(*models.Role), args.Error(1)
 }
 
-func (m *MockRoleRepository) GetByName(ctx context.Context, name string, tenantID uuid.UUID) (*models.Role, error) {
-	args := m.Called(ctx, name, tenantID)
+func (m *MockRoleRepository) GetByName(ctx context.Context, tenantID uuid.UUID, name string) (*models.Role, error) {
+	args := m.Called(ctx, tenantID, name)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*models.Role), args.Error(1)
+}
+
+func (m *MockRoleRepository) AssignRoleToUser(ctx context.Context, userID, roleID uuid.UUID) error {
+	args := m.Called(ctx, userID, roleID)
+	return args.Error(0)
 }
 
 func (m *MockRoleRepository) Update(ctx context.Context, r *models.Role) error {
@@ -55,10 +60,6 @@ func (m *MockRoleRepository) List(ctx context.Context, tenantID uuid.UUID, filte
 	return args.Get(0).([]*models.Role), args.Error(1)
 }
 
-func (m *MockRoleRepository) AssignToUser(ctx context.Context, userID, roleID uuid.UUID) error {
-	args := m.Called(ctx, userID, roleID)
-	return args.Error(0)
-}
 
 func (m *MockRoleRepository) RemoveFromUser(ctx context.Context, userID, roleID uuid.UUID) error {
 	args := m.Called(ctx, userID, roleID)
@@ -75,13 +76,15 @@ func (m *MockRoleRepository) GetUserRoles(ctx context.Context, userID uuid.UUID)
 
 func TestService_Create(t *testing.T) {
 	mockRepo := new(MockRoleRepository)
-	service := NewService(mockRepo)
+	mockPermRepo := new(MockPermissionRepository)
+	service := NewService(mockRepo, mockPermRepo)
 
 	tenantID := uuid.New()
+	desc := "Administrator role"
 	req := &CreateRoleRequest{
 		TenantID:    tenantID,
 		Name:        "admin",
-		Description: "Administrator role",
+		Description: &desc,
 	}
 
 	expectedRole := &models.Role{
@@ -90,7 +93,7 @@ func TestService_Create(t *testing.T) {
 		Name:     req.Name,
 	}
 
-	mockRepo.On("GetByName", mock.Anything, req.Name, tenantID).Return(nil, assert.AnError)
+	mockRepo.On("GetByName", mock.Anything, tenantID, req.Name).Return(nil, assert.AnError)
 	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.Role")).Return(nil).Run(func(args mock.Arguments) {
 		role := args.Get(1).(*models.Role)
 		role.ID = expectedRole.ID
@@ -106,7 +109,8 @@ func TestService_Create(t *testing.T) {
 
 func TestService_GetByID(t *testing.T) {
 	mockRepo := new(MockRoleRepository)
-	service := NewService(mockRepo)
+	mockPermRepo := new(MockPermissionRepository)
+	service := NewService(mockRepo, mockPermRepo)
 
 	roleID := uuid.New()
 	expectedRole := &models.Role{
@@ -124,18 +128,26 @@ func TestService_GetByID(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestService_AssignToUser(t *testing.T) {
+func TestService_AssignRoleToUser(t *testing.T) {
 	mockRepo := new(MockRoleRepository)
-	service := NewService(mockRepo)
+	mockPermRepo := new(MockPermissionRepository)
+	service := NewService(mockRepo, mockPermRepo)
 
 	userID := uuid.New()
 	roleID := uuid.New()
+	expectedRole := &models.Role{ID: roleID}
 
-	mockRepo.On("AssignToUser", mock.Anything, userID, roleID).Return(nil)
+	mockRepo.On("GetByID", mock.Anything, roleID).Return(expectedRole, nil)
+	mockRepo.On("AssignRoleToUser", mock.Anything, userID, roleID).Return(nil)
 
-	err := service.AssignToUser(context.Background(), userID, roleID)
+	err := service.AssignRoleToUser(context.Background(), userID, roleID)
 	require.NoError(t, err)
 
 	mockRepo.AssertExpectations(t)
+}
+
+// MockPermissionRepository for role service tests
+type MockPermissionRepository struct {
+	mock.Mock
 }
 
