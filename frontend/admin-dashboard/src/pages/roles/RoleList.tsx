@@ -13,11 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CreateRoleDialog } from './CreateRoleDialog';
 import { EditRoleDialog } from './EditRoleDialog';
 import { DeleteRoleDialog } from './DeleteRoleDialog';
 import { RolePermissionsDialog } from './RolePermissionsDialog';
+import { SearchInput } from '@/components/SearchInput';
 import type { Role } from '@shared/types/api';
 
 export function RoleList() {
@@ -26,11 +27,24 @@ export function RoleList() {
   const [editRole, setEditRole] = useState<Role | null>(null);
   const [deleteRole, setDeleteRole] = useState<Role | null>(null);
   const [permissionsRole, setPermissionsRole] = useState<Role | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: roles, isLoading, error } = useQuery({
     queryKey: ['roles'],
     queryFn: () => roleApi.list(),
   });
+
+  // Filter roles based on search
+  const filteredRoles = useMemo(() => {
+    if (!roles) return [];
+    
+    return roles.filter((role) => {
+      return (
+        role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (role.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    });
+  }, [roles, searchQuery]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => roleApi.delete(id),
@@ -59,6 +73,17 @@ export function RoleList() {
         <Button onClick={() => setCreateOpen(true)}>Create Role</Button>
       </div>
 
+      <div className="flex items-center gap-4">
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search by name or description..."
+        />
+        <div className="text-sm text-gray-500">
+          Showing {filteredRoles.length} of {roles?.length || 0} roles
+        </div>
+      </div>
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -70,7 +95,7 @@ export function RoleList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {roles?.map((role) => (
+            {filteredRoles.map((role) => (
               <TableRow key={role.id}>
                 <TableCell className="font-medium">{role.name}</TableCell>
                 <TableCell>{role.description || '-'}</TableCell>
@@ -104,6 +129,13 @@ export function RoleList() {
                 </TableCell>
               </TableRow>
             ))}
+            {filteredRoles.length === 0 && roles && roles.length > 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-gray-500">
+                  No roles match your search criteria.
+                </TableCell>
+              </TableRow>
+            )}
             {roles?.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} className="text-center text-gray-500">

@@ -13,10 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { CreatePermissionDialog } from './CreatePermissionDialog';
 import { EditPermissionDialog } from './EditPermissionDialog';
 import { DeletePermissionDialog } from './DeletePermissionDialog';
+import { SearchInput } from '@/components/SearchInput';
 import type { Permission } from '@shared/types/api';
 
 export function PermissionList() {
@@ -24,11 +25,26 @@ export function PermissionList() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editPermission, setEditPermission] = useState<Permission | null>(null);
   const [deletePermission, setDeletePermission] = useState<Permission | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: permissions, isLoading, error } = useQuery({
     queryKey: ['permissions'],
     queryFn: () => permissionApi.list(),
   });
+
+  // Filter permissions based on search
+  const filteredPermissions = useMemo(() => {
+    if (!permissions) return [];
+    
+    return permissions.filter((permission) => {
+      const searchLower = searchQuery.toLowerCase();
+      return (
+        permission.resource.toLowerCase().includes(searchLower) ||
+        permission.action.toLowerCase().includes(searchLower) ||
+        (permission.description || '').toLowerCase().includes(searchLower)
+      );
+    });
+  }, [permissions, searchQuery]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => permissionApi.delete(id),
@@ -57,6 +73,17 @@ export function PermissionList() {
         <Button onClick={() => setCreateOpen(true)}>Create Permission</Button>
       </div>
 
+      <div className="flex items-center gap-4">
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search by resource, action, or description..."
+        />
+        <div className="text-sm text-gray-500">
+          Showing {filteredPermissions.length} of {permissions?.length || 0} permissions
+        </div>
+      </div>
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -69,7 +96,7 @@ export function PermissionList() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {permissions?.map((permission) => (
+            {filteredPermissions.map((permission) => (
               <TableRow key={permission.id}>
                 <TableCell className="font-medium">{permission.resource}</TableCell>
                 <TableCell>{permission.action}</TableCell>
@@ -97,6 +124,13 @@ export function PermissionList() {
                 </TableCell>
               </TableRow>
             ))}
+            {filteredPermissions.length === 0 && permissions && permissions.length > 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-gray-500">
+                  No permissions match your search criteria.
+                </TableCell>
+              </TableRow>
+            )}
             {permissions?.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-gray-500">
