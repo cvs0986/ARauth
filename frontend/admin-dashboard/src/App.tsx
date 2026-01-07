@@ -8,6 +8,8 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
+import { Settings } from './pages/Settings';
+import { AuditLogs } from './pages/AuditLogs';
 import { TenantList } from './pages/tenants/TenantList';
 import { UserList } from './pages/users/UserList';
 import { RoleList } from './pages/roles/RoleList';
@@ -75,6 +77,26 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <PermissionList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Settings />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/audit"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <AuditLogs />
                 </Layout>
               </ProtectedRoute>
             }

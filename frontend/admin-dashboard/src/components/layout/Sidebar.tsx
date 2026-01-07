@@ -11,6 +11,7 @@ const navigation = [
   { name: 'Users', href: '/users', icon: '👤' },
   { name: 'Roles', href: '/roles', icon: '🔑' },
   { name: 'Permissions', href: '/permissions', icon: '🛡️' },
+  { name: 'Audit Logs', href: '/audit', icon: '📋' },
   { name: 'Settings', href: '/settings', icon: '⚙️' },
 ];
 
