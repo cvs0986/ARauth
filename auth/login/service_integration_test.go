@@ -44,7 +44,7 @@ func TestService_Login_Integration(t *testing.T) {
 		Domain: "test.example.com",
 		Status: "active",
 	}
-	err = tenantRepo.Create(context.Background(), tenant)
+	err := tenantRepo.Create(context.Background(), tenant)
 	require.NoError(t, err)
 
 	// Create user
@@ -112,7 +112,7 @@ func TestService_Login_InvalidPassword_Integration(t *testing.T) {
 		Domain: "test.example.com",
 		Status: "active",
 	}
-	err = tenantRepo.Create(context.Background(), tenant)
+	err := tenantRepo.Create(context.Background(), tenant)
 	require.NoError(t, err)
 
 	userID := uuid.New()
