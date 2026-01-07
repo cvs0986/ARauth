@@ -86,27 +86,15 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 
 // List handles GET /api/v1/users
 func (h *UserHandler) List(c *gin.Context) {
-	tenantIDStr := c.Query("tenant_id")
-	if tenantIDStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid_request",
-			"message": "tenant_id is required",
-		})
-		return
-	}
-
-	tenantID, err := uuid.Parse(tenantIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid_tenant_id",
-			"message": "Invalid tenant ID format",
-		})
+	// Get tenant ID from context
+	tenantID, ok := middleware.RequireTenant(c)
+	if !ok {
 		return
 	}
 
 	// Parse pagination
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 	if pageSize > 100 {
 		pageSize = 100
 	}
@@ -128,10 +116,8 @@ func (h *UserHandler) List(c *gin.Context) {
 	// Get users
 	users, err := h.userService.List(c.Request.Context(), tenantID, filters)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":   "internal_error",
-			"message": "Failed to retrieve users",
-		})
+		middleware.RespondWithError(c, http.StatusInternalServerError, "list_failed",
+			err.Error(), nil)
 		return
 	}
 
@@ -141,16 +127,11 @@ func (h *UserHandler) List(c *gin.Context) {
 		total = len(users) // Fallback
 	}
 
-	totalPages := (total + pageSize - 1) / pageSize
-
 	c.JSON(http.StatusOK, gin.H{
-		"data": users,
-		"pagination": gin.H{
-			"page":       page,
-			"limit":      pageSize,
-			"total":      total,
-			"total_pages": totalPages,
-		},
+		"users":     users,
+		"page":      filters.Page,
+		"page_size": filters.PageSize,
+		"total":     total,
 	})
 }
 
@@ -189,24 +170,39 @@ func (h *UserHandler) Update(c *gin.Context) {
 
 // Delete handles DELETE /api/v1/users/:id
 func (h *UserHandler) Delete(c *gin.Context) {
+	// Get tenant ID from context
+	tenantID, ok := middleware.RequireTenant(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":   "invalid_id",
-			"message": "Invalid user ID format",
-		})
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_id",
+			"Invalid user ID format", nil)
+		return
+	}
+
+	// Verify user belongs to tenant before deleting
+	existingUser, err := h.userService.GetByID(c.Request.Context(), id)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusNotFound, "not_found",
+			"User not found", nil)
+		return
+	}
+	if existingUser.TenantID != tenantID {
+		middleware.RespondWithError(c, http.StatusForbidden, "access_denied",
+			"User does not belong to this tenant", nil)
 		return
 	}
 
 	if err := h.userService.Delete(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error":   "not_found",
-			"message": "User not found",
-		})
+		middleware.RespondWithError(c, http.StatusBadRequest, "delete_failed",
+			err.Error(), nil)
 		return
 	}
 
-	c.Status(http.StatusNoContent)
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
 
