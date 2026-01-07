@@ -105,7 +105,7 @@ func RateLimitWithConfig(cacheClient *cache.Cache, config RateLimitConfig) gin.H
 		err = cacheClient.Get(c.Request.Context(), countKey, &count)
 		if err != nil {
 			// Count doesn't exist, start fresh
-			cacheClient.Set(c.Request.Context(), countKey, 1, config.Window*2)
+			_ = cacheClient.Set(c.Request.Context(), countKey, 1, config.Window*2) // Ignore cache errors
 			c.Next()
 			return
 		}
