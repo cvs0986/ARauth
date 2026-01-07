@@ -31,14 +31,14 @@ func setupTestDB(t *testing.T) (*sql.DB, func()) {
 		t.Fatalf("Failed to open test database: %v", err)
 	}
 
-	// Wrap in DB struct (userRepository expects *sql.DB)
-	db := dbConn
-	if err != nil {
-		t.Fatalf("Failed to connect to test database: %v", err)
+	// Test connection
+	if err := dbConn.Ping(); err != nil {
+		t.Skipf("Skipping test: database not available: %v", err)
+		return nil, func() {}
 	}
 
 	// Clean up before test
-	testutil.CleanupTestDB(t, db.DB)
+	testutil.CleanupTestDB(t, dbConn)
 
 	// Return cleanup function
 	cleanup := func() {
