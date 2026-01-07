@@ -1,4 +1,4 @@
-module github.com/nuage-identity/iam
+module github.com/arauth-identity/iam
 
 go 1.24.0
 
