@@ -13,6 +13,7 @@ import (
 	"github.com/nuage-identity/iam/api/handlers"
 	"github.com/nuage-identity/iam/api/routes"
 	"github.com/nuage-identity/iam/auth/hydra"
+	"github.com/nuage-identity/iam/auth/claims"
 	"github.com/nuage-identity/iam/auth/login"
 	"github.com/nuage-identity/iam/auth/mfa"
 	"github.com/nuage-identity/iam/config/loader"
@@ -138,10 +139,13 @@ func main() {
 		mfaSessionManager = mfa.NewSessionManager(cache.NewCache(nil)) // Will fail gracefully
 	}
 
+	// Initialize claims builder
+	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo)
+
 	// Initialize services
 	tenantService := tenant.NewService(tenantRepo)
 	userService := user.NewService(userRepo)
-	loginService := login.NewService(userRepo, credentialRepo, hydraClient)
+	loginService := login.NewService(userRepo, credentialRepo, hydraClient, claimsBuilder)
 	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, mfaSessionManager)
 	roleService := role.NewService(roleRepo, permissionRepo)
 	permissionService := permission.NewService(permissionRepo)

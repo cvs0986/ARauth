@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/nuage-identity/iam/auth/claims"
 	"github.com/nuage-identity/iam/auth/hydra"
 	"github.com/nuage-identity/iam/identity/models"
 	"github.com/nuage-identity/iam/security/password"
@@ -17,6 +18,7 @@ type Service struct {
 	credentialRepo interfaces.CredentialRepository
 	hydraClient    *hydra.Client
 	passwordHasher *password.Hasher
+	claimsBuilder  *claims.Builder
 }
 
 // NewService creates a new login service
@@ -24,12 +26,14 @@ func NewService(
 	userRepo interfaces.UserRepository,
 	credentialRepo interfaces.CredentialRepository,
 	hydraClient *hydra.Client,
+	claimsBuilder *claims.Builder,
 ) *Service {
 	return &Service{
 		userRepo:       userRepo,
 		credentialRepo: credentialRepo,
 		hydraClient:    hydraClient,
 		passwordHasher: password.NewHasher(),
+		claimsBuilder:  claimsBuilder,
 	}
 }
 
