@@ -1,6 +1,6 @@
 # 🔐 Hybrid Authentication Implementation - Status
 
-**Last Updated**: $(date)
+**Last Updated**: 2026-01-08
 
 ---
 
@@ -28,40 +28,42 @@
    - HS256 fallback
    - Token generation
    - Token validation
+   - Refresh token hashing
+
+6. **Login Service Update** ✅
+   - Added remember_me field
+   - Integrated token service
+   - Token issuance after authentication
+   - Refresh token storage
 
 ---
 
 ## 🚧 In Progress
 
-1. **Update Login Service** (Next)
-   - Add remember_me field
-   - Integrate token service
-   - Store refresh tokens
+1. **Token Endpoints** (Next)
+   - POST /api/v1/auth/refresh
+   - POST /api/v1/auth/revoke
 
 ---
 
 ## 📋 Remaining
 
-1. **Token Endpoints**
-   - POST /api/v1/auth/refresh
-   - POST /api/v1/auth/revoke
-
-2. **JWT Middleware**
+1. **JWT Middleware**
    - Token validation
    - User context setting
 
-3. **Frontend Updates**
+2. **Frontend Updates**
    - Remember Me checkbox
    - Admin Dashboard UI for token settings
 
 ---
 
-## 📊 Progress: 50% Complete
+## 📊 Progress: 70% Complete
 
 - ✅ Foundation (migrations, config, interfaces)
 - ✅ Data Layer (repositories)
 - ✅ Token Service
-- ⏳ Business Logic (login service update)
+- ✅ Business Logic (login service)
 - ⏳ API Layer (endpoints, middleware)
 - ⏳ Frontend (UI components)
 
@@ -69,22 +71,28 @@
 
 ## 🔗 GitHub Issues
 
-- #X: JWT Token Service ✅
-- #Y: PostgreSQL Repositories ✅
-- #Z: Update Login Service 🚧
-- #A: Token Endpoints 📋
-- #B: JWT Middleware 📋
-- #C: Remember Me UI 📋
-- #D: Admin Dashboard Token Settings 📋
+- #25: JWT Token Service ✅
+- #26: PostgreSQL Repositories ✅
+- #27: Update Login Service ✅
+- #28: Token Endpoints 🚧 (to be created)
+- #29: JWT Middleware 📋 (to be created)
+- #30: Remember Me UI 📋 (to be created)
+- #31: Admin Dashboard Token Settings 📋 (to be created)
 
 ---
 
 ## 🎯 Next Steps
 
-1. Update login service to issue tokens
-2. Create token refresh endpoint
-3. Create token revocation endpoint
-4. Create JWT validation middleware
-5. Add Remember Me to login UI
-6. Create Admin Dashboard token settings UI
+1. Create token refresh endpoint
+2. Create token revocation endpoint
+3. Create JWT validation middleware
+4. Add Remember Me to login UI
+5. Create Admin Dashboard token settings UI
 
+---
+
+## 📝 Recent Commits
+
+- `feat(auth): update login service to issue JWT tokens`
+- `feat(auth): implement token repositories and JWT service`
+- `feat(auth): add token lifetime configuration system`
