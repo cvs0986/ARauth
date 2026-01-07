@@ -45,17 +45,12 @@ func main() {
 	defer db.Close()
 
 	// Test connection
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := db.PingContext(ctx); err != nil {
+	if err := db.PingContext(pingCtx); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to ping database: %v\n", err)
 		os.Exit(1)
 	}
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to connect to database: %v\n", err)
-		os.Exit(1)
-	}
-	defer db.Close()
 
 	// Get user ID
 	var userID uuid.UUID
@@ -78,7 +73,8 @@ func main() {
 
 	// Check if credential exists
 	ctx := context.Background()
-	existingCred, err := credRepo.GetByUserID(ctx, userID)
+	var existingCred *credential.Credential
+	existingCred, err = credRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		// Credential doesn't exist, create it
 		cred := &credential.Credential{
