@@ -45,16 +45,32 @@ jobs:
     - name: Install dependencies
       run: go mod download
     
-    - name: Run tests
-      run: go test -v -race -coverprofile=coverage.out ./...
+    - name: Run database migrations
+      run: |
+        go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+        migrate -path migrations -database "$DATABASE_URL" up
       env:
         DATABASE_URL: postgres://postgres:postgres@localhost:5432/iam_test?sslmode=disable
+    
+    - name: Run unit tests
+      run: go test -v -race -coverprofile=coverage.out -short ./...
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/iam_test?sslmode=disable
+        TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/iam_test?sslmode=disable
+        REDIS_URL: redis://localhost:6379
+    
+    - name: Run integration tests
+      run: go test -v -race -tags=integration ./...
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/iam_test?sslmode=disable
+        TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/iam_test?sslmode=disable
         REDIS_URL: redis://localhost:6379
     
     - name: Upload coverage
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage.out
+        fail_ci_if_error: false
 
   lint:
     runs-on: ubuntu-latest
