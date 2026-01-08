@@ -19,6 +19,7 @@ import (
 	"github.com/arauth-identity/iam/auth/token"
 	"github.com/arauth-identity/iam/config/loader"
 	"github.com/arauth-identity/iam/config/validator"
+	"github.com/arauth-identity/iam/identity/capability"
 	"github.com/arauth-identity/iam/identity/permission"
 	"github.com/arauth-identity/iam/identity/role"
 	"github.com/arauth-identity/iam/identity/tenant"
@@ -110,6 +111,12 @@ func main() {
 	roleRepo := postgres.NewRoleRepository(db)
 	permissionRepo := postgres.NewPermissionRepository(db)
 	systemRoleRepo := postgres.NewSystemRoleRepository(db) // NEW: System role repository
+	
+	// Initialize capability repositories
+	systemCapabilityRepo := postgres.NewSystemCapabilityRepository(db)
+	tenantCapabilityRepo := postgres.NewTenantCapabilityRepository(db)
+	tenantFeatureEnablementRepo := postgres.NewTenantFeatureEnablementRepository(db)
+	userCapabilityStateRepo := postgres.NewUserCapabilityStateRepository(db)
 
 	// Initialize audit logger
 	auditLogger := audit.NewLogger(auditRepo)
@@ -158,11 +165,19 @@ func main() {
 		logger.Logger.Fatal("Failed to initialize token service", zap.Error(err))
 	}
 
+	// Initialize capability service
+	capabilityService := capability.NewService(
+		systemCapabilityRepo,
+		tenantCapabilityRepo,
+		tenantFeatureEnablementRepo,
+		userCapabilityStateRepo,
+	)
+
 	// Initialize services
 	tenantService := tenant.NewService(tenantRepo)
 	userService := user.NewService(userRepo, credentialRepo) // Pass credentialRepo to create credentials automatically
-	loginService := login.NewService(userRepo, credentialRepo, refreshTokenRepo, tenantSettingsRepo, hydraClient, claimsBuilder, tokenService, lifetimeResolver)
-	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, mfaSessionManager)
+	loginService := login.NewService(userRepo, credentialRepo, refreshTokenRepo, tenantSettingsRepo, hydraClient, claimsBuilder, tokenService, lifetimeResolver, capabilityService)
+	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, mfaSessionManager, capabilityService)
 	roleService := role.NewService(roleRepo, permissionRepo)
 	permissionService := permission.NewService(permissionRepo)
 

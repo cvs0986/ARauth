@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/arauth-identity/iam/identity/capability"
+	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/security/encryption"
 	"github.com/arauth-identity/iam/security/totp"
 	"github.com/arauth-identity/iam/storage/interfaces"
@@ -19,6 +21,7 @@ type Service struct {
 	totpGenerator       *totp.Generator
 	encryptor           *encryption.Encryptor
 	sessionManager      *SessionManager
+	capabilityService   capability.ServiceInterface
 }
 
 // NewService creates a new MFA service
@@ -29,6 +32,7 @@ func NewService(
 	totpGenerator *totp.Generator,
 	encryptor *encryption.Encryptor,
 	sessionManager *SessionManager,
+	capabilityService capability.ServiceInterface,
 ) *Service {
 	return &Service{
 		userRepo:            userRepo,
@@ -37,6 +41,7 @@ func NewService(
 		totpGenerator:       totpGenerator,
 		encryptor:           encryptor,
 		sessionManager:      sessionManager,
+		capabilityService:   capabilityService,
 	}
 }
 
@@ -65,6 +70,28 @@ func (s *Service) Enroll(ctx context.Context, req *EnrollRequest) (*EnrollRespon
 	user, err := s.userRepo.GetByID(ctx, req.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
+	}
+
+	// Check if MFA/TOTP is allowed and enabled via capability model
+	var tenantID uuid.UUID
+	if user.TenantID != nil {
+		tenantID = *user.TenantID
+		eval, err := s.capabilityService.EvaluateCapability(ctx, tenantID, user.ID, models.CapabilityKeyTOTP)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check TOTP capability: %w", err)
+		}
+		if !eval.CanUse {
+			return nil, fmt.Errorf("TOTP is not available for this tenant: %s", eval.Reason)
+		}
+	} else {
+		// For SYSTEM users, check if TOTP is supported
+		supported, err := s.capabilityService.IsCapabilitySupported(ctx, models.CapabilityKeyTOTP)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check TOTP capability: %w", err)
+		}
+		if !supported {
+			return nil, fmt.Errorf("TOTP is not supported")
+		}
 	}
 
 	// Generate TOTP secret
@@ -122,6 +149,28 @@ func (s *Service) Verify(ctx context.Context, req *VerifyRequest) (bool, error) 
 	user, err := s.userRepo.GetByID(ctx, req.UserID)
 	if err != nil {
 		return false, fmt.Errorf("user not found: %w", err)
+	}
+
+	// Check if MFA/TOTP is allowed and enabled via capability model
+	var tenantID uuid.UUID
+	if user.TenantID != nil {
+		tenantID = *user.TenantID
+		eval, err := s.capabilityService.EvaluateCapability(ctx, tenantID, user.ID, models.CapabilityKeyTOTP)
+		if err != nil {
+			return false, fmt.Errorf("failed to check TOTP capability: %w", err)
+		}
+		if !eval.CanUse {
+			return false, fmt.Errorf("TOTP is not available for this tenant: %s", eval.Reason)
+		}
+	} else {
+		// For SYSTEM users, check if TOTP is supported
+		supported, err := s.capabilityService.IsCapabilitySupported(ctx, models.CapabilityKeyTOTP)
+		if err != nil {
+			return false, fmt.Errorf("failed to check TOTP capability: %w", err)
+		}
+		if !supported {
+			return false, fmt.Errorf("TOTP is not supported")
+		}
 	}
 
 	// Check if MFA secret exists (MFA may be enrolled but not yet verified)

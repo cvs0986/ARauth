@@ -8,6 +8,7 @@ import (
 	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/auth/hydra"
 	"github.com/arauth-identity/iam/auth/token"
+	"github.com/arauth-identity/iam/identity/capability"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/security/password"
 	"github.com/arauth-identity/iam/storage/interfaces"
@@ -24,6 +25,7 @@ type Service struct {
 	claimsBuilder       *claims.Builder
 	tokenService        token.ServiceInterface
 	lifetimeResolver    *token.LifetimeResolver
+	capabilityService   capability.ServiceInterface
 }
 
 // NewService creates a new login service
@@ -36,6 +38,7 @@ func NewService(
 	claimsBuilder *claims.Builder,
 	tokenService token.ServiceInterface,
 	lifetimeResolver *token.LifetimeResolver,
+	capabilityService capability.ServiceInterface,
 ) *Service {
 	return &Service{
 		userRepo:           userRepo,
@@ -47,6 +50,7 @@ func NewService(
 		claimsBuilder:      claimsBuilder,
 		tokenService:       tokenService,
 		lifetimeResolver:   lifetimeResolver,
+		capabilityService: capabilityService,
 	}
 }
 
@@ -126,6 +130,15 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 		return nil, fmt.Errorf("user account is not active")
 	}
 
+	// Check if password authentication is allowed (for tenant users)
+	// SYSTEM users always allowed (they don't have tenant restrictions)
+	if user.TenantID != nil {
+		// Check if password auth capability is allowed for tenant
+		// Note: We assume password auth is always supported at system level
+		// If we add a "password" capability, we would check it here
+		// For now, password auth is always allowed if tenant exists
+	}
+
 	// Get credentials
 	cred, err := s.credentialRepo.GetByUserID(ctx, user.ID)
 	if err != nil {
@@ -162,11 +175,34 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 		_ = err
 	}
 
-	// Check if MFA is required
+	// Check if MFA is required and allowed
 	// MFA is required if:
 	// 1. User has MFA enabled (user.MFAEnabled), OR
 	// 2. Tenant requires MFA for all users (tenant settings MFARequired)
+	// But MFA must also be:
+	// 3. Supported by system
+	// 4. Allowed for tenant
+	// 5. Enabled by tenant
 	mfaRequired := false
+	
+	// First check if MFA/TOTP is allowed and enabled via capability model
+	var mfaAllowed bool
+	var mfaEnabled bool
+	if user.TenantID != nil {
+		// Check capability model for tenant users
+		eval, err := s.capabilityService.EvaluateCapability(ctx, *user.TenantID, user.ID, models.CapabilityKeyMFA)
+		if err == nil && eval != nil {
+			mfaAllowed = eval.TenantAllowed
+			mfaEnabled = eval.TenantEnabled
+		}
+	} else {
+		// For SYSTEM users, check if MFA is supported at system level
+		supported, err := s.capabilityService.IsCapabilitySupported(ctx, models.CapabilityKeyMFA)
+		if err == nil {
+			mfaAllowed = supported
+			mfaEnabled = supported // System users can use MFA if supported
+		}
+	}
 	
 	// Check user-level MFA
 	if user.MFAEnabled {
@@ -177,6 +213,11 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 		if err == nil && tenantSettings != nil && tenantSettings.MFARequired {
 			mfaRequired = true
 		}
+	}
+	
+	// If MFA is required but not allowed/enabled, return error
+	if mfaRequired && (!mfaAllowed || !mfaEnabled) {
+		return nil, fmt.Errorf("MFA is required but not available for this tenant")
 	}
 	
 	if mfaRequired {
@@ -209,9 +250,74 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 
 // handleOAuth2Login handles OAuth2 login flow with Hydra
 func (s *Service) handleOAuth2Login(ctx context.Context, challenge string, user *models.User) (*LoginResponse, error) {
-	// Verify login request exists in Hydra (we don't need the full request for now)
-	if _, err := s.hydraClient.GetLoginRequest(ctx, challenge); err != nil {
+	// Check if OAuth2/OIDC is allowed for tenant
+	if user.TenantID != nil {
+		eval, err := s.capabilityService.EvaluateCapability(ctx, *user.TenantID, user.ID, models.CapabilityKeyOIDC)
+		if err == nil && eval != nil && !eval.CanUse {
+			return nil, fmt.Errorf("OAuth2/OIDC is not available for this tenant: %s", eval.Reason)
+		}
+	} else {
+		// For SYSTEM users, check if OIDC is supported
+		supported, err := s.capabilityService.IsCapabilitySupported(ctx, models.CapabilityKeyOIDC)
+		if err != nil || !supported {
+			return nil, fmt.Errorf("OAuth2/OIDC is not supported")
+		}
+	}
+
+	// Get login request from Hydra to validate scopes
+	loginReq, err := s.hydraClient.GetLoginRequest(ctx, challenge)
+	if err != nil {
 		return nil, fmt.Errorf("failed to get login request: %w", err)
+	}
+
+	// Validate requested scopes against allowed scope namespaces
+	if user.TenantID != nil && len(loginReq.RequestedScope) > 0 {
+		// Get tenant capability for allowed scope namespaces
+		tenantCap, err := s.capabilityService.GetSystemCapability(ctx, models.CapabilityKeyAllowedScopeNamespaces)
+		if err == nil && tenantCap != nil {
+			// Get system default allowed namespaces
+			allowedNamespaces, err := tenantCap.GetDefaultValue()
+			if err == nil {
+				if namespaces, ok := allowedNamespaces["value"].([]interface{}); ok {
+					allowedNamespaceMap := make(map[string]bool)
+					for _, ns := range namespaces {
+						if nsStr, ok := ns.(string); ok {
+							allowedNamespaceMap[nsStr] = true
+						}
+					}
+					
+					// TODO: Check tenant-specific allowed namespaces in Phase 3
+					// For now, use system defaults
+					
+					// Validate each requested scope
+					for _, requestedScope := range loginReq.RequestedScope {
+						// Extract namespace from scope (e.g., "users:read" -> "users")
+						namespace := requestedScope
+						for i, char := range requestedScope {
+							if char == ':' {
+								namespace = requestedScope[:i]
+								break
+							}
+						}
+						
+						// Standard OIDC scopes are always allowed
+						standardScopes := map[string]bool{
+							"openid":        true,
+							"profile":       true,
+							"email":         true,
+							"offline_access": true,
+						}
+						
+						// Check if namespace is allowed (or if it's a standard OIDC scope)
+						if !standardScopes[namespace] && !standardScopes[requestedScope] {
+							if !allowedNamespaceMap[namespace] {
+								return nil, fmt.Errorf("scope namespace '%s' is not allowed for this tenant", namespace)
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	// Build claims from user, roles, and permissions
