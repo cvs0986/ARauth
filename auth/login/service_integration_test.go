@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/auth/claims"
+	"github.com/arauth-identity/iam/identity/capability"
 	"github.com/arauth-identity/iam/identity/credential"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/internal/testutil"
@@ -51,7 +52,7 @@ func TestService_Login_Integration(t *testing.T) {
 	userID := uuid.New()
 	user := &models.User{
 		ID:       userID,
-		TenantID: tenantID,
+		TenantID: &tenantID,
 		Username: "testuser",
 		Email:    "test@example.com",
 		Status:   "active",
@@ -70,11 +71,23 @@ func TestService_Login_Integration(t *testing.T) {
 	err = credentialRepo.Create(context.Background(), cred)
 	require.NoError(t, err)
 
+	// Create capability repositories and service
+	systemCapabilityRepo := postgres.NewSystemCapabilityRepository(db)
+	tenantCapabilityRepo := postgres.NewTenantCapabilityRepository(db)
+	tenantFeatureRepo := postgres.NewTenantFeatureEnablementRepository(db)
+	userCapabilityRepo := postgres.NewUserCapabilityStateRepository(db)
+	capabilityService := capability.NewService(systemCapabilityRepo, tenantCapabilityRepo, tenantFeatureRepo, userCapabilityRepo)
+	
+	// Create system role repository
+	systemRoleRepo := postgres.NewSystemRoleRepository(db)
+	
 	// Create claims builder
-	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo)
+	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo, systemRoleRepo, capabilityService)
 
-	// Create service (with nil hydra client for now - can be mocked)
-	service := NewService(userRepo, credentialRepo, nil, claimsBuilder)
+	// Create service (with nil hydra client and other dependencies for integration tests)
+	refreshTokenRepo := postgres.NewRefreshTokenRepository(db)
+	tenantSettingsRepo := postgres.NewTenantSettingsRepository(db)
+	service := NewService(userRepo, credentialRepo, refreshTokenRepo, tenantSettingsRepo, nil, claimsBuilder, nil, nil, capabilityService)
 
 	// Test login
 	req := &LoginRequest{

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/config"
+	"github.com/arauth-identity/iam/identity/capability"
 	"github.com/arauth-identity/iam/identity/credential"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/internal/cache"
@@ -50,7 +51,7 @@ func TestService_Enroll_Integration(t *testing.T) {
 	userID := uuid.New()
 	user := &models.User{
 		ID:       userID,
-		TenantID: tenantID,
+		TenantID: &tenantID,
 		Username: "mfauser",
 		Email:    "mfa@example.com",
 		Status:   "active",
@@ -80,7 +81,14 @@ func TestService_Enroll_Integration(t *testing.T) {
 	cacheClient := cache.NewCache(nil) // In-memory cache for tests
 	sessionManager := NewSessionManager(cacheClient)
 
-	service := NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, sessionManager)
+	// Create capability service
+	systemCapabilityRepo := postgres.NewSystemCapabilityRepository(db)
+	tenantCapabilityRepo := postgres.NewTenantCapabilityRepository(db)
+	tenantFeatureRepo := postgres.NewTenantFeatureEnablementRepository(db)
+	userCapabilityRepo := postgres.NewUserCapabilityStateRepository(db)
+	capabilityService := capability.NewService(systemCapabilityRepo, tenantCapabilityRepo, tenantFeatureRepo, userCapabilityRepo)
+
+	service := NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, sessionManager, capabilityService)
 
 	// Test enrollment
 	req := &EnrollRequest{
