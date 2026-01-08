@@ -1,35 +1,53 @@
 /**
  * Dashboard Home Page
+ * Shows different statistics for SYSTEM vs TENANT users
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { tenantApi, userApi, roleApi, permissionApi } from '@/services/api';
+import { tenantApi, userApi, roleApi, permissionApi, systemApi } from '@/services/api';
+import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { Users, Building2, Shield, Key, TrendingUp, Activity } from 'lucide-react';
+import { Users, Building2, Shield, Key, TrendingUp, Activity, Globe, Server } from 'lucide-react';
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { isSystemUser, selectedTenantId, tenantId } = useAuthStore();
 
-  // Fetch statistics
+  // SYSTEM users see all tenants, TENANT users see their tenant
   const { data: tenants, isLoading: tenantsLoading } = useQuery({
-    queryKey: ['tenants'],
-    queryFn: () => tenantApi.list(),
+    queryKey: isSystemUser() ? ['system', 'tenants'] : ['tenant', tenantId],
+    queryFn: async () => {
+      if (isSystemUser()) {
+        return systemApi.tenants.list();
+      } else {
+        // TENANT users: fetch their own tenant
+        if (tenantId) {
+          const tenant = await tenantApi.getById(tenantId);
+          return [tenant];
+        }
+        return [];
+      }
+    },
+    enabled: !isSystemUser() ? !!tenantId : true,
   });
 
+  // For SYSTEM users: show all users or filtered by selected tenant
+  // For TENANT users: show only their tenant's users
+  const currentTenantId = isSystemUser() ? selectedTenantId : tenantId;
   const { data: users, isLoading: usersLoading } = useQuery({
-    queryKey: ['users'],
+    queryKey: ['users', currentTenantId],
     queryFn: () => userApi.list(),
   });
 
   const { data: roles, isLoading: rolesLoading } = useQuery({
-    queryKey: ['roles'],
+    queryKey: ['roles', currentTenantId],
     queryFn: () => roleApi.list(),
   });
 
   const { data: permissions, isLoading: permissionsLoading } = useQuery({
-    queryKey: ['permissions'],
+    queryKey: ['permissions', currentTenantId],
     queryFn: () => permissionApi.list(),
   });
 
@@ -62,36 +80,69 @@ export function Dashboard() {
     );
   }
 
+  // Determine dashboard title and description
+  const dashboardTitle = isSystemUser() ? 'System Dashboard' : 'Tenant Dashboard';
+  const dashboardDescription = isSystemUser()
+    ? 'Overview of all tenants and system-wide statistics'
+    : 'Overview of your tenant and resources';
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Overview of your ARauth Identity system</p>
+          <h1 className="text-3xl font-bold">{dashboardTitle}</h1>
+          <p className="text-gray-600 mt-1">{dashboardDescription}</p>
+          {isSystemUser() && selectedTenantId && (
+            <p className="text-sm text-blue-600 mt-1">
+              Viewing data for selected tenant context
+            </p>
+          )}
         </div>
       </div>
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tenants</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.tenants.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.tenants.active} active
-            </p>
-            <Button
-              variant="link"
-              className="p-0 h-auto mt-2"
-              onClick={() => navigate('/tenants')}
-            >
-              View all →
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Tenants Card - Only show for SYSTEM users */}
+        {isSystemUser() && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tenants</CardTitle>
+              <Globe className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.tenants.total}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.tenants.active} active
+              </p>
+              <Button
+                variant="link"
+                className="p-0 h-auto mt-2"
+                onClick={() => navigate('/tenants')}
+              >
+                View all →
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Current Tenant Info - Only show for TENANT users */}
+        {!isSystemUser() && tenants && tenants.length > 0 && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tenant</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-bold">{tenants[0]?.name || 'N/A'}</div>
+              <p className="text-xs text-muted-foreground">
+                {tenants[0]?.domain || 'N/A'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Status: <span className="capitalize">{tenants[0]?.status || 'N/A'}</span>
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -159,14 +210,16 @@ export function Dashboard() {
             <CardDescription>Common management tasks</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => navigate('/tenants')}
-            >
-              <Building2 className="mr-2 h-4 w-4" />
-              Manage Tenants
-            </Button>
+            {isSystemUser() && (
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => navigate('/tenants')}
+              >
+                <Building2 className="mr-2 h-4 w-4" />
+                Manage Tenants
+              </Button>
+            )}
             <Button
               variant="outline"
               className="w-full justify-start"
@@ -191,20 +244,32 @@ export function Dashboard() {
               <Key className="mr-2 h-4 w-4" />
               Manage Permissions
             </Button>
+            {isSystemUser() && (
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => navigate('/settings')}
+              >
+                <Server className="mr-2 h-4 w-4" />
+                System Settings
+              </Button>
+            )}
           </CardContent>
         </Card>
 
-        {/* System Overview */}
+        {/* System/Tenant Overview */}
         <Card>
           <CardHeader>
-            <CardTitle>System Overview</CardTitle>
-            <CardDescription>Current system status</CardDescription>
+            <CardTitle>{isSystemUser() ? 'System Overview' : 'Tenant Overview'}</CardTitle>
+            <CardDescription>
+              {isSystemUser() ? 'Current system status' : 'Current tenant status'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-green-500" />
-                <span className="text-sm">System Status</span>
+                <span className="text-sm">{isSystemUser() ? 'System Status' : 'Tenant Status'}</span>
               </div>
               <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
                 Operational
@@ -213,18 +278,28 @@ export function Dashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-blue-500" />
-                <span className="text-sm">Total Entities</span>
+                <span className="text-sm">Total Resources</span>
               </div>
               <span className="text-sm font-medium">
-                {stats.tenants.total + stats.users.total + stats.roles.total + stats.permissions.total}
+                {isSystemUser()
+                  ? stats.tenants.total + stats.users.total + stats.roles.total + stats.permissions.total
+                  : stats.users.total + stats.roles.total + stats.permissions.total}
               </span>
             </div>
             <div className="pt-2 border-t">
-              <p className="text-xs text-gray-600">
-                Active Tenants: {stats.tenants.active} / {stats.tenants.total}
-              </p>
+              {isSystemUser() && (
+                <p className="text-xs text-gray-600">
+                  Active Tenants: {stats.tenants.active} / {stats.tenants.total}
+                </p>
+              )}
               <p className="text-xs text-gray-600">
                 Active Users: {stats.users.active} / {stats.users.total}
+              </p>
+              <p className="text-xs text-gray-600">
+                Total Roles: {stats.roles.total}
+              </p>
+              <p className="text-xs text-gray-600">
+                Total Permissions: {stats.permissions.total}
               </p>
             </div>
           </CardContent>
