@@ -139,10 +139,11 @@ func main() {
 	if cacheClient != nil {
 		mfaSessionManager = mfa.NewSessionManager(cacheClient)
 	} else {
-		// Create a no-op session manager if Redis is not available
-		// In production, Redis should be required for MFA
-		logger.Logger.Warn("Redis not available - MFA sessions will not persist across restarts")
-		mfaSessionManager = mfa.NewSessionManager(cache.NewCache(nil)) // Will fail gracefully
+		// Use in-memory cache as fallback when Redis is not available
+		// In production, Redis should be required for MFA to persist across restarts
+		logger.Logger.Warn("Redis not available - Using in-memory cache for MFA sessions (sessions will not persist across restarts)")
+		memoryCache := cache.NewMemoryCache()
+		mfaSessionManager = mfa.NewSessionManager(memoryCache)
 	}
 
 	// Initialize claims builder

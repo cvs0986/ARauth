@@ -11,12 +11,12 @@ import (
 
 // SessionManager manages MFA sessions
 type SessionManager struct {
-	cache *cache.Cache
+	cache cache.CacheInterface
 	ttl   time.Duration
 }
 
 // NewSessionManager creates a new MFA session manager
-func NewSessionManager(cacheClient *cache.Cache) *SessionManager {
+func NewSessionManager(cacheClient cache.CacheInterface) *SessionManager {
 	return &SessionManager{
 		cache: cacheClient,
 		ttl:   5 * time.Minute, // MFA sessions expire after 5 minutes
