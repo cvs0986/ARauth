@@ -57,6 +57,7 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		if ts, ok := tokenService.(token.ServiceInterface); ok {
 			systemAPI.Use(middleware.JWTAuthMiddleware(ts))
 			systemAPI.Use(middleware.RequireSystemUser(ts))
+		}
 
 		// Tenant management (system admin only)
 		systemTenants := systemAPI.Group("/tenants")

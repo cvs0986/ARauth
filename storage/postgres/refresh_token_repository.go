@@ -40,8 +40,16 @@ func (r *refreshTokenRepository) Create(ctx context.Context, token *interfaces.R
 		token.UpdatedAt = now
 	}
 
+	// Handle nullable tenant_id for SYSTEM users
+	var tenantIDValue interface{}
+	if token.TenantID != uuid.Nil {
+		tenantIDValue = token.TenantID
+	} else {
+		tenantIDValue = nil
+	}
+
 	_, err := r.db.ExecContext(ctx, query,
-		token.ID, token.UserID, token.TenantID, token.TokenHash,
+		token.ID, token.UserID, tenantIDValue, token.TokenHash,
 		token.ExpiresAt, token.RevokedAt, token.RememberMe,
 		token.CreatedAt, token.UpdatedAt,
 	)
@@ -114,12 +122,21 @@ func (r *refreshTokenRepository) GetByUserID(ctx context.Context, userID uuid.UU
 	for rows.Next() {
 		token := &interfaces.RefreshToken{}
 		var revokedAt sql.NullTime
+		var tenantID sql.NullString
 
 		err := rows.Scan(
-			&token.ID, &token.UserID, &token.TenantID, &token.TokenHash,
+			&token.ID, &token.UserID, &tenantID, &token.TokenHash,
 			&token.ExpiresAt, &revokedAt, &token.RememberMe,
 			&token.CreatedAt, &token.UpdatedAt,
 		)
+		
+		// Handle nullable tenant_id
+		if tenantID.Valid {
+			parsedTenantID, err := uuid.Parse(tenantID.String)
+			if err == nil {
+				token.TenantID = parsedTenantID
+			}
+		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan refresh token: %w", err)
 		}
