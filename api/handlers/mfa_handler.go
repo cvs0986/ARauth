@@ -189,11 +189,41 @@ func (h *MFAHandler) Challenge(c *gin.Context) {
 
 // VerifyChallenge handles POST /api/v1/mfa/challenge/verify
 func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
-	var req mfa.VerifyChallengeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	// Parse request body - support both challenge_id/code and session_id/totp_code formats
+	var body struct {
+		ChallengeID string `json:"challenge_id"` // Frontend uses this
+		Code        string `json:"code"`          // Frontend uses this
+		SessionID   string `json:"session_id"`   // Backend expects this
+		TOTPCode    string `json:"totp_code"`     // Backend expects this
+		RecoveryCode string `json:"recovery_code"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
 		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
 			"Request validation failed", middleware.FormatValidationErrors(err))
 		return
+	}
+
+	// Map frontend format (challenge_id/code) to backend format (session_id/totp_code)
+	sessionID := body.SessionID
+	if sessionID == "" {
+		sessionID = body.ChallengeID // Use challenge_id if session_id not provided
+	}
+	if sessionID == "" {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
+			"session_id or challenge_id is required", nil)
+		return
+	}
+
+	totpCode := body.TOTPCode
+	if totpCode == "" {
+		totpCode = body.Code // Use code if totp_code not provided
+	}
+
+	// Create verify challenge request
+	req := &mfa.VerifyChallengeRequest{
+		SessionID:   sessionID,
+		TOTPCode:    totpCode,
+		RecoveryCode: body.RecoveryCode,
 	}
 
 	resp, err := h.mfaService.VerifyChallenge(c.Request.Context(), &req)
