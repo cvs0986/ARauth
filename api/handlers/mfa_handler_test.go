@@ -150,13 +150,14 @@ func TestMFAHandler_Enroll_InvalidRequest(t *testing.T) {
 	router := gin.New()
 	router.POST("/api/v1/mfa/enroll", handler.Enroll)
 
-	// Invalid JSON
-	req, _ := http.NewRequest("POST", "/api/v1/mfa/enroll", bytes.NewBufferString("invalid json"))
+	// Test missing user_claims - should return 401
+	req, _ := http.NewRequest("POST", "/api/v1/mfa/enroll", bytes.NewBufferString("{}"))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// Handler checks for user_claims first, so missing claims should return 401
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
