@@ -75,33 +75,39 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 	var user *models.User
 	var err error
 
-	// For SYSTEM users, try to get by username first, then by email (no tenant required)
-	// First, try to get as SYSTEM user by username
-	systemUser, systemErr := s.userRepo.GetSystemUserByUsername(ctx, req.Username)
-	if systemErr == nil && systemUser != nil && systemUser.PrincipalType == models.PrincipalTypeSystem {
-		user = systemUser
-		// SYSTEM users don't need tenant_id
-		req.TenantID = uuid.Nil
+	// Priority: If tenant ID is provided, try TENANT user first
+	// If no tenant ID, try SYSTEM user
+	if req.TenantID != uuid.Nil {
+		// Tenant ID provided - try to find TENANT user first
+		user, err = s.userRepo.GetByUsername(ctx, req.Username, req.TenantID)
+		if err != nil || user == nil {
+			return nil, fmt.Errorf("invalid credentials")
+		}
+		
+		// Verify the user is actually a TENANT user
+		if user.PrincipalType != models.PrincipalTypeTenant {
+			return nil, fmt.Errorf("invalid credentials")
+		}
+		
+		// Verify tenant ID matches
+		if user.TenantID == nil || *user.TenantID != req.TenantID {
+			return nil, fmt.Errorf("invalid credentials")
+		}
 	} else {
-		// If username lookup failed, try by email (username might be email)
-		systemUser, systemErr = s.userRepo.GetByEmailSystem(ctx, req.Username)
+		// No tenant ID provided - try SYSTEM user
+		// First, try to get as SYSTEM user by username
+		systemUser, systemErr := s.userRepo.GetSystemUserByUsername(ctx, req.Username)
 		if systemErr == nil && systemUser != nil && systemUser.PrincipalType == models.PrincipalTypeSystem {
 			user = systemUser
-			// SYSTEM users don't need tenant_id
-			req.TenantID = uuid.Nil
+		} else {
+			// If username lookup failed, try by email (username might be email)
+			systemUser, systemErr = s.userRepo.GetByEmailSystem(ctx, req.Username)
+			if systemErr == nil && systemUser != nil && systemUser.PrincipalType == models.PrincipalTypeSystem {
+				user = systemUser
+			}
 		}
-	}
-	
-	// If not a SYSTEM user, try as TENANT user
-	if user == nil {
-		// For TENANT users, validate tenant ID is provided
-		if req.TenantID == uuid.Nil {
-			return nil, fmt.Errorf("tenant_id is required for tenant users")
-		}
-
-		// Get user by username (tenant-scoped)
-		user, err = s.userRepo.GetByUsername(ctx, req.Username, req.TenantID)
-		if err != nil {
+		
+		if user == nil {
 			return nil, fmt.Errorf("invalid credentials")
 		}
 	}
