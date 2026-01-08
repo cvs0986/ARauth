@@ -145,9 +145,13 @@ export function Dashboard() {
   }
 
   // Determine dashboard title and description
-  const dashboardTitle = isSystemUser() ? 'System Dashboard' : 'Tenant Dashboard';
+  const dashboardTitle = isSystemUser() 
+    ? (shouldAggregateAllTenants ? 'System Dashboard - All Tenants' : 'System Dashboard')
+    : 'Tenant Dashboard';
   const dashboardDescription = isSystemUser()
-    ? 'Overview of all tenants and system-wide statistics'
+    ? (shouldAggregateAllTenants 
+        ? 'Aggregated overview of all tenants and their resources'
+        : 'Overview of all tenants and system-wide statistics')
     : 'Overview of your tenant and resources';
 
   return (
@@ -156,6 +160,15 @@ export function Dashboard() {
         <div>
           <h1 className="text-3xl font-bold">{dashboardTitle}</h1>
           <p className="text-gray-600 mt-1">{dashboardDescription}</p>
+          {isSystemUser() && !selectedTenantId && (
+            <Alert className="mt-4 bg-blue-50 border-blue-200 text-blue-800">
+              <Info className="h-4 w-4 mr-2" />
+              <AlertTitle>All Tenants View</AlertTitle>
+              <AlertDescription>
+                Showing aggregated statistics across all tenants. Select a specific tenant from the header dropdown to view tenant-specific data.
+              </AlertDescription>
+            </Alert>
+          )}
           {isSystemUser() && selectedTenantId && (
             <p className="text-sm text-blue-600 mt-1">
               Viewing data for selected tenant context
