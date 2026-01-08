@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"image/png"
+	"time"
 
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
@@ -66,11 +67,17 @@ func (g *Generator) GenerateQRCode(accountName string, secret string) ([]byte, e
 }
 
 // Validate validates a TOTP code
-// Uses a time window of ±1 period (30 seconds) to account for clock skew
+// Uses ValidateCustom with a time window of ±1 period (30 seconds) to account for clock skew
 func (g *Generator) Validate(secret string, code string) bool {
-	// Validate with a time window of ±1 period (30 seconds) to account for clock skew
+	// Use ValidateCustom to explicitly set time window tolerance
 	// This allows codes from the previous and next time windows to be valid
-	return totp.Validate(code, secret)
+	// The default Validate uses ±1 period, but we make it explicit here
+	return totp.ValidateCustom(code, secret, time.Now(), totp.ValidateOpts{
+		Period:    30,
+		Skew:      1, // Allow ±1 period (30 seconds) clock skew
+		Digits:    otp.DigitsSix,
+		Algorithm: otp.AlgorithmSHA1,
+	})
 }
 
 // GenerateRecoveryCodes generates recovery codes for MFA
