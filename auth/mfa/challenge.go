@@ -103,10 +103,16 @@ func (s *Service) VerifyChallenge(ctx context.Context, req *VerifyChallengeReque
 	// Delete session on successful verification
 	_ = s.sessionManager.DeleteSession(ctx, req.SessionID) // Ignore error on cleanup
 
-	return &VerifyChallengeResponse{
+	// Build response - handle uuid.Nil for SYSTEM users
+	response := &VerifyChallengeResponse{
 		Verified: true,
 		UserID:   session.UserID.String(),
-		TenantID: session.TenantID.String(),
-	}, nil
+	}
+	if session.TenantID != uuid.Nil {
+		tenantIDStr := session.TenantID.String()
+		response.TenantID = tenantIDStr
+	}
+
+	return response, nil
 }
 

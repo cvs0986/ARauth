@@ -231,11 +231,25 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		// Log failed attempt if we have user info
 		if resp != nil && resp.UserID != "" {
 			userID, _ := uuid.Parse(resp.UserID)
-			tenantID, _ := uuid.Parse(resp.TenantID)
+			var tenantID uuid.UUID
+			if resp.TenantID != "" {
+				tenantID, _ = uuid.Parse(resp.TenantID)
+			}
 			_ = h.auditLogger.LogMFAAction(c.Request.Context(), tenantID, userID, "verify_challenge", c.Request, "failure", err.Error()) // Ignore audit log errors
 		}
+		// Provide more detailed error message
+		errorMsg := err.Error()
+		if strings.Contains(errorMsg, "session not found") || strings.Contains(errorMsg, "session expired") {
+			errorMsg = "MFA session not found or expired. Please initiate a new login."
+		} else if strings.Contains(errorMsg, "maximum attempts exceeded") {
+			errorMsg = "Maximum MFA verification attempts exceeded. Please initiate a new login."
+		} else if strings.Contains(errorMsg, "MFA is not enabled") {
+			errorMsg = "MFA is not enabled for this user. Please enroll in MFA first."
+		} else if strings.Contains(errorMsg, "MFA secret not found") {
+			errorMsg = "MFA secret not found. Please re-enroll in MFA."
+		}
 		middleware.RespondWithError(c, http.StatusUnauthorized, "verification_failed",
-			err.Error(), nil)
+			errorMsg, nil)
 		return
 	}
 
