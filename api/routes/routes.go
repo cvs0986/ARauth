@@ -34,7 +34,7 @@ func getRedis(redisClient interface{}) *redis.Client {
 }
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -50,7 +50,32 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 	// Metrics endpoint
 	SetupMetricsRoutes(router)
 
-	// API v1 routes
+	// System API routes (for SYSTEM users only)
+	systemAPI := router.Group("/system")
+	{
+		// System routes require JWT authentication and SYSTEM principal type
+		if ts, ok := tokenService.(token.ServiceInterface); ok {
+			systemAPI.Use(middleware.JWTAuthMiddleware(ts))
+			systemAPI.Use(middleware.RequireSystemUser(ts))
+
+		// Tenant management (system admin only)
+		systemTenants := systemAPI.Group("/tenants")
+		{
+			systemTenants.GET("", systemHandler.ListTenants)
+			systemTenants.POST("", middleware.RequireSystemPermission("tenant", "create")(systemHandler.CreateTenant))
+			systemTenants.GET("/:id", middleware.RequireSystemPermission("tenant", "read")(systemHandler.GetTenant))
+			systemTenants.PUT("/:id", middleware.RequireSystemPermission("tenant", "update")(systemHandler.UpdateTenant))
+			systemTenants.DELETE("/:id", middleware.RequireSystemPermission("tenant", "delete")(systemHandler.DeleteTenant))
+			systemTenants.POST("/:id/suspend", middleware.RequireSystemPermission("tenant", "suspend")(systemHandler.SuspendTenant))
+			systemTenants.POST("/:id/resume", middleware.RequireSystemPermission("tenant", "resume")(systemHandler.ResumeTenant))
+		}
+
+		// System settings management (future)
+		// systemAPI.GET("/settings", systemHandler.GetSystemSettings)
+		// systemAPI.PUT("/settings", systemHandler.UpdateSystemSettings)
+	}
+
+	// API v1 routes (tenant-scoped)
 	v1 := router.Group("/api/v1")
 	{
 

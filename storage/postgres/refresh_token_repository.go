@@ -64,12 +64,21 @@ func (r *refreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash s
 
 	token := &interfaces.RefreshToken{}
 	var revokedAt sql.NullTime
+	var tenantID sql.NullString
 
 	err := r.db.QueryRowContext(ctx, query, tokenHash).Scan(
-		&token.ID, &token.UserID, &token.TenantID, &token.TokenHash,
+		&token.ID, &token.UserID, &tenantID, &token.TokenHash,
 		&token.ExpiresAt, &revokedAt, &token.RememberMe,
 		&token.CreatedAt, &token.UpdatedAt,
 	)
+	
+	// Handle nullable tenant_id
+	if tenantID.Valid {
+		parsedTenantID, err := uuid.Parse(tenantID.String)
+		if err == nil {
+			token.TenantID = parsedTenantID
+		}
+	}
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("refresh token not found: %w", err)

@@ -175,6 +175,7 @@ func main() {
 	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger)
 	roleHandler := handlers.NewRoleHandler(roleService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
+	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo) // NEW: System handler
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
@@ -187,7 +188,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, tenantRepo, cacheClient, db, redisClient)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
 
 	// Create HTTP server
 	srv := &http.Server{
