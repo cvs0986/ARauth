@@ -51,21 +51,14 @@ func RequireTenantUser(tokenService token.ServiceInterface) gin.HandlerFunc {
 			return
 		}
 
-		// Verify tenant_id matches requested tenant
-		requestedTenantID, ok := GetTenantID(c)
-		if !ok {
-			RespondWithError(c, http.StatusBadRequest, "tenant_required", "Tenant context is required", nil)
+		// For TENANT users, verify they have a tenant_id in their JWT token
+		// The tenant_id will be extracted by TenantMiddleware from the token
+		// We don't check GetTenantID here because TenantMiddleware hasn't run yet
+		if userClaims.TenantID == "" {
+			RespondWithError(c, http.StatusBadRequest, "tenant_required",
+				"TENANT users must have tenant_id in their JWT token", nil)
 			c.Abort()
 			return
-		}
-
-		if userClaims.TenantID != "" {
-			if userClaims.TenantID != requestedTenantID.String() {
-				RespondWithError(c, http.StatusForbidden, "forbidden",
-					"You do not have access to this tenant", nil)
-				c.Abort()
-				return
-			}
 		}
 
 		c.Next()
