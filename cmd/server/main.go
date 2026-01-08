@@ -175,7 +175,7 @@ func main() {
 	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger)
 	roleHandler := handlers.NewRoleHandler(roleService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
-	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo) // NEW: System handler
+	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo, tenantSettingsRepo) // NEW: System handler with tenant settings
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {

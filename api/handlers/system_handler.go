@@ -13,15 +13,17 @@ import (
 
 // SystemHandler handles system-level operations (tenant management, system settings)
 type SystemHandler struct {
-	tenantService tenant.ServiceInterface
-	tenantRepo    interfaces.TenantRepository
+	tenantService      tenant.ServiceInterface
+	tenantRepo         interfaces.TenantRepository
+	tenantSettingsRepo interfaces.TenantSettingsRepository
 }
 
 // NewSystemHandler creates a new system handler
-func NewSystemHandler(tenantService tenant.ServiceInterface, tenantRepo interfaces.TenantRepository) *SystemHandler {
+func NewSystemHandler(tenantService tenant.ServiceInterface, tenantRepo interfaces.TenantRepository, tenantSettingsRepo interfaces.TenantSettingsRepository) *SystemHandler {
 	return &SystemHandler{
-		tenantService: tenantService,
-		tenantRepo:    tenantRepo,
+		tenantService:      tenantService,
+		tenantRepo:         tenantRepo,
+		tenantSettingsRepo: tenantSettingsRepo,
 	}
 }
 

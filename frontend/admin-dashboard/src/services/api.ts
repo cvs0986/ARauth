@@ -122,6 +122,17 @@ export const systemApi = {
       const response = await apiClient.post<Tenant>(`/system/tenants/${id}/resume`, {});
       return response.data;
     },
+    
+    // Tenant Settings Management (SYSTEM users only)
+    getSettings: async (id: string): Promise<any> => {
+      const response = await apiClient.get(`/system/tenants/${id}/settings`);
+      return response.data;
+    },
+    
+    updateSettings: async (id: string, data: any): Promise<any> => {
+      const response = await apiClient.put(`/system/tenants/${id}/settings`, data);
+      return response.data;
+    },
   },
 };
 
