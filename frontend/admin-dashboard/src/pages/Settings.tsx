@@ -291,12 +291,19 @@ export function Settings() {
   // Save tenant settings mutation
   const saveTenantSettingsMutation = useMutation({
     mutationFn: async (data: TokenSettings) => {
-      if (!currentTenantId) throw new Error('No tenant selected');
-      return systemApi.tenants.updateSettings(currentTenantId, data);
+      if (isSystemUser()) {
+        // SYSTEM users: update settings for selected tenant
+        if (!currentTenantId) throw new Error('No tenant selected');
+        return systemApi.tenants.updateSettings(currentTenantId, data);
+      } else {
+        // TENANT users: update their own tenant settings
+        if (!tenantId) throw new Error('No tenant context available');
+        return tenantApi.updateSettings(data);
+      }
     },
     onSuccess: () => {
       setSuccess('Tenant settings saved successfully');
-      queryClient.invalidateQueries({ queryKey: ['tenant-settings', currentTenantId] });
+      queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
       setTimeout(() => setSuccess(null), 3000);
     },
     onError: (err: any) => {
