@@ -28,13 +28,16 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  access_token: string;
+  access_token?: string;
   refresh_token?: string;
   id_token?: string;
-  token_type: string;
-  expires_in: number;
+  token_type?: string;
+  expires_in?: number;
   refresh_expires_in?: number;
   remember_me?: boolean;
+  mfa_required?: boolean;
+  mfa_session_id?: string;
+  redirect_to?: string;
 }
 
 // Tenant types

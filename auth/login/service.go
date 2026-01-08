@@ -179,10 +179,11 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 	
 	if mfaRequired {
 		// MFA is required - client should call /api/v1/mfa/challenge endpoint
-		// with user_id and tenant_id to get a session
+		// with username and password to get a challenge session
+		// Note: We don't return tokens yet, user must complete MFA verification
 		return &LoginResponse{
 			MFARequired: true,
-			// Client should call MFA challenge endpoint to get session
+			// Client should call MFA challenge endpoint with username/password
 		}, nil
 	}
 
