@@ -35,7 +35,7 @@ func getRedis(redisClient interface{}) *redis.Client {
 }
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -74,6 +74,20 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			// Tenant settings management (system admin only)
 			systemTenants.GET("/:id/settings", middleware.RequireSystemPermission("tenant", "configure"), systemHandler.GetTenantSettings)
 			systemTenants.PUT("/:id/settings", middleware.RequireSystemPermission("tenant", "configure"), systemHandler.UpdateTenantSettings)
+			
+			// Tenant capability assignment (system admin only)
+			systemTenants.GET("/:id/capabilities", middleware.RequireSystemPermission("tenant", "configure"), capabilityHandler.GetTenantCapabilities)
+			systemTenants.PUT("/:id/capabilities/:key", middleware.RequireSystemPermission("tenant", "configure"), capabilityHandler.SetTenantCapability)
+			systemTenants.DELETE("/:id/capabilities/:key", middleware.RequireSystemPermission("tenant", "configure"), capabilityHandler.DeleteTenantCapability)
+			systemTenants.GET("/:id/capabilities/evaluation", middleware.RequireSystemPermission("tenant", "read"), capabilityHandler.EvaluateTenantCapabilities)
+		}
+
+		// System capability management (system owner only)
+		systemCapabilities := systemAPI.Group("/capabilities")
+		{
+			systemCapabilities.GET("", capabilityHandler.ListSystemCapabilities)
+			systemCapabilities.GET("/:key", capabilityHandler.GetSystemCapability)
+			systemCapabilities.PUT("/:key", middleware.RequireSystemPermission("system", "configure"), capabilityHandler.UpdateSystemCapability)
 		}
 
 		// System settings management (future)
@@ -172,6 +186,11 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			// Route: GET/PUT /api/v1/tenant/settings (uses tenant from context)
 			tenantScoped.GET("/tenant/settings", systemHandler.GetTenantSettingsFromContext)
 			tenantScoped.PUT("/tenant/settings", systemHandler.UpdateTenantSettingsFromContext)
+
+			// Tenant feature enablement (tenant-scoped)
+			tenantScoped.GET("/tenant/features", capabilityHandler.GetTenantFeatures)
+			tenantScoped.PUT("/tenant/features/:key", capabilityHandler.EnableTenantFeature)
+			tenantScoped.DELETE("/tenant/features/:key", capabilityHandler.DisableTenantFeature)
 
 		}
 	}
