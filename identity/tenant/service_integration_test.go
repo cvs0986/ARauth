@@ -102,7 +102,9 @@ func TestService_Isolation_Integration(t *testing.T) {
 	tenantRepo := postgres.NewTenantRepository(db)
 	userRepo := postgres.NewUserRepository(db)
 	tenantService := NewService(tenantRepo)
-	userService := user.NewService(userRepo)
+	// Create a mock credential repo for testing (not used in tenant service tests)
+	credentialRepo := postgres.NewCredentialRepository(db)
+	userService := user.NewService(userRepo, credentialRepo)
 
 	// Create two tenants
 	tenant1Req := &CreateTenantRequest{

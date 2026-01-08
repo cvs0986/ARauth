@@ -36,7 +36,7 @@ func setupTestServerWithAuth(db *sql.DB, cacheClient *cache.Cache, loginService 
 	permissionRepo := postgres.NewPermissionRepository(db)
 
 	// Setup services
-	userService := user.NewService(postgres.NewUserRepository(db))
+	userService := user.NewService(postgres.NewUserRepository(db), postgres.NewCredentialRepository(db))
 	tenantService := tenant.NewService(tenantRepo)
 	roleService := role.NewService(roleRepo, permissionRepo)
 	permissionService := permission.NewService(permissionRepo)
@@ -121,7 +121,8 @@ func setupTestServer(db *sql.DB, cacheClient *cache.Cache) (*httptest.Server, *g
 	permissionRepo := postgres.NewPermissionRepository(db)
 
 	// Setup services
-	userService := user.NewService(userRepo)
+	credentialRepo := postgres.NewCredentialRepository(db)
+	userService := user.NewService(userRepo, credentialRepo)
 	tenantService := tenant.NewService(tenantRepo)
 	roleService := role.NewService(roleRepo, permissionRepo)
 	permissionService := permission.NewService(permissionRepo)

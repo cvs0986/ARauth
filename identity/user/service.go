@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/arauth-identity/iam/identity/credential"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/security/password"
 	"github.com/arauth-identity/iam/storage/interfaces"
@@ -13,17 +15,21 @@ import (
 
 // Service provides user management business logic
 type Service struct {
-	repo            interfaces.UserRepository
+	repo              interfaces.UserRepository
+	credentialRepo    interfaces.CredentialRepository
 	passwordValidator *password.Validator
+	passwordHasher    *password.Hasher
 }
 
 // NewService creates a new user service
-func NewService(repo interfaces.UserRepository) *Service {
+func NewService(repo interfaces.UserRepository, credentialRepo interfaces.CredentialRepository) *Service {
 	// Default password policy: min 12 chars, require all complexity
 	validator := password.NewValidator(12, true, true, true, true)
 	return &Service{
 		repo:              repo,
+		credentialRepo:    credentialRepo,
 		passwordValidator: validator,
+		passwordHasher:    password.NewHasher(),
 	}
 }
 
@@ -32,6 +38,7 @@ type CreateUserRequest struct {
 	TenantID  uuid.UUID              `json:"tenant_id"` // Set from context, not from request body
 	Username  string                 `json:"username" binding:"required,min=3,max=255"`
 	Email     string                 `json:"email" binding:"required,email"`
+	Password  string                 `json:"password" binding:"required,min=12"` // Password is required
 	FirstName *string                `json:"first_name,omitempty"`
 	LastName  *string                `json:"last_name,omitempty"`
 	Status    string                 `json:"status,omitempty"`
@@ -67,8 +74,13 @@ func (s *Service) Create(ctx context.Context, req *CreateUserRequest) (*models.U
 		return nil, fmt.Errorf("invalid email format")
 	}
 
-	// Note: Password validation should be done when setting password
-	// This service doesn't handle password directly (handled by credential service)
+	// Validate password
+	if req.Password == "" {
+		return nil, fmt.Errorf("password is required")
+	}
+	if err := s.passwordValidator.Validate(req.Password, req.Email); err != nil {
+		return nil, fmt.Errorf("password validation failed: %w", err)
+	}
 
 	// Check if user already exists
 	existing, _ := s.repo.GetByUsername(ctx, req.Username, req.TenantID)
@@ -102,6 +114,29 @@ func (s *Service) Create(ctx context.Context, req *CreateUserRequest) (*models.U
 
 	if err := s.repo.Create(ctx, u); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Create credentials for the user
+	passwordHash, err := s.passwordHasher.Hash(req.Password)
+	if err != nil {
+		// If credential creation fails, we should rollback user creation
+		// For now, we'll just return an error (in production, use transactions)
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	cred := &credential.Credential{
+		ID:                uuid.New(),
+		UserID:            u.ID,
+		PasswordHash:      passwordHash,
+		PasswordChangedAt: time.Now(),
+		CreatedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
+	}
+
+	if err := s.credentialRepo.Create(ctx, cred); err != nil {
+		// If credential creation fails, we should rollback user creation
+		// For now, we'll just return an error (in production, use transactions)
+		return nil, fmt.Errorf("failed to create credentials: %w", err)
 	}
 
 	return u, nil
