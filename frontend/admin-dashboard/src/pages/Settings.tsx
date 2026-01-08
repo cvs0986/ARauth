@@ -67,7 +67,8 @@ type TokenSettings = z.infer<typeof tokenSettingsSchema>;
 export function Settings() {
   const { isSystemUser, selectedTenantId, tenantId } = useAuthStore();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('tenant');
+  // Initialize activeTab to 'security' (first available tab) instead of 'tenant'
+  const [activeTab, setActiveTab] = useState('security');
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
