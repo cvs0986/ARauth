@@ -107,8 +107,8 @@ func (h *MFAHandler) Verify(c *gin.Context) {
 
 	// Create verify request with user ID from token
 	req := &mfa.VerifyRequest{
-		UserID: userID,
-		Code:   body.Code,
+		UserID:   userID,
+		TOTPCode: body.Code,
 	}
 
 	valid, err := h.mfaService.Verify(c.Request.Context(), req)
