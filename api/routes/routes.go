@@ -105,6 +105,13 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			auth.POST("/revoke", authHandler.RevokeToken)
 		}
 
+		// MFA challenge endpoints (public - called during login flow before token is issued)
+		mfaPublic := v1.Group("/mfa")
+		{
+			mfaPublic.POST("/challenge", mfaHandler.Challenge)
+			mfaPublic.POST("/challenge/verify", mfaHandler.VerifyChallenge)
+		}
+
 		// Tenant-scoped routes (require tenant context)
 		// These routes can be accessed by:
 		// 1. TENANT users (automatically use their tenant from JWT token)
@@ -128,13 +135,11 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 				users.DELETE("/:id", userHandler.Delete)
 			}
 
-			// MFA routes (tenant-scoped)
+			// MFA routes (tenant-scoped - require authentication)
 			mfa := tenantScoped.Group("/mfa")
 			{
 				mfa.POST("/enroll", mfaHandler.Enroll)
 				mfa.POST("/verify", mfaHandler.Verify)
-				mfa.POST("/challenge", mfaHandler.Challenge)
-				mfa.POST("/challenge/verify", mfaHandler.VerifyChallenge)
 			}
 
 			// Role routes (tenant-scoped)
