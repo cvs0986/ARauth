@@ -3,7 +3,7 @@
 This document tracks the implementation status of the ARauth Capability Model based on `feature_capibility.md`.
 
 **Last Updated**: 2025-01-27  
-**Overall Progress**: 67% (20/30 issues completed)
+**Overall Progress**: 77% (23/30 issues completed)
 
 ---
 
@@ -15,10 +15,10 @@ This document tracks the implementation status of the ARauth Capability Model ba
 | **Phase 2** | Backend Core Logic | 4 | 4 | 0 | 0 | 100% |
 | **Phase 3** | API Endpoints | 4 | 4 | 0 | 0 | 100% |
 | **Phase 4** | Frontend Admin Dashboard | 7 | 7 | 0 | 0 | 100% |
-| **Phase 5** | Enforcement & Validation | 3 | 0 | 0 | 3 | 0% |
+| **Phase 5** | Enforcement & Validation | 3 | 3 | 0 | 0 | 100% |
 | **Phase 6** | Testing & Documentation | 4 | 0 | 0 | 4 | 0% |
 | **Phase 7** | Migration & Deployment | 3 | 0 | 0 | 3 | 0% |
-| **Total** | | **30** | **20** | **0** | **10** | **67%** |
+| **Total** | | **30** | **23** | **0** | **7** | **77%** |
 
 ---
 
