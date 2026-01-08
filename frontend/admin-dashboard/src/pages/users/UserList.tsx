@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userApi } from '@/services/api';
+import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -23,6 +24,7 @@ import type { User } from '@shared/types/api';
 
 export function UserList() {
   const queryClient = useQueryClient();
+  const { isSystemUser, selectedTenantId, tenantId, getCurrentTenantId } = useAuthStore();
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
@@ -31,9 +33,13 @@ export function UserList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Get current tenant context (selected tenant for SYSTEM, own tenant for TENANT)
+  const currentTenantId = getCurrentTenantId();
+
   const { data: users, isLoading, error } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => userApi.list(),
+    queryKey: ['users', currentTenantId],
+    queryFn: () => userApi.list(currentTenantId),
+    enabled: !!currentTenantId || !isSystemUser(), // For SYSTEM users, require tenant selection
   });
 
   // Filter users based on search and status
@@ -88,11 +94,34 @@ export function UserList() {
     );
   }
 
+  if (isSystemUser() && !currentTenantId) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Users</h1>
+        </div>
+        <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
+          <p className="text-gray-600 mb-2">Please select a tenant from the header to view and manage users.</p>
+          <p className="text-sm text-gray-500">SYSTEM users can manage users for any tenant by selecting it from the tenant dropdown.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Users</h1>
-        <Button onClick={() => setCreateOpen(true)}>Create User</Button>
+        <div>
+          <h1 className="text-3xl font-bold">Users</h1>
+          {isSystemUser() && currentTenantId && (
+            <p className="text-sm text-gray-600 mt-1">
+              Managing users for selected tenant
+            </p>
+          )}
+        </div>
+        <Button onClick={() => setCreateOpen(true)} disabled={!currentTenantId}>
+          Create User
+        </Button>
       </div>
 
       <div className="flex items-center gap-4">
@@ -123,6 +152,7 @@ export function UserList() {
               <TableHead>Username</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Name</TableHead>
+              {isSystemUser() && <TableHead>Tenant</TableHead>}
               <TableHead>Status</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -138,6 +168,15 @@ export function UserList() {
                     ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
                     : '-'}
                 </TableCell>
+                {isSystemUser() && (
+                  <TableCell>
+                    {user.tenant_id ? (
+                      <span className="text-sm text-gray-600">{user.tenant_id}</span>
+                    ) : (
+                      <span className="text-sm text-gray-400 italic">System User</span>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded text-xs ${
@@ -176,14 +215,14 @@ export function UserList() {
             ))}
             {filteredUsers.length === 0 && users && users.length > 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-500">
+                <TableCell colSpan={isSystemUser() ? 7 : 6} className="text-center text-gray-500">
                   No users match your search criteria.
                 </TableCell>
               </TableRow>
             )}
             {users?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-500">
+                <TableCell colSpan={isSystemUser() ? 7 : 6} className="text-center text-gray-500">
                   No users found. Create your first user to get started.
                 </TableCell>
               </TableRow>
@@ -192,7 +231,11 @@ export function UserList() {
         </Table>
       </div>
 
-      <CreateUserDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateUserDialog 
+        open={createOpen} 
+        onOpenChange={setCreateOpen}
+        tenantId={currentTenantId || undefined}
+      />
       {editUser && (
         <EditUserDialog
           user={editUser}

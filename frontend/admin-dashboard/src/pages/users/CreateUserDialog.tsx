@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
+import { useAuthStore } from '@/store/authStore';
 
 const createUserSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -34,10 +35,12 @@ type CreateUserFormData = z.infer<typeof createUserSchema>;
 interface CreateUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  tenantId?: string; // Optional tenant ID for SYSTEM users creating tenant users
 }
 
-export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) {
+export function CreateUserDialog({ open, onOpenChange, tenantId }: CreateUserDialogProps) {
   const queryClient = useQueryClient();
+  const { isSystemUser } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -50,7 +53,13 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   });
 
   const mutation = useMutation({
-    mutationFn: userApi.create,
+    mutationFn: (data: CreateUserFormData) => {
+      // Include tenant_id if provided (for SYSTEM users creating tenant users)
+      return userApi.create({
+        ...data,
+        tenant_id: tenantId,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       reset();
@@ -73,7 +82,9 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
         <DialogHeader>
           <DialogTitle>Create User</DialogTitle>
           <DialogDescription>
-            Create a new user account. The user will be able to log in with these credentials.
+            {isSystemUser() && tenantId
+              ? `Create a new user account for the selected tenant. The user will be able to log in with these credentials.`
+              : 'Create a new user account. The user will be able to log in with these credentials.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

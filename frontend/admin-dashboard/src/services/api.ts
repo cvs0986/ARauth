@@ -138,8 +138,14 @@ export const systemApi = {
 
 // User API
 export const userApi = {
-  list: async (): Promise<User[]> => {
-    const response = await apiClient.get<{ users: User[]; page: number; page_size: number; total: number }>(API_ENDPOINTS.USERS.BASE);
+  list: async (tenantId?: string | null): Promise<User[]> => {
+    // For SYSTEM users, tenantId is passed as query param or header
+    // For TENANT users, tenant context is automatically set via middleware
+    const config = tenantId ? { headers: { 'X-Tenant-ID': tenantId } } : undefined;
+    const response = await apiClient.get<{ users: User[]; page: number; page_size: number; total: number }>(
+      API_ENDPOINTS.USERS.BASE,
+      config
+    );
     return response.data.users || [];
   },
   
