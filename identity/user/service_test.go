@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/arauth-identity/iam/identity/credential"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
 	"github.com/stretchr/testify/assert"
@@ -85,9 +86,38 @@ func (m *MockUserRepository) GetSystemUserByUsername(ctx context.Context, userna
 	return args.Get(0).(*models.User), args.Error(1)
 }
 
+// MockCredentialRepository is a mock implementation of CredentialRepository
+type MockCredentialRepository struct {
+	mock.Mock
+}
+
+func (m *MockCredentialRepository) Create(ctx context.Context, cred *credential.Credential) error {
+	args := m.Called(ctx, cred)
+	return args.Error(0)
+}
+
+func (m *MockCredentialRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*credential.Credential, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*credential.Credential), args.Error(1)
+}
+
+func (m *MockCredentialRepository) Update(ctx context.Context, cred *credential.Credential) error {
+	args := m.Called(ctx, cred)
+	return args.Error(0)
+}
+
+func (m *MockCredentialRepository) Delete(ctx context.Context, userID uuid.UUID) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
 func TestService_Create(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := NewService(mockRepo)
+	mockCredRepo := new(MockCredentialRepository)
+	service := NewService(mockRepo, mockCredRepo)
 
 	tenantID := uuid.New()
 	firstName := "Test"
