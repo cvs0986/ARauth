@@ -153,9 +153,6 @@ func main() {
 		mfaSessionManager = mfa.NewSessionManager(memoryCache)
 	}
 
-	// Initialize claims builder
-	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo, systemRoleRepo)
-
 	// Initialize token lifetime resolver
 	lifetimeResolver := token.NewLifetimeResolver(&cfg.Security, tenantSettingsRepo)
 
@@ -165,13 +162,16 @@ func main() {
 		logger.Logger.Fatal("Failed to initialize token service", zap.Error(err))
 	}
 
-	// Initialize capability service
+	// Initialize capability service (needed for claims builder)
 	capabilityService := capability.NewService(
 		systemCapabilityRepo,
 		tenantCapabilityRepo,
 		tenantFeatureEnablementRepo,
 		userCapabilityStateRepo,
 	)
+
+	// Initialize claims builder with capability service
+	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo, systemRoleRepo, capabilityService)
 
 	// Initialize services
 	tenantService := tenant.NewService(tenantRepo)
