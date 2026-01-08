@@ -77,3 +77,13 @@ metrics:
   path: "/metrics"
   port: 9090
 
+bootstrap:
+  enabled: false  # Set to true to enable bootstrap on startup
+  force: false     # Set to true to re-bootstrap even if master user exists
+  master_user:
+    username: "admin"
+    email: "admin@arauth.io"
+    password: "${BOOTSTRAP_PASSWORD}"  # Must be set via env var for security
+    first_name: "System"
+    last_name: "Administrator"
+

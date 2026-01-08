@@ -10,9 +10,10 @@ type Config struct {
 	Database DatabaseConfig `yaml:"database"`
 	Redis    RedisConfig    `yaml:"redis"`
 	Hydra    HydraConfig    `yaml:"hydra"`
-	Security SecurityConfig `yaml:"security"`
+	Security SecurityConfig  `yaml:"security"`
 	Logging  LoggingConfig  `yaml:"logging"`
 	Metrics  MetricsConfig  `yaml:"metrics"`
+	Bootstrap BootstrapConfig `yaml:"bootstrap"`
 }
 
 // ServerConfig holds server configuration
