@@ -26,10 +26,10 @@ func NewUserRepository(db *sql.DB) interfaces.UserRepository {
 func (r *userRepository) Create(ctx context.Context, u *models.User) error {
 	query := `
 		INSERT INTO users (
-			id, tenant_id, username, email, first_name, last_name,
+			id, tenant_id, principal_type, username, email, first_name, last_name,
 			status, mfa_enabled, mfa_secret_encrypted, metadata,
 			created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 
 	now := time.Now()
@@ -45,6 +45,10 @@ func (r *userRepository) Create(ctx context.Context, u *models.User) error {
 	if u.Status == "" {
 		u.Status = models.UserStatusActive
 	}
+	// Default principal type to TENANT if not set
+	if u.PrincipalType == "" {
+		u.PrincipalType = models.PrincipalTypeTenant
+	}
 
 	var metadataJSON interface{}
 	if u.Metadata != nil {
@@ -54,7 +58,7 @@ func (r *userRepository) Create(ctx context.Context, u *models.User) error {
 	}
 
 	_, err := r.db.ExecContext(ctx, query,
-		u.ID, u.TenantID, u.Username, u.Email, u.FirstName, u.LastName,
+		u.ID, u.TenantID, u.PrincipalType, u.Username, u.Email, u.FirstName, u.LastName,
 		u.Status, u.MFAEnabled, u.MFASecretEncrypted,
 		metadataJSON, // metadata as JSONB
 		u.CreatedAt, u.UpdatedAt,
@@ -70,7 +74,7 @@ func (r *userRepository) Create(ctx context.Context, u *models.User) error {
 // GetByID retrieves a user by ID
 func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	query := `
-		SELECT id, tenant_id, username, email, first_name, last_name,
+		SELECT id, tenant_id, principal_type, username, email, first_name, last_name,
 		       status, mfa_enabled, mfa_secret_encrypted, last_login_at,
 		       metadata, created_at, updated_at, deleted_at
 		FROM users
@@ -80,14 +84,25 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Use
 	u := &models.User{}
 	var firstName, lastName, mfaSecret sql.NullString
 	var lastLoginAt, deletedAt sql.NullTime
+	var tenantID sql.NullString
+	var principalType string
 	var metadataJSON []byte
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&u.ID, &u.TenantID, &u.Username, &u.Email,
+		&u.ID, &tenantID, &principalType, &u.Username, &u.Email,
 		&firstName, &lastName, &u.Status, &u.MFAEnabled,
 		&mfaSecret, &lastLoginAt, &metadataJSON, &u.CreatedAt,
 		&u.UpdatedAt, &deletedAt,
 	)
+	
+	// Handle nullable tenant_id
+	if tenantID.Valid {
+		parsedTenantID, err := uuid.Parse(tenantID.String)
+		if err == nil {
+			u.TenantID = &parsedTenantID
+		}
+	}
+	u.PrincipalType = models.PrincipalType(principalType)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -121,7 +136,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Use
 // GetByUsername retrieves a user by username and tenant ID
 func (r *userRepository) GetByUsername(ctx context.Context, username string, tenantID uuid.UUID) (*models.User, error) {
 	query := `
-		SELECT id, tenant_id, username, email, first_name, last_name,
+		SELECT id, tenant_id, principal_type, username, email, first_name, last_name,
 		       status, mfa_enabled, mfa_secret_encrypted, last_login_at,
 		       metadata, created_at, updated_at, deleted_at
 		FROM users
@@ -131,14 +146,24 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string, ten
 	u := &models.User{}
 	var firstName, lastName, mfaSecret sql.NullString
 	var lastLoginAt, deletedAt sql.NullTime
+	var tenantIDStr sql.NullString
+	var principalType string
 	var metadataJSON []byte
 
 	err := r.db.QueryRowContext(ctx, query, tenantID, username).Scan(
-		&u.ID, &u.TenantID, &u.Username, &u.Email,
+		&u.ID, &tenantIDStr, &principalType, &u.Username, &u.Email,
 		&firstName, &lastName, &u.Status, &u.MFAEnabled,
 		&mfaSecret, &lastLoginAt, &metadataJSON, &u.CreatedAt,
 		&u.UpdatedAt, &deletedAt,
 	)
+	
+	if tenantIDStr.Valid {
+		parsedTenantID, err := uuid.Parse(tenantIDStr.String)
+		if err == nil {
+			u.TenantID = &parsedTenantID
+		}
+	}
+	u.PrincipalType = models.PrincipalType(principalType)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -172,7 +197,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string, ten
 // GetByEmail retrieves a user by email and tenant ID
 func (r *userRepository) GetByEmail(ctx context.Context, email string, tenantID uuid.UUID) (*models.User, error) {
 	query := `
-		SELECT id, tenant_id, username, email, first_name, last_name,
+		SELECT id, tenant_id, principal_type, username, email, first_name, last_name,
 		       status, mfa_enabled, mfa_secret_encrypted, last_login_at,
 		       metadata, created_at, updated_at, deleted_at
 		FROM users
@@ -182,14 +207,24 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string, tenantID 
 	u := &models.User{}
 	var firstName, lastName, mfaSecret sql.NullString
 	var lastLoginAt, deletedAt sql.NullTime
+	var tenantIDStr sql.NullString
+	var principalType string
 	var metadataJSON []byte
 
 	err := r.db.QueryRowContext(ctx, query, tenantID, email).Scan(
-		&u.ID, &u.TenantID, &u.Username, &u.Email,
+		&u.ID, &tenantIDStr, &principalType, &u.Username, &u.Email,
 		&firstName, &lastName, &u.Status, &u.MFAEnabled,
 		&mfaSecret, &lastLoginAt, &metadataJSON, &u.CreatedAt,
 		&u.UpdatedAt, &deletedAt,
 	)
+	
+	if tenantIDStr.Valid {
+		parsedTenantID, err := uuid.Parse(tenantIDStr.String)
+		if err == nil {
+			u.TenantID = &parsedTenantID
+		}
+	}
+	u.PrincipalType = models.PrincipalType(principalType)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found: %w", err)
@@ -220,13 +255,74 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string, tenantID 
 	return u, nil
 }
 
+// GetByEmailSystem retrieves a SYSTEM user by email (no tenant ID required)
+func (r *userRepository) GetByEmailSystem(ctx context.Context, email string) (*models.User, error) {
+	query := `
+		SELECT id, tenant_id, principal_type, username, email, first_name, last_name,
+		       status, mfa_enabled, mfa_secret_encrypted, last_login_at,
+		       metadata, created_at, updated_at, deleted_at
+		FROM users
+		WHERE principal_type = 'SYSTEM' AND email = $1 AND deleted_at IS NULL
+	`
+
+	u := &models.User{}
+	var firstName, lastName, mfaSecret sql.NullString
+	var lastLoginAt, deletedAt sql.NullTime
+	var tenantIDStr sql.NullString
+	var principalType string
+	var metadataJSON []byte
+
+	err := r.db.QueryRowContext(ctx, query, email).Scan(
+		&u.ID, &tenantIDStr, &principalType, &u.Username, &u.Email,
+		&firstName, &lastName, &u.Status, &u.MFAEnabled,
+		&mfaSecret, &lastLoginAt, &metadataJSON, &u.CreatedAt,
+		&u.UpdatedAt, &deletedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("system user not found: %w", err)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get system user by email: %w", err)
+	}
+
+	if tenantIDStr.Valid {
+		parsedTenantID, err := uuid.Parse(tenantIDStr.String)
+		if err == nil {
+			u.TenantID = &parsedTenantID
+		}
+	}
+	u.PrincipalType = models.PrincipalType(principalType)
+
+	if firstName.Valid {
+		u.FirstName = &firstName.String
+	}
+	if lastName.Valid {
+		u.LastName = &lastName.String
+	}
+	if mfaSecret.Valid {
+		u.MFASecretEncrypted = &mfaSecret.String
+	}
+	if lastLoginAt.Valid {
+		u.LastLoginAt = &lastLoginAt.Time
+	}
+	if deletedAt.Valid {
+		u.DeletedAt = &deletedAt.Time
+	}
+	if len(metadataJSON) > 0 {
+		_ = json.Unmarshal(metadataJSON, &u.Metadata) // Ignore unmarshal errors for optional metadata
+	}
+
+	return u, nil
+}
+
 // Update updates an existing user
 func (r *userRepository) Update(ctx context.Context, u *models.User) error {
 	query := `
 		UPDATE users
 		SET username = $2, email = $3, first_name = $4, last_name = $5,
 		    status = $6, mfa_enabled = $7, mfa_secret_encrypted = $8,
-		    last_login_at = $9, metadata = $10, updated_at = $11
+		    last_login_at = $9, metadata = $10, tenant_id = $11, principal_type = $12, updated_at = $13
 		WHERE id = $1 AND deleted_at IS NULL
 	`
 
@@ -243,7 +339,7 @@ func (r *userRepository) Update(ctx context.Context, u *models.User) error {
 		u.ID, u.Username, u.Email, u.FirstName, u.LastName,
 		u.Status, u.MFAEnabled, u.MFASecretEncrypted, u.LastLoginAt,
 		metadataJSON, // metadata as JSONB
-		u.UpdatedAt,
+		u.TenantID, u.PrincipalType, u.UpdatedAt,
 	)
 
 	if err != nil {
@@ -297,7 +393,7 @@ func (r *userRepository) List(ctx context.Context, tenantID uuid.UUID, filters *
 	offset := (filters.Page - 1) * filters.PageSize
 
 	query := `
-		SELECT id, tenant_id, username, email, first_name, last_name,
+		SELECT id, tenant_id, principal_type, username, email, first_name, last_name,
 		       status, mfa_enabled, mfa_secret_encrypted, last_login_at,
 		       metadata, created_at, updated_at, deleted_at
 		FROM users
@@ -334,14 +430,24 @@ func (r *userRepository) List(ctx context.Context, tenantID uuid.UUID, filters *
 		u := &models.User{}
 		var firstName, lastName, mfaSecret sql.NullString
 		var lastLoginAt, deletedAt sql.NullTime
+		var tenantIDStr sql.NullString
+		var principalType string
 		var metadataJSON []byte
 
 		err := rows.Scan(
-			&u.ID, &u.TenantID, &u.Username, &u.Email,
+			&u.ID, &tenantIDStr, &principalType, &u.Username, &u.Email,
 			&firstName, &lastName, &u.Status, &u.MFAEnabled,
 			&mfaSecret, &lastLoginAt, &metadataJSON, &u.CreatedAt,
 			&u.UpdatedAt, &deletedAt,
 		)
+		
+		if tenantIDStr.Valid {
+			parsedTenantID, err := uuid.Parse(tenantIDStr.String)
+			if err == nil {
+				u.TenantID = &parsedTenantID
+			}
+		}
+		u.PrincipalType = models.PrincipalType(principalType)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan user: %w", err)
 		}
