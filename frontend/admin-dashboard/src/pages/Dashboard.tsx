@@ -36,22 +36,27 @@ export function Dashboard() {
   // For SYSTEM users: show all users or filtered by selected tenant
   // For TENANT users: show only their tenant's users
   const currentTenantId = isSystemUser() ? selectedTenantId : tenantId;
+  
+  // For SYSTEM users: only fetch when a tenant is selected (tenant-scoped APIs require tenant context)
+  // For TENANT users: always fetch (they have tenantId)
+  const shouldFetchTenantData = isSystemUser() ? !!selectedTenantId : !!tenantId;
+  
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['users', currentTenantId],
     queryFn: () => userApi.list(currentTenantId || undefined),
-    enabled: isSystemUser() ? true : !!tenantId, // For SYSTEM users, allow even if no tenant selected (will show empty)
+    enabled: shouldFetchTenantData,
   });
 
   const { data: roles, isLoading: rolesLoading } = useQuery({
     queryKey: ['roles', currentTenantId],
     queryFn: () => roleApi.list(currentTenantId || undefined),
-    enabled: isSystemUser() ? true : !!tenantId, // For SYSTEM users, allow even if no tenant selected (will show empty)
+    enabled: shouldFetchTenantData,
   });
 
   const { data: permissions, isLoading: permissionsLoading } = useQuery({
     queryKey: ['permissions', currentTenantId],
     queryFn: () => permissionApi.list(currentTenantId || undefined),
-    enabled: isSystemUser() ? true : !!tenantId, // For SYSTEM users, allow even if no tenant selected (will show empty)
+    enabled: shouldFetchTenantData,
   });
 
   const isLoading = tenantsLoading || usersLoading || rolesLoading || permissionsLoading;
