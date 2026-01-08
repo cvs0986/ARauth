@@ -37,14 +37,28 @@ func TenantMiddleware(tenantRepo interfaces.TenantRepository) gin.HandlerFunc {
 		// For TENANT users: tenant ID must come from JWT token (security - they can't switch tenants)
 		// For SYSTEM users: tenant ID can come from header (they can select tenant context)
 		if !isSystemUser {
-			// TENANT users: get tenant ID from JWT token claims
+			// TENANT users: get tenant ID from JWT token claims (set by JWTAuthMiddleware)
 			if tenantIDStr, exists := c.Get("tenant_id"); exists {
-				if tenantIDStrStr, ok := tenantIDStr.(string); ok && tenantIDStrStr != "" {
-					tenantID, err = uuid.Parse(tenantIDStrStr)
+				// tenant_id is stored as string in context
+				var tenantIDStrValue string
+				switch v := tenantIDStr.(type) {
+				case string:
+					tenantIDStrValue = v
+				case uuid.UUID:
+					tenantID = v
+				default:
+					// Try to convert to string
+					if str, ok := tenantIDStr.(string); ok {
+						tenantIDStrValue = str
+					}
+				}
+				
+				if tenantIDStrValue != "" && tenantID == uuid.Nil {
+					tenantID, err = uuid.Parse(tenantIDStrValue)
 					if err != nil {
 						c.JSON(http.StatusBadRequest, gin.H{
 							"error":   "invalid_tenant_id",
-							"message": "Invalid tenant ID format in JWT token",
+							"message": "Invalid tenant ID format in JWT token: " + err.Error(),
 						})
 						c.Abort()
 						return
