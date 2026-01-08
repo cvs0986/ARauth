@@ -39,7 +39,8 @@ func TestService_Create_Integration(t *testing.T) {
 	defer testutil.TeardownTestDB(t, db)
 
 	repo := postgres.NewUserRepository(db)
-	service := NewService(repo)
+	credRepo := postgres.NewCredentialRepository(db)
+	service := NewService(repo, credRepo)
 
 	tenantID := uuid.New()
 	// Create test tenant first
@@ -69,7 +70,8 @@ func TestService_GetByID_Integration(t *testing.T) {
 	defer testutil.TeardownTestDB(t, db)
 
 	repo := postgres.NewUserRepository(db)
-	service := NewService(repo)
+	credRepo := postgres.NewCredentialRepository(db)
+	service := NewService(repo, credRepo)
 
 	tenantID := uuid.New()
 	// Create test tenant first
@@ -79,6 +81,7 @@ func TestService_GetByID_Integration(t *testing.T) {
 		TenantID: tenantID,
 		Username: "getuser",
 		Email:    "get@example.com",
+		Password: "TestPassword@123",
 	}
 
 	createdUser, err := service.Create(context.Background(), req)
@@ -100,7 +103,8 @@ func TestService_GetByUsername_Integration(t *testing.T) {
 	defer testutil.TeardownTestDB(t, db)
 
 	repo := postgres.NewUserRepository(db)
-	service := NewService(repo)
+	credRepo := postgres.NewCredentialRepository(db)
+	service := NewService(repo, credRepo)
 
 	tenantID := uuid.New()
 	// Create test tenant first
@@ -110,6 +114,7 @@ func TestService_GetByUsername_Integration(t *testing.T) {
 		TenantID: tenantID,
 		Username: "usernameuser",
 		Email:    "username@example.com",
+		Password: "TestPassword@123",
 	}
 
 	createdUser, err := service.Create(context.Background(), req)
