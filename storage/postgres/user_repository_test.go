@@ -63,7 +63,7 @@ func TestUserRepository_Create(t *testing.T) {
 
 	user := &models.User{
 		ID:        uuid.New(),
-		TenantID:  tenantID,
+		TenantID:  &tenantID,
 		Username:  "testuser",
 		Email:     "test@example.com",
 		Status:    models.UserStatusActive,
@@ -89,7 +89,7 @@ func TestUserRepository_GetByID(t *testing.T) {
 
 	user := &models.User{
 		ID:        uuid.New(),
-		TenantID:  tenantID,
+		TenantID:  &tenantID,
 		Username:  "getuser",
 		Email:     "get@example.com",
 		Status:    models.UserStatusActive,
@@ -121,7 +121,7 @@ func TestUserRepository_GetByUsername(t *testing.T) {
 
 	user := &models.User{
 		ID:        uuid.New(),
-		TenantID:  tenantID,
+		TenantID:  &tenantID,
 		Username:  "usernameuser",
 		Email:     "username@example.com",
 		Status:    models.UserStatusActive,
@@ -152,7 +152,7 @@ func TestUserRepository_Update(t *testing.T) {
 
 	user := &models.User{
 		ID:        uuid.New(),
-		TenantID:  tenantID,
+		TenantID:  &tenantID,
 		Username:  "updateuser",
 		Email:     "update@example.com",
 		Status:    models.UserStatusActive,
@@ -225,7 +225,7 @@ func TestUserRepository_List_WithFilters(t *testing.T) {
 
 	user := &models.User{
 		ID:        uuid.New(),
-		TenantID:  tenantID,
+		TenantID:  &tenantID,
 		Username:  "testuser",
 		Email:     "test@example.com",
 		Status:    models.UserStatusActive,
@@ -257,7 +257,7 @@ func TestUserRepository_GetByEmail(t *testing.T) {
 
 	user := &models.User{
 		ID:        uuid.New(),
-		TenantID:  tenantID,
+		TenantID:  &tenantID,
 		Username:  "testuser",
 		Email:     "test@example.com",
 		Status:    models.UserStatusActive,
@@ -288,7 +288,7 @@ func TestUserRepository_Delete(t *testing.T) {
 
 	user := &models.User{
 		ID:        uuid.New(),
-		TenantID:  tenantID,
+		TenantID:  &tenantID,
 		Username:  "testuser",
 		Email:     "test@example.com",
 		Status:    models.UserStatusActive,

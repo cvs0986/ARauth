@@ -10,7 +10,7 @@ import (
 )
 
 func TestService_Create_InvalidEmail(t *testing.T) {
-	mockRepo := new(testutil.MockUserRepository)
+	mockRepo := new(MockUserRepository)
 	service := NewService(mockRepo)
 
 	req := &CreateUserRequest{
