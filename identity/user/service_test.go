@@ -143,6 +143,7 @@ func TestService_Create(t *testing.T) {
 		user := args.Get(1).(*models.User)
 		user.ID = expectedUser.ID
 	})
+	mockCredRepo.On("Create", mock.Anything, mock.AnythingOfType("*credential.Credential")).Return(nil)
 
 	user, err := service.Create(context.Background(), req)
 	require.NoError(t, err)
@@ -151,17 +152,20 @@ func TestService_Create(t *testing.T) {
 	assert.Equal(t, req.Email, user.Email)
 
 	mockRepo.AssertExpectations(t)
+	mockCredRepo.AssertExpectations(t)
 }
 
 func TestService_Create_DuplicateUsername(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := NewService(mockRepo)
+	mockCredRepo := new(MockCredentialRepository)
+	service := NewService(mockRepo, mockCredRepo)
 
 	tenantID := uuid.New()
 	req := &CreateUserRequest{
 		TenantID: tenantID,
 		Username: "testuser",
 		Email:    "test@example.com",
+		Password: "TestPassword@123",
 	}
 
 	existingUser := &models.User{
@@ -181,7 +185,8 @@ func TestService_Create_DuplicateUsername(t *testing.T) {
 
 func TestService_GetByID(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := NewService(mockRepo)
+	mockCredRepo := new(MockCredentialRepository)
+	service := NewService(mockRepo, mockCredRepo)
 
 	userID := uuid.New()
 	expectedUser := &models.User{
@@ -236,7 +241,8 @@ func TestService_Update(t *testing.T) {
 
 func TestService_Delete(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := NewService(mockRepo)
+	mockCredRepo := new(MockCredentialRepository)
+	service := NewService(mockRepo, mockCredRepo)
 
 	userID := uuid.New()
 
