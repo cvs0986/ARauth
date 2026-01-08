@@ -72,12 +72,16 @@ func (g *Generator) Validate(secret string, code string) bool {
 	// Use ValidateCustom to explicitly set time window tolerance
 	// This allows codes from the previous and next time windows to be valid
 	// The default Validate uses ±1 period, but we make it explicit here
-	return totp.ValidateCustom(code, secret, time.Now(), totp.ValidateOpts{
+	valid, err := totp.ValidateCustom(code, secret, time.Now(), totp.ValidateOpts{
 		Period:    30,
 		Skew:      1, // Allow ±1 period (30 seconds) clock skew
 		Digits:    otp.DigitsSix,
 		Algorithm: otp.AlgorithmSHA1,
 	})
+	if err != nil {
+		return false
+	}
+	return valid
 }
 
 // GenerateRecoveryCodes generates recovery codes for MFA
