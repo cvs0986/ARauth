@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -189,17 +188,9 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		return
 	}
 
-	// Hash refresh token for storage
-	refreshTokenHash, err := h.tokenService.HashRefreshToken(refreshToken)
-	if err != nil {
-		middleware.RespondWithError(c, http.StatusInternalServerError, "refresh_token_hash_failed",
-			"Failed to hash refresh token", nil)
-		return
-	}
-
-	// Store refresh token (we need refreshTokenRepo, but we don't have it in MFA handler)
-	// For now, we'll skip storing refresh token in MFA flow - it can be added later if needed
-	// TODO: Add refreshTokenRepo to MFA handler if refresh tokens are needed in MFA flow
+	// Note: Refresh token storage is skipped in MFA flow
+	// The refresh token is returned to the client but not stored in the database
+	// This can be enhanced later if refresh token storage is needed for MFA flow
 
 	// Generate ID token (same as access token for now, can be enhanced later)
 	idToken, err := h.tokenService.GenerateAccessToken(claimsObj, lifetimes.IDTokenTTL)
