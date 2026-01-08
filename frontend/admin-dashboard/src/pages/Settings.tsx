@@ -1,18 +1,22 @@
 /**
- * System Settings Page
+ * Settings Page
+ * Shows System Settings for SYSTEM users, Tenant Settings for all users
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
-import { Shield, Key, Settings as SettingsIcon, Mail, Clock } from 'lucide-react';
+import { Shield, Key, Settings as SettingsIcon, Clock, Building2, Server } from 'lucide-react';
+import { useAuthStore } from '@/store/authStore';
+import { systemApi } from '@/services/api';
 
 // Settings schemas
 const securitySettingsSchema = z.object({
@@ -61,10 +65,25 @@ type SystemSettings = z.infer<typeof systemSettingsSchema>;
 type TokenSettings = z.infer<typeof tokenSettingsSchema>;
 
 export function Settings() {
-  const [activeTab, setActiveTab] = useState('security');
+  const { isSystemUser, selectedTenantId, tenantId } = useAuthStore();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('tenant');
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Get current tenant ID (selected tenant for SYSTEM users, own tenant for TENANT users)
+  const currentTenantId = isSystemUser() ? selectedTenantId : tenantId;
+
+  // Fetch tenant settings if tenant is selected/available
+  const { data: tenantSettings, isLoading: settingsLoading } = useQuery({
+    queryKey: ['tenant-settings', currentTenantId],
+    queryFn: () => {
+      if (!currentTenantId) return null;
+      return systemApi.tenants.getSettings(currentTenantId);
+    },
+    enabled: !!currentTenantId && isSystemUser(), // Only fetch for SYSTEM users with selected tenant
+  });
 
   // Security Settings Form
   const {

@@ -11,21 +11,21 @@ import { useAuthStore } from '@/store/authStore';
 const systemNavigation = [
   { name: 'Dashboard', href: '/', icon: '📊', permission: null },
   { name: 'Tenants', href: '/tenants', icon: '🏢', permission: 'tenant:read' },
-  { name: 'Users', href: '/users', icon: '👤', permission: null }, // Shows all users across tenants
-  { name: 'Roles', href: '/roles', icon: '🔑', permission: null }, // Shows all roles
-  { name: 'Permissions', href: '/permissions', icon: '🛡️', permission: null }, // Shows all permissions
-  { name: 'Audit Logs', href: '/audit', icon: '📋', permission: 'system:audit' },
-  { name: 'Settings', href: '/settings', icon: '⚙️', permission: 'system:settings' },
+  { name: 'Users', href: '/users', icon: '👤', permission: null }, // Core feature - always visible
+  { name: 'Roles', href: '/roles', icon: '🔑', permission: null }, // Core feature - always visible
+  { name: 'Permissions', href: '/permissions', icon: '🛡️', permission: null }, // Core feature - always visible
+  { name: 'Audit Logs', href: '/audit', icon: '📋', permission: null }, // Core feature - always visible
+  { name: 'Settings', href: '/settings', icon: '⚙️', permission: null }, // Core feature - always visible
 ];
 
 // Tenant navigation items (for TENANT users)
 const tenantNavigation = [
   { name: 'Dashboard', href: '/', icon: '📊', permission: null },
-  { name: 'Users', href: '/users', icon: '👤', permission: 'users:read' },
-  { name: 'Roles', href: '/roles', icon: '🔑', permission: 'roles:read' },
-  { name: 'Permissions', href: '/permissions', icon: '🛡️', permission: 'permissions:read' },
-  { name: 'Audit Logs', href: '/audit', icon: '📋', permission: null },
-  { name: 'Settings', href: '/settings', icon: '⚙️', permission: null },
+  { name: 'Users', href: '/users', icon: '👤', permission: null }, // Core feature - always visible
+  { name: 'Roles', href: '/roles', icon: '🔑', permission: null }, // Core feature - always visible
+  { name: 'Permissions', href: '/permissions', icon: '🛡️', permission: null }, // Core feature - always visible
+  { name: 'Audit Logs', href: '/audit', icon: '📋', permission: null }, // Core feature - always visible
+  { name: 'Settings', href: '/settings', icon: '⚙️', permission: null }, // Core feature - always visible
 ];
 
 export function Sidebar() {
@@ -36,9 +36,12 @@ export function Sidebar() {
   const navigation = isSystemUser() ? systemNavigation : tenantNavigation;
 
   // Filter navigation items based on permissions
+  // Core features (permission: null) are always visible
+  // Features with specific permissions are filtered based on user permissions
   const filteredNavigation = navigation.filter((item) => {
-    if (!item.permission) return true; // No permission required
+    if (!item.permission) return true; // No permission required - always show
     
+    // Only filter items that have specific permission requirements
     if (isSystemUser()) {
       return hasSystemPermission(item.permission);
     } else {
