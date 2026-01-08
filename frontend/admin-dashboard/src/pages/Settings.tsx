@@ -14,9 +14,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
-import { Shield, Key, Building2, Server } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Shield, Key, Building2, Server, Settings as SettingsIcon } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { systemApi, tenantApi } from '@/services/api';
+import { systemApi, tenantApi, systemCapabilityApi, tenantCapabilityApi, tenantFeatureApi } from '@/services/api';
+import { Link } from 'react-router-dom';
 
 // Settings schemas
 const securitySettingsSchema = z.object({
@@ -63,6 +65,142 @@ type SecuritySettings = z.infer<typeof securitySettingsSchema>;
 type OAuthSettings = z.infer<typeof oauthSettingsSchema>;
 type SystemSettings = z.infer<typeof systemSettingsSchema>;
 type TokenSettings = z.infer<typeof tokenSettingsSchema>;
+
+// Capabilities Settings Tab Component
+function CapabilitiesSettingsTab({ isSystemUser, currentTenantId }: { isSystemUser: boolean; currentTenantId: string | null }) {
+  const { tenantId } = useAuthStore();
+
+  // For SYSTEM users: show system capabilities
+  const { data: systemCapabilities } = useQuery({
+    queryKey: ['system', 'capabilities'],
+    queryFn: () => systemCapabilityApi.list(),
+    enabled: isSystemUser,
+  });
+
+  // For SYSTEM users: show tenant capabilities for selected tenant
+  const { data: tenantCapabilities } = useQuery({
+    queryKey: ['tenant', 'capabilities', currentTenantId],
+    queryFn: () => tenantCapabilityApi.list(currentTenantId!),
+    enabled: isSystemUser && !!currentTenantId,
+  });
+
+  // For TENANT users: show enabled features
+  const { data: tenantFeatures } = useQuery({
+    queryKey: ['tenant', 'features'],
+    queryFn: () => tenantFeatureApi.list(),
+    enabled: !isSystemUser && !!tenantId,
+  });
+
+  if (isSystemUser) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>System Capabilities</CardTitle>
+            <CardDescription>
+              Global system capabilities that define what features are available
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {systemCapabilities?.map((cap) => (
+                <div key={cap.capability_key} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <div className="font-mono font-medium">{cap.capability_key}</div>
+                    <div className="text-sm text-gray-500">{cap.description || 'No description'}</div>
+                  </div>
+                  <Badge variant={cap.enabled ? 'default' : 'secondary'}>
+                    {cap.enabled ? 'Enabled' : 'Disabled'}
+                  </Badge>
+                </div>
+              ))}
+              <div className="pt-2">
+                <Button variant="outline" asChild>
+                  <Link to="/capabilities/system">Manage System Capabilities</Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {currentTenantId && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Tenant Capabilities</CardTitle>
+              <CardDescription>
+                Capabilities assigned to the selected tenant
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {tenantCapabilities && tenantCapabilities.length > 0 ? (
+                  tenantCapabilities.map((cap) => (
+                    <div key={cap.capability_key} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <div className="font-mono font-medium">{cap.capability_key}</div>
+                      </div>
+                      <Badge variant={cap.enabled ? 'default' : 'secondary'}>
+                        {cap.enabled ? 'Enabled' : 'Disabled'}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">No capabilities assigned</p>
+                )}
+                <div className="pt-2">
+                  <Button variant="outline" asChild>
+                    <Link to="/capabilities/tenant-assignment">Manage Tenant Capabilities</Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  // TENANT users: show enabled features
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Enabled Features</CardTitle>
+        <CardDescription>
+          Features that are currently enabled for your tenant
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {tenantFeatures && tenantFeatures.length > 0 ? (
+            tenantFeatures.map((feature) => (
+              <div key={feature.capability_key} className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <div className="font-mono font-medium">{feature.capability_key}</div>
+                  <div className="text-sm text-gray-500">
+                    Enabled {feature.enabled_at ? new Date(feature.enabled_at).toLocaleDateString() : ''}
+                  </div>
+                </div>
+                <Badge variant={feature.enabled ? 'default' : 'secondary'}>
+                  {feature.enabled ? 'Enabled' : 'Disabled'}
+                </Badge>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500">No features enabled</p>
+          )}
+          <div className="pt-2 space-x-2">
+            <Button variant="outline" asChild>
+              <Link to="/capabilities/features">Manage Features</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/capabilities/user-enrollment">Manage User Capabilities</Link>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function Settings() {
   const { isSystemUser, selectedTenantId, tenantId } = useAuthStore();
@@ -271,12 +409,14 @@ export function Settings() {
   useEffect(() => {
     if (isSystemUser()) {
       // SYSTEM users: default to 'security' if current tab doesn't exist
-      if (!['system', 'security', 'oauth', 'tenant'].includes(activeTab)) {
+      if (!['system', 'security', 'oauth', 'tenant', 'capabilities'].includes(activeTab)) {
         setActiveTab('security');
       }
     } else {
-      // TENANT users: only 'tenant' tab is available
-      setActiveTab('tenant');
+      // TENANT users: only 'tenant' and 'capabilities' tabs are available
+      if (!['tenant', 'capabilities'].includes(activeTab)) {
+        setActiveTab('tenant');
+      }
     }
   }, [isSystemUser(), activeTab]);
 
@@ -369,13 +509,28 @@ export function Settings() {
                 <Key className="mr-2 h-4 w-4" />
                 OAuth2/OIDC
               </TabsTrigger>
+              <TabsTrigger value="capabilities">
+                <SettingsIcon className="mr-2 h-4 w-4" />
+                Capabilities
+              </TabsTrigger>
             </>
           )}
           <TabsTrigger value="tenant">
             <Building2 className="mr-2 h-4 w-4" />
             {isSystemUser() ? 'Tenant Settings' : 'Token Settings'}
           </TabsTrigger>
+          {!isSystemUser() && (
+            <TabsTrigger value="capabilities">
+              <SettingsIcon className="mr-2 h-4 w-4" />
+              Capabilities
+            </TabsTrigger>
+          )}
         </TabsList>
+
+        {/* Capabilities Tab */}
+        <TabsContent value="capabilities">
+          <CapabilitiesSettingsTab isSystemUser={isSystemUser()} currentTenantId={currentTenantId} />
+        </TabsContent>
 
         {/* Security Settings Tab - Available for both SYSTEM and TENANT users */}
         <TabsContent value="security">
@@ -497,6 +652,11 @@ export function Settings() {
                         {...registerSecurity('rateLimitRequests', { valueAsNumber: true })}
                         disabled={isLoading}
                       />
+                      {securityErrors.rateLimitRequests && (
+                        <p className="text-sm text-red-600">
+                          {securityErrors.rateLimitRequests.message}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="rateLimitWindow">Window (seconds)</Label>
@@ -506,6 +666,11 @@ export function Settings() {
                         {...registerSecurity('rateLimitWindow', { valueAsNumber: true })}
                         disabled={isLoading}
                       />
+                      {securityErrors.rateLimitWindow && (
+                        <p className="text-sm text-red-600">
+                          {securityErrors.rateLimitWindow.message}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -518,20 +683,18 @@ export function Settings() {
           </Card>
         </TabsContent>
 
-        {/* OAuth2/OIDC Settings Tab - Only for SYSTEM users */}
+        {/* OAuth Settings Tab - SYSTEM users only */}
         {isSystemUser() && (
           <TabsContent value="oauth">
-          <Card>
-            <CardHeader>
-              <CardTitle>OAuth2/OIDC Settings</CardTitle>
-              <CardDescription>
-                Configure ORY Hydra integration and token settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmitOAuth(onOAuthSubmit)} className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Hydra Configuration</h3>
+            <Card>
+              <CardHeader>
+                <CardTitle>OAuth2/OIDC Settings</CardTitle>
+                <CardDescription>
+                  Configure OAuth2 and OpenID Connect settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmitOAuth(onOAuthSubmit)} className="space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="hydraAdminUrl">Hydra Admin URL</Label>
@@ -540,10 +703,11 @@ export function Settings() {
                         type="url"
                         {...registerOAuth('hydraAdminUrl')}
                         disabled={isLoading}
-                        placeholder="http://localhost:4445"
                       />
                       {oauthErrors.hydraAdminUrl && (
-                        <p className="text-sm text-red-600">{oauthErrors.hydraAdminUrl.message}</p>
+                        <p className="text-sm text-red-600">
+                          {oauthErrors.hydraAdminUrl.message}
+                        </p>
                       )}
                     </div>
 
@@ -554,111 +718,114 @@ export function Settings() {
                         type="url"
                         {...registerOAuth('hydraPublicUrl')}
                         disabled={isLoading}
-                        placeholder="http://localhost:4444"
                       />
                       {oauthErrors.hydraPublicUrl && (
-                        <p className="text-sm text-red-600">{oauthErrors.hydraPublicUrl.message}</p>
+                        <p className="text-sm text-red-600">
+                          {oauthErrors.hydraPublicUrl.message}
+                        </p>
                       )}
                     </div>
-                  </div>
-                </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Token TTL Settings</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="accessTokenTTL">Access Token TTL (seconds)</Label>
-                      <Input
-                        id="accessTokenTTL"
-                        type="number"
-                        {...registerOAuth('accessTokenTTL', { valueAsNumber: true })}
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="refreshTokenTTL">Refresh Token TTL (seconds)</Label>
-                      <Input
-                        id="refreshTokenTTL"
-                        type="number"
-                        {...registerOAuth('refreshTokenTTL', { valueAsNumber: true })}
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="idTokenTTL">ID Token TTL (seconds)</Label>
-                      <Input
-                        id="idTokenTTL"
-                        type="number"
-                        {...registerOAuth('idTokenTTL', { valueAsNumber: true })}
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? 'Saving...' : 'Save OAuth Settings'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        )}
-
-        {/* System Settings Tab - Only for SYSTEM users */}
-        {isSystemUser() && (
-          <TabsContent value="system">
-            <Card>
-              <CardHeader>
-                <CardTitle>System Configuration</CardTitle>
-                <CardDescription>
-                  Configure JWT settings, session management, and security policies
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmitSystem(onSystemSubmit)} className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">JWT Configuration</h3>
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="jwtSecret">JWT Secret (leave empty to keep current)</Label>
+                        <Label htmlFor="accessTokenTTL">Access Token TTL (seconds)</Label>
                         <Input
-                          id="jwtSecret"
-                          type="password"
-                          {...registerSystem('jwtSecret')}
+                          id="accessTokenTTL"
+                          type="number"
+                          {...registerOAuth('accessTokenTTL', { valueAsNumber: true })}
                           disabled={isLoading}
-                          placeholder="Enter new secret (min 32 characters)"
                         />
-                        {systemErrors.jwtSecret && (
-                          <p className="text-sm text-red-600">{systemErrors.jwtSecret.message}</p>
+                        {oauthErrors.accessTokenTTL && (
+                          <p className="text-sm text-red-600">
+                            {oauthErrors.accessTokenTTL.message}
+                          </p>
                         )}
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="jwtIssuer">JWT Issuer</Label>
+                        <Label htmlFor="refreshTokenTTL">Refresh Token TTL (seconds)</Label>
                         <Input
-                          id="jwtIssuer"
-                          {...registerSystem('jwtIssuer')}
+                          id="refreshTokenTTL"
+                          type="number"
+                          {...registerOAuth('refreshTokenTTL', { valueAsNumber: true })}
                           disabled={isLoading}
-                          placeholder="arauth-identity"
                         />
+                        {oauthErrors.refreshTokenTTL && (
+                          <p className="text-sm text-red-600">
+                            {oauthErrors.refreshTokenTTL.message}
+                          </p>
+                        )}
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="jwtAudience">JWT Audience</Label>
+                        <Label htmlFor="idTokenTTL">ID Token TTL (seconds)</Label>
                         <Input
-                          id="jwtAudience"
-                          {...registerSystem('jwtAudience')}
+                          id="idTokenTTL"
+                          type="number"
+                          {...registerOAuth('idTokenTTL', { valueAsNumber: true })}
                           disabled={isLoading}
-                          placeholder="Optional"
                         />
+                        {oauthErrors.idTokenTTL && (
+                          <p className="text-sm text-red-600">
+                            {oauthErrors.idTokenTTL.message}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Session Management</h3>
-                    <div className="space-y-4">
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? 'Saving...' : 'Save OAuth Settings'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* System Settings Tab - SYSTEM users only */}
+        {isSystemUser() && (
+          <TabsContent value="system">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Settings</CardTitle>
+                <CardDescription>
+                  Configure system-wide settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmitSystem(onSystemSubmit)} className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="jwtIssuer">JWT Issuer</Label>
+                      <Input
+                        id="jwtIssuer"
+                        {...registerSystem('jwtIssuer')}
+                        disabled={isLoading}
+                        placeholder="arauth-identity"
+                      />
+                      {systemErrors.jwtIssuer && (
+                        <p className="text-sm text-red-600">
+                          {systemErrors.jwtIssuer.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="jwtAudience">JWT Audience</Label>
+                      <Input
+                        id="jwtAudience"
+                        {...registerSystem('jwtAudience')}
+                        disabled={isLoading}
+                      />
+                      {systemErrors.jwtAudience && (
+                        <p className="text-sm text-red-600">
+                          {systemErrors.jwtAudience.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="sessionTimeout">Session Timeout (seconds)</Label>
                         <Input
@@ -667,13 +834,13 @@ export function Settings() {
                           {...registerSystem('sessionTimeout', { valueAsNumber: true })}
                           disabled={isLoading}
                         />
+                        {systemErrors.sessionTimeout && (
+                          <p className="text-sm text-red-600">
+                            {systemErrors.sessionTimeout.message}
+                          </p>
+                        )}
                       </div>
-                    </div>
-                  </div>
 
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Account Lockout</h3>
-                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="maxLoginAttempts">Max Login Attempts</Label>
                         <Input
@@ -682,7 +849,13 @@ export function Settings() {
                           {...registerSystem('maxLoginAttempts', { valueAsNumber: true })}
                           disabled={isLoading}
                         />
+                        {systemErrors.maxLoginAttempts && (
+                          <p className="text-sm text-red-600">
+                            {systemErrors.maxLoginAttempts.message}
+                          </p>
+                        )}
                       </div>
+
                       <div className="space-y-2">
                         <Label htmlFor="lockoutDuration">Lockout Duration (seconds)</Label>
                         <Input
@@ -691,6 +864,11 @@ export function Settings() {
                           {...registerSystem('lockoutDuration', { valueAsNumber: true })}
                           disabled={isLoading}
                         />
+                        {systemErrors.lockoutDuration && (
+                          <p className="text-sm text-red-600">
+                            {systemErrors.lockoutDuration.message}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -704,29 +882,27 @@ export function Settings() {
           </TabsContent>
         )}
 
-        {/* Tenant Settings / Token Settings Tab - For all users */}
+        {/* Tenant Settings Tab */}
         <TabsContent value="tenant">
           <Card>
             <CardHeader>
-              <CardTitle>
-                {isSystemUser() ? 'Tenant Token Settings' : 'Token Settings'}
-              </CardTitle>
+              <CardTitle>{isSystemUser() ? 'Tenant Settings' : 'Token Settings'}</CardTitle>
               <CardDescription>
                 {isSystemUser()
-                  ? `Configure token lifetimes and security settings for ${currentTenantId ? 'selected tenant' : 'a tenant'}`
-                  : 'Configure token lifetimes and security settings for your tenant'}
+                  ? 'Configure token settings for the selected tenant'
+                  : 'Configure token settings for your tenant'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isSystemUser() && !currentTenantId ? (
-                <Alert className="bg-blue-50 border-blue-200 text-blue-800">
+                <Alert>
                   <Building2 className="h-4 w-4 mr-2" />
-                  Please select a tenant from the header dropdown to configure tenant settings.
+                  Please select a tenant from the header to configure tenant settings.
                 </Alert>
               ) : (
                 <form onSubmit={handleSubmitToken(onTenantTokenSubmit)} className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Default Token Lifetimes</h3>
+                    <h3 className="text-lg font-semibold mb-4">Token Lifetimes</h3>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="accessTokenTTLMinutes">Access Token TTL (minutes)</Label>
@@ -734,8 +910,7 @@ export function Settings() {
                           id="accessTokenTTLMinutes"
                           type="number"
                           {...registerToken('accessTokenTTLMinutes', { valueAsNumber: true })}
-                          disabled={isLoading}
-                          placeholder="15"
+                          disabled={isLoading || settingsLoading}
                         />
                         {tokenErrors.accessTokenTTLMinutes && (
                           <p className="text-sm text-red-600">
@@ -743,14 +918,14 @@ export function Settings() {
                           </p>
                         )}
                       </div>
+
                       <div className="space-y-2">
                         <Label htmlFor="refreshTokenTTLDays">Refresh Token TTL (days)</Label>
                         <Input
                           id="refreshTokenTTLDays"
                           type="number"
                           {...registerToken('refreshTokenTTLDays', { valueAsNumber: true })}
-                          disabled={isLoading}
-                          placeholder="30"
+                          disabled={isLoading || settingsLoading}
                         />
                         {tokenErrors.refreshTokenTTLDays && (
                           <p className="text-sm text-red-600">
@@ -758,14 +933,14 @@ export function Settings() {
                           </p>
                         )}
                       </div>
+
                       <div className="space-y-2">
                         <Label htmlFor="idTokenTTLMinutes">ID Token TTL (minutes)</Label>
                         <Input
                           id="idTokenTTLMinutes"
                           type="number"
                           {...registerToken('idTokenTTLMinutes', { valueAsNumber: true })}
-                          disabled={isLoading}
-                          placeholder="60"
+                          disabled={isLoading || settingsLoading}
                         />
                         {tokenErrors.idTokenTTLMinutes && (
                           <p className="text-sm text-red-600">
@@ -777,56 +952,53 @@ export function Settings() {
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Remember Me Settings</h3>
+                    <h3 className="text-lg font-semibold mb-4">Remember Me</h3>
                     <div className="space-y-4">
                       <div className="flex items-center space-x-2">
                         <input
                           type="checkbox"
                           id="rememberMeEnabled"
                           {...registerToken('rememberMeEnabled')}
-                          disabled={isLoading}
+                          disabled={isLoading || settingsLoading}
                           className="rounded"
                         />
                         <Label htmlFor="rememberMeEnabled">Enable Remember Me</Label>
                       </div>
 
                       {rememberMeEnabled && (
-                        <div className="ml-6 space-y-4 border-l-2 pl-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="rememberMeRefreshTokenTTLDays">
-                                Remember Me Refresh Token TTL (days)
-                              </Label>
-                              <Input
-                                id="rememberMeRefreshTokenTTLDays"
-                                type="number"
-                                {...registerToken('rememberMeRefreshTokenTTLDays', { valueAsNumber: true })}
-                                disabled={isLoading}
-                                placeholder="90"
-                              />
-                              {tokenErrors.rememberMeRefreshTokenTTLDays && (
-                                <p className="text-sm text-red-600">
-                                  {tokenErrors.rememberMeRefreshTokenTTLDays.message}
-                                </p>
-                              )}
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="rememberMeAccessTokenTTLMinutes">
-                                Remember Me Access Token TTL (minutes)
-                              </Label>
-                              <Input
-                                id="rememberMeAccessTokenTTLMinutes"
-                                type="number"
-                                {...registerToken('rememberMeAccessTokenTTLMinutes', { valueAsNumber: true })}
-                                disabled={isLoading}
-                                placeholder="60"
-                              />
-                              {tokenErrors.rememberMeAccessTokenTTLMinutes && (
-                                <p className="text-sm text-red-600">
-                                  {tokenErrors.rememberMeAccessTokenTTLMinutes.message}
-                                </p>
-                              )}
-                            </div>
+                        <div className="grid grid-cols-2 gap-4 pl-6">
+                          <div className="space-y-2">
+                            <Label htmlFor="rememberMeRefreshTokenTTLDays">
+                              Remember Me Refresh Token TTL (days)
+                            </Label>
+                            <Input
+                              id="rememberMeRefreshTokenTTLDays"
+                              type="number"
+                              {...registerToken('rememberMeRefreshTokenTTLDays', { valueAsNumber: true })}
+                              disabled={isLoading || settingsLoading}
+                            />
+                            {tokenErrors.rememberMeRefreshTokenTTLDays && (
+                              <p className="text-sm text-red-600">
+                                {tokenErrors.rememberMeRefreshTokenTTLDays.message}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="rememberMeAccessTokenTTLMinutes">
+                              Remember Me Access Token TTL (minutes)
+                            </Label>
+                            <Input
+                              id="rememberMeAccessTokenTTLMinutes"
+                              type="number"
+                              {...registerToken('rememberMeAccessTokenTTLMinutes', { valueAsNumber: true })}
+                              disabled={isLoading || settingsLoading}
+                            />
+                            {tokenErrors.rememberMeAccessTokenTTLMinutes && (
+                              <p className="text-sm text-red-600">
+                                {tokenErrors.rememberMeAccessTokenTTLMinutes.message}
+                              </p>
+                            )}
                           </div>
                         </div>
                       )}
@@ -834,43 +1006,37 @@ export function Settings() {
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Security Options</h3>
+                    <h3 className="text-lg font-semibold mb-4">Token Security</h3>
                     <div className="space-y-4">
                       <div className="flex items-center space-x-2">
                         <input
                           type="checkbox"
                           id="tokenRotationEnabled"
                           {...registerToken('tokenRotationEnabled')}
-                          disabled={isLoading}
+                          disabled={isLoading || settingsLoading}
                           className="rounded"
                         />
-                        <Label htmlFor="tokenRotationEnabled">
-                          Enable Token Rotation (recommended)
-                        </Label>
+                        <Label htmlFor="tokenRotationEnabled">Enable Token Rotation</Label>
                       </div>
+
                       <div className="flex items-center space-x-2">
                         <input
                           type="checkbox"
                           id="requireMFAForExtendedSessions"
                           {...registerToken('requireMFAForExtendedSessions')}
-                          disabled={isLoading}
+                          disabled={isLoading || settingsLoading}
                           className="rounded"
                         />
                         <Label htmlFor="requireMFAForExtendedSessions">
-                          Require MFA for extended sessions (Remember Me)
+                          Require MFA for Extended Sessions
                         </Label>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex justify-end space-x-4">
-                    <Button type="button" variant="outline" onClick={() => setActiveTab(isSystemUser() ? 'system' : 'tenant')}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? 'Saving...' : isSystemUser() ? 'Save Tenant Settings' : 'Save Token Settings'}
-                    </Button>
-                  </div>
+                  <Button type="submit" disabled={isLoading || settingsLoading}>
+                    {isLoading ? 'Saving...' : 'Save Tenant Settings'}
+                  </Button>
                 </form>
               )}
             </CardContent>
@@ -880,4 +1046,3 @@ export function Settings() {
     </div>
   );
 }
-

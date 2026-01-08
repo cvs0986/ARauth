@@ -4,13 +4,14 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { tenantApi, userApi, roleApi, permissionApi, systemApi } from '@/services/api';
+import { tenantApi, userApi, roleApi, permissionApi, systemApi, systemCapabilityApi, tenantCapabilityApi, tenantFeatureApi, userCapabilityApi } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useNavigate } from 'react-router-dom';
-import { Users, Building2, Shield, Key, TrendingUp, Activity, Globe, Server, Info } from 'lucide-react';
+import { Users, Building2, Shield, Key, TrendingUp, Activity, Globe, Server, Info, Settings } from 'lucide-react';
+import { CapabilityInheritanceVisualization } from '@/components/capabilities/CapabilityInheritanceVisualization';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -108,6 +109,35 @@ export function Dashboard() {
     enabled: shouldFetchTenantData && !shouldAggregateAllTenants,
   });
 
+  // Capability metrics
+  const { data: systemCapabilities } = useQuery({
+    queryKey: ['system', 'capabilities'],
+    queryFn: () => systemCapabilityApi.list(),
+    enabled: isSystemUser(),
+  });
+
+  const { data: tenantCapabilities } = useQuery({
+    queryKey: ['tenant', 'capabilities', currentTenantId],
+    queryFn: () => tenantCapabilityApi.list(currentTenantId!),
+    enabled: !!currentTenantId,
+  });
+
+  const { data: tenantFeatures } = useQuery({
+    queryKey: ['tenant', 'features'],
+    queryFn: () => tenantFeatureApi.list(),
+    enabled: !isSystemUser() && !!tenantId,
+  });
+
+  // Get user capability enrollments count (for tenant users)
+  const { data: allUsers } = useQuery({
+    queryKey: ['users', currentTenantId],
+    queryFn: () => userApi.list(currentTenantId || undefined),
+    enabled: !!currentTenantId && !isSystemUser(),
+  });
+
+  // Count enrolled users (simplified - would need to fetch all user capabilities)
+  const enrolledUsersCount = 0; // TODO: Calculate from user capabilities
+
   // Use aggregated data when "All Tenants" is selected, otherwise use single tenant data
   const finalUsers = shouldAggregateAllTenants ? aggregatedUsers : users;
   const finalRoles = shouldAggregateAllTenants ? aggregatedRoles : roles;
@@ -133,6 +163,14 @@ export function Dashboard() {
     },
     permissions: {
       total: Array.isArray(finalPermissions) ? finalPermissions.length : 0,
+    },
+    capabilities: {
+      systemTotal: Array.isArray(systemCapabilities) ? systemCapabilities.length : 0,
+      systemEnabled: Array.isArray(systemCapabilities) ? systemCapabilities.filter((c) => c.enabled).length : 0,
+      tenantTotal: Array.isArray(tenantCapabilities) ? tenantCapabilities.length : 0,
+      tenantEnabled: Array.isArray(tenantCapabilities) ? tenantCapabilities.filter((c) => c.enabled).length : 0,
+      featuresEnabled: Array.isArray(tenantFeatures) ? tenantFeatures.filter((f) => f.enabled).length : 0,
+      usersEnrolled: enrolledUsersCount,
     },
   };
 
@@ -277,6 +315,73 @@ export function Dashboard() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Capability Metrics */}
+        {isSystemUser() && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">System Capabilities</CardTitle>
+              <Settings className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.capabilities.systemTotal}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.capabilities.systemEnabled} enabled
+              </p>
+              <Button
+                variant="link"
+                className="p-0 h-auto mt-2"
+                onClick={() => navigate('/capabilities/system')}
+              >
+                View all →
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {currentTenantId && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tenant Capabilities</CardTitle>
+              <Settings className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.capabilities.tenantTotal}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.capabilities.tenantEnabled} enabled
+              </p>
+              {isSystemUser() && (
+                <Button
+                  variant="link"
+                  className="p-0 h-auto mt-2"
+                  onClick={() => navigate('/capabilities/tenant-assignment')}
+                >
+                  View all →
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {!isSystemUser() && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Enabled Features</CardTitle>
+              <Settings className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.capabilities.featuresEnabled}</div>
+              <p className="text-xs text-muted-foreground">Active features</p>
+              <Button
+                variant="link"
+                className="p-0 h-auto mt-2"
+                onClick={() => navigate('/capabilities/features')}
+              >
+                View all →
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Quick Actions and Recent Activity */}
@@ -383,6 +488,24 @@ export function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Capability Visualization */}
+      {systemCapabilities && systemCapabilities.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Capability Inheritance</CardTitle>
+            <CardDescription>
+              Visualize how capabilities flow from System → Tenant → User
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CapabilityInheritanceVisualization
+              capabilityKey={systemCapabilities[0].capability_key}
+              tenantId={currentTenantId || undefined}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Activity Placeholder */}
       <Card>
