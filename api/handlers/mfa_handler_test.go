@@ -75,19 +75,18 @@ func TestMFAHandler_Enroll(t *testing.T) {
 	// Note: Audit logger and other dependencies are not easily mockable, but tests can still verify handler behavior
 	handler := NewMFAHandler(mockService, nil, nil, nil, nil, nil)
 
-	router := gin.New()
-	router.POST("/api/v1/mfa/enroll", handler.Enroll)
-
 	userID := uuid.New()
+	router := gin.New()
 	// Handler gets user ID from JWT claims, not request body
-	// Set up mock claims in context
+	// Set up mock claims in context BEFORE the handler
 	router.Use(func(c *gin.Context) {
-		claims := &claims.Claims{
+		userClaims := &claims.Claims{
 			Subject: userID.String(),
 		}
-		c.Set("user_claims", claims)
+		c.Set("user_claims", userClaims)
 		c.Next()
 	})
+	router.POST("/api/v1/mfa/enroll", handler.Enroll)
 
 	expectedResponse := &mfa.EnrollResponse{
 		Secret:        "test-secret",
