@@ -191,7 +191,7 @@ func TestUserRepository_List(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		user := &models.User{
 			ID:        uuid.New(),
-			TenantID:  tenantID,
+			TenantID:  &tenantID,
 			Username:  fmt.Sprintf("listuser%d", i),
 			Email:     fmt.Sprintf("list%d@example.com", i),
 			Status:    models.UserStatusActive,
