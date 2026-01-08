@@ -85,6 +85,24 @@ export function PermissionList() {
     );
   }
 
+  // Show alert for SYSTEM users without selected tenant
+  if (isSystemUser() && !currentTenantId) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Permissions</h1>
+        </div>
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Select a Tenant</AlertTitle>
+          <AlertDescription>
+            Please select a tenant from the header dropdown to view and manage permissions for that tenant.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">

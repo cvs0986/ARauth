@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { roleApi } from '@/services/api';
+import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -20,10 +21,13 @@ import { DeleteRoleDialog } from './DeleteRoleDialog';
 import { RolePermissionsDialog } from './RolePermissionsDialog';
 import { SearchInput } from '@/components/SearchInput';
 import { Pagination } from '@/components/Pagination';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 import type { Role } from '@shared/types/api';
 
 export function RoleList() {
   const queryClient = useQueryClient();
+  const { isSystemUser, selectedTenantId, tenantId, getCurrentTenantId } = useAuthStore();
   const [createOpen, setCreateOpen] = useState(false);
   const [editRole, setEditRole] = useState<Role | null>(null);
   const [deleteRole, setDeleteRole] = useState<Role | null>(null);
@@ -32,9 +36,13 @@ export function RoleList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Get current tenant context (selected tenant for SYSTEM, own tenant for TENANT)
+  const currentTenantId = getCurrentTenantId();
+
   const { data: roles, isLoading, error } = useQuery({
-    queryKey: ['roles'],
-    queryFn: () => roleApi.list(),
+    queryKey: ['roles', currentTenantId],
+    queryFn: () => roleApi.list(currentTenantId || undefined),
+    enabled: !!currentTenantId || !isSystemUser(), // For SYSTEM users, require tenant selection
   });
 
   // Filter roles based on search
