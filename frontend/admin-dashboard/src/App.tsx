@@ -15,6 +15,10 @@ import { UserList } from './pages/users/UserList';
 import { RoleList } from './pages/roles/RoleList';
 import { PermissionList } from './pages/permissions/PermissionList';
 import { MFA } from './pages/MFA';
+import { SystemCapabilityList } from './pages/capabilities/SystemCapabilityList';
+import { TenantCapabilityAssignment } from './pages/capabilities/TenantCapabilityAssignment';
+import { TenantFeatureEnablement } from './pages/capabilities/TenantFeatureEnablement';
+import { UserCapabilityEnrollment } from './pages/capabilities/UserCapabilityEnrollment';
 
 // Create QueryClient instance
 const queryClient = new QueryClient({
@@ -108,6 +112,46 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <MFA />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/capabilities/system"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <SystemCapabilityList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/capabilities/tenant-assignment"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TenantCapabilityAssignment />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/capabilities/features"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TenantFeatureEnablement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/capabilities/user-enrollment"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UserCapabilityEnrollment />
                 </Layout>
               </ProtectedRoute>
             }
