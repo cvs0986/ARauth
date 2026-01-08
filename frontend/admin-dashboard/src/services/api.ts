@@ -285,6 +285,34 @@ export const permissionApi = {
   },
 };
 
+// MFA API
+export const mfaApi = {
+  enroll: async (): Promise<any> => {
+    const response = await apiClient.post(API_ENDPOINTS.MFA.ENROLL);
+    return response.data;
+  },
+  
+  verify: async (data: { code: string }): Promise<void> => {
+    await apiClient.post(API_ENDPOINTS.MFA.VERIFY, data);
+  },
+  
+  challenge: async (data: { user_id: string; tenant_id?: string }): Promise<{ challenge_id: string }> => {
+    const response = await apiClient.post<{ challenge_id: string }>(
+      API_ENDPOINTS.MFA.CHALLENGE,
+      data
+    );
+    return response.data;
+  },
+  
+  verifyChallenge: async (data: { challenge_id: string; code: string }): Promise<{ access_token: string }> => {
+    const response = await apiClient.post<{ access_token: string }>(
+      API_ENDPOINTS.MFA.VERIFY_CHALLENGE,
+      data
+    );
+    return response.data;
+  },
+};
+
 // Export error handler
 export { handleApiError };
 

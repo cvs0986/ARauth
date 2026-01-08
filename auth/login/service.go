@@ -15,14 +15,15 @@ import (
 
 // Service provides login functionality
 type Service struct {
-	userRepo         interfaces.UserRepository
-	credentialRepo   interfaces.CredentialRepository
-	refreshTokenRepo interfaces.RefreshTokenRepository
-	hydraClient      *hydra.Client
-	passwordHasher   *password.Hasher
-	claimsBuilder    *claims.Builder
-	tokenService     token.ServiceInterface
-	lifetimeResolver *token.LifetimeResolver
+	userRepo            interfaces.UserRepository
+	credentialRepo      interfaces.CredentialRepository
+	refreshTokenRepo    interfaces.RefreshTokenRepository
+	tenantSettingsRepo  interfaces.TenantSettingsRepository
+	hydraClient         *hydra.Client
+	passwordHasher      *password.Hasher
+	claimsBuilder       *claims.Builder
+	tokenService        token.ServiceInterface
+	lifetimeResolver    *token.LifetimeResolver
 }
 
 // NewService creates a new login service
@@ -30,20 +31,22 @@ func NewService(
 	userRepo interfaces.UserRepository,
 	credentialRepo interfaces.CredentialRepository,
 	refreshTokenRepo interfaces.RefreshTokenRepository,
+	tenantSettingsRepo interfaces.TenantSettingsRepository,
 	hydraClient *hydra.Client,
 	claimsBuilder *claims.Builder,
 	tokenService token.ServiceInterface,
 	lifetimeResolver *token.LifetimeResolver,
 ) *Service {
 	return &Service{
-		userRepo:         userRepo,
-		credentialRepo:   credentialRepo,
-		refreshTokenRepo: refreshTokenRepo,
-		hydraClient:      hydraClient,
-		passwordHasher:   password.NewHasher(),
-		claimsBuilder:    claimsBuilder,
-		tokenService:     tokenService,
-		lifetimeResolver: lifetimeResolver,
+		userRepo:           userRepo,
+		credentialRepo:     credentialRepo,
+		refreshTokenRepo:   refreshTokenRepo,
+		tenantSettingsRepo: tenantSettingsRepo,
+		hydraClient:        hydraClient,
+		passwordHasher:     password.NewHasher(),
+		claimsBuilder:      claimsBuilder,
+		tokenService:       tokenService,
+		lifetimeResolver:   lifetimeResolver,
 	}
 }
 
@@ -158,7 +161,23 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 	}
 
 	// Check if MFA is required
+	// MFA is required if:
+	// 1. User has MFA enabled (user.MFAEnabled), OR
+	// 2. Tenant requires MFA for all users (tenant settings MFARequired)
+	mfaRequired := false
+	
+	// Check user-level MFA
 	if user.MFAEnabled {
+		mfaRequired = true
+	} else if user.TenantID != nil {
+		// Check tenant-level MFA requirement
+		tenantSettings, err := s.tenantSettingsRepo.GetByTenantID(ctx, *user.TenantID)
+		if err == nil && tenantSettings != nil && tenantSettings.MFARequired {
+			mfaRequired = true
+		}
+	}
+	
+	if mfaRequired {
 		// MFA is required - client should call /api/v1/mfa/challenge endpoint
 		// with user_id and tenant_id to get a session
 		return &LoginResponse{

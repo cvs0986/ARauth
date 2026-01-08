@@ -14,6 +14,7 @@ const systemNavigation = [
   { name: 'Users', href: '/users', icon: '👤', permission: null }, // Core feature - always visible
   { name: 'Roles', href: '/roles', icon: '🔑', permission: null }, // Core feature - always visible
   { name: 'Permissions', href: '/permissions', icon: '🛡️', permission: null }, // Core feature - always visible
+  { name: 'MFA', href: '/mfa', icon: '🔐', permission: null }, // MFA management
   { name: 'Audit Logs', href: '/audit', icon: '📋', permission: null }, // Core feature - always visible
   { name: 'Settings', href: '/settings', icon: '⚙️', permission: null }, // Core feature - always visible
 ];
@@ -24,6 +25,7 @@ const tenantNavigation = [
   { name: 'Users', href: '/users', icon: '👤', permission: null }, // Core feature - always visible
   { name: 'Roles', href: '/roles', icon: '🔑', permission: null }, // Core feature - always visible
   { name: 'Permissions', href: '/permissions', icon: '🛡️', permission: null }, // Core feature - always visible
+  { name: 'MFA', href: '/mfa', icon: '🔐', permission: null }, // MFA management
   { name: 'Audit Logs', href: '/audit', icon: '📋', permission: null }, // Core feature - always visible
   { name: 'Settings', href: '/settings', icon: '⚙️', permission: null }, // Core feature - always visible
 ];

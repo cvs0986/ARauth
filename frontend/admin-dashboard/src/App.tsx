@@ -14,6 +14,7 @@ import { TenantList } from './pages/tenants/TenantList';
 import { UserList } from './pages/users/UserList';
 import { RoleList } from './pages/roles/RoleList';
 import { PermissionList } from './pages/permissions/PermissionList';
+import { MFA } from './pages/MFA';
 
 // Create QueryClient instance
 const queryClient = new QueryClient({
@@ -97,6 +98,16 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <AuditLogs />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mfa"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <MFA />
                 </Layout>
               </ProtectedRoute>
             }
