@@ -100,6 +100,29 @@ func loadFromEnv(cfg *config.Config) {
 	if format := os.Getenv("LOG_FORMAT"); format != "" {
 		cfg.Logging.Format = strings.ToLower(format)
 	}
+
+	// Bootstrap
+	if enabled := os.Getenv("BOOTSTRAP_ENABLED"); enabled != "" {
+		cfg.Bootstrap.Enabled = enabled == "true" || enabled == "1"
+	}
+	if force := os.Getenv("BOOTSTRAP_FORCE"); force != "" {
+		cfg.Bootstrap.Force = force == "true" || force == "1"
+	}
+	if username := os.Getenv("BOOTSTRAP_USERNAME"); username != "" {
+		cfg.Bootstrap.MasterUser.Username = username
+	}
+	if email := os.Getenv("BOOTSTRAP_EMAIL"); email != "" {
+		cfg.Bootstrap.MasterUser.Email = email
+	}
+	if password := os.Getenv("BOOTSTRAP_PASSWORD"); password != "" {
+		cfg.Bootstrap.MasterUser.Password = password
+	}
+	if firstName := os.Getenv("BOOTSTRAP_FIRST_NAME"); firstName != "" {
+		cfg.Bootstrap.MasterUser.FirstName = firstName
+	}
+	if lastName := os.Getenv("BOOTSTRAP_LAST_NAME"); lastName != "" {
+		cfg.Bootstrap.MasterUser.LastName = lastName
+	}
 }
 
 // setDefaults sets default values for configuration
