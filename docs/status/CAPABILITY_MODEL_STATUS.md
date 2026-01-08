@@ -193,23 +193,36 @@ This document tracks the implementation status of the ARauth Capability Model ba
 
 ## Phase 5: Enforcement & Validation
 
-**Status**: 🔴 Not Started  
-**Target Completion**: [TBD]  
-**Dependencies**: Phase 2 must be completed
+**Status**: 🟢 Completed  
+**Completed**: 2025-01-27  
+**Dependencies**: Phase 2 completed ✅
 
 ### Issues
 
 | # | Issue | Status | Assignee | Notes |
 |---|-------|--------|----------|-------|
-| 021 | Capability enforcement middleware | ⚪ Not Started | - | Depends on #006, #008, #009 |
-| 022 | Capability validation logic | ⚪ Not Started | - | Depends on #006 |
-| 023 | Include capability context in tokens | ⚪ Not Started | - | Depends on #006, #008 |
+| 021 | Capability enforcement middleware | 🟢 Completed | - | ✅ Middleware created with RequireCapability, RequireFeatureEnabled, RequireUserEnrollment |
+| 022 | Capability validation logic | 🟢 Completed | - | ✅ Validation service created with rules for tenant feature enablement, capability assignment, user enrollment |
+| 023 | Include capability context in tokens | 🟢 Completed | - | ✅ Claims builder updated to include capabilities and features in JWT tokens |
 
 ### Dependencies
-- Phase 2 (Backend Core Logic)
+- Phase 2 (Backend Core Logic) ✅
 
 ### Blockers
-- Waiting on Phase 2
+- None
+
+### Completed Work
+- ✅ Created capability enforcement middleware (`api/middleware/capability.go`)
+- ✅ Added `RequireCapability` middleware for full three-layer evaluation
+- ✅ Added `RequireFeatureEnabled` middleware for tenant feature checks
+- ✅ Added `RequireUserEnrollment` middleware for user enrollment checks
+- ✅ Created validation service (`identity/capability/validation.go`)
+- ✅ Validates tenant cannot enable features not allowed by system
+- ✅ Validates tenant cannot exceed system limits (e.g., max_token_ttl)
+- ✅ Validates user enrollment requirements
+- ✅ Updated claims builder to include capability context in tokens
+- ✅ Added `Capabilities` and `Features` fields to JWT claims
+- ✅ Capability context is informational only, not authoritative for authorization
 
 ---
 
