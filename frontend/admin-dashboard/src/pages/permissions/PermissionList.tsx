@@ -19,10 +19,13 @@ import { EditPermissionDialog } from './EditPermissionDialog';
 import { DeletePermissionDialog } from './DeletePermissionDialog';
 import { SearchInput } from '@/components/SearchInput';
 import { Pagination } from '@/components/Pagination';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 import type { Permission } from '@shared/types/api';
 
 export function PermissionList() {
   const queryClient = useQueryClient();
+  const { isSystemUser, selectedTenantId, tenantId, getCurrentTenantId } = useAuthStore();
   const [createOpen, setCreateOpen] = useState(false);
   const [editPermission, setEditPermission] = useState<Permission | null>(null);
   const [deletePermission, setDeletePermission] = useState<Permission | null>(null);
@@ -30,9 +33,13 @@ export function PermissionList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Get current tenant context (selected tenant for SYSTEM, own tenant for TENANT)
+  const currentTenantId = getCurrentTenantId();
+
   const { data: permissions, isLoading, error } = useQuery({
-    queryKey: ['permissions'],
-    queryFn: () => permissionApi.list(),
+    queryKey: ['permissions', currentTenantId],
+    queryFn: () => permissionApi.list(currentTenantId || undefined),
+    enabled: !!currentTenantId || !isSystemUser(), // For SYSTEM users, require tenant selection
   });
 
   // Filter permissions based on search
@@ -68,7 +75,7 @@ export function PermissionList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => permissionApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['permissions'] });
+      queryClient.invalidateQueries({ queryKey: ['permissions', currentTenantId] });
       setDeletePermission(null);
     },
   });

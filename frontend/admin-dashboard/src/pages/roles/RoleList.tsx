@@ -76,7 +76,7 @@ export function RoleList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => roleApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      queryClient.invalidateQueries({ queryKey: ['roles', currentTenantId] });
       setDeleteRole(null);
     },
   });
