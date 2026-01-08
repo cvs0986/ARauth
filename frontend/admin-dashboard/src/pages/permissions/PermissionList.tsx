@@ -49,6 +49,22 @@ export function PermissionList() {
     });
   }, [permissions, searchQuery]);
 
+  // Paginate filtered permissions
+  const paginatedPermissions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    const end = start + pageSize;
+    return filteredPermissions.slice(start, end);
+  }, [filteredPermissions, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredPermissions.length / pageSize);
+
+  // Reset to page 1 when filters change
+  useMemo(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => permissionApi.delete(id),
     onSuccess: () => {
