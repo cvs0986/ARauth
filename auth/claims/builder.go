@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/identity/capability"
 	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
@@ -14,14 +15,16 @@ type Builder struct {
 	roleRepo        interfaces.RoleRepository
 	permissionRepo  interfaces.PermissionRepository
 	systemRoleRepo  interfaces.SystemRoleRepository // NEW: For SYSTEM users
+	capabilityService capability.ServiceInterface // NEW: For capability context
 }
 
 // NewBuilder creates a new claims builder
-func NewBuilder(roleRepo interfaces.RoleRepository, permissionRepo interfaces.PermissionRepository, systemRoleRepo interfaces.SystemRoleRepository) *Builder {
+func NewBuilder(roleRepo interfaces.RoleRepository, permissionRepo interfaces.PermissionRepository, systemRoleRepo interfaces.SystemRoleRepository, capabilityService capability.ServiceInterface) *Builder {
 	return &Builder{
 		roleRepo:       roleRepo,
 		permissionRepo: permissionRepo,
 		systemRoleRepo: systemRoleRepo,
+		capabilityService: capabilityService,
 	}
 }
 
@@ -45,6 +48,15 @@ type Claims struct {
 	SystemRoles      []string `json:"system_roles,omitempty"` // NEW: System roles
 	SystemPermissions []string `json:"system_permissions,omitempty"` // NEW: System permissions
 	Scope            string   `json:"scope,omitempty"` // Space-separated scopes
+	// Capability context (informational only, not authoritative for authorization)
+	Capabilities     map[string]bool   `json:"capabilities,omitempty"` // Capabilities available to tenant
+	Features         map[string]FeatureInfo `json:"features,omitempty"` // Features enabled by tenant
+}
+
+// FeatureInfo represents information about an enabled feature
+type FeatureInfo struct {
+	Enabled    bool   `json:"enabled"`
+	Required   bool   `json:"required,omitempty"` // If feature is required (e.g., MFA for admins)
 }
 
 // BuildClaims builds claims for a user
@@ -58,6 +70,8 @@ func (b *Builder) BuildClaims(ctx context.Context, user *models.User) (*Claims, 
 		Permissions:   []string{},
 		SystemRoles:  []string{},
 		SystemPermissions: []string{},
+		Capabilities:  make(map[string]bool),
+		Features:      make(map[string]FeatureInfo),
 	}
 
 	// Handle tenant_id (nullable for SYSTEM users)
@@ -111,6 +125,29 @@ func (b *Builder) BuildClaims(ctx context.Context, user *models.User) (*Claims, 
 	}
 
 	// For TENANT users: get tenant roles and permissions
+	// Also get capability context
+	if user.TenantID != nil {
+		// Get enabled features for tenant
+		enabledFeatures, err := b.capabilityService.GetEnabledFeaturesForTenant(ctx, *user.TenantID)
+		if err == nil {
+			for featureKey, enabled := range enabledFeatures {
+				if enabled {
+					claims.Features[featureKey] = FeatureInfo{
+						Enabled: true,
+					}
+				}
+			}
+		}
+
+		// Get allowed capabilities for tenant (informational)
+		allowedCapabilities, err := b.capabilityService.GetAllowedCapabilitiesForTenant(ctx, *user.TenantID)
+		if err == nil {
+			for capKey, allowed := range allowedCapabilities {
+				claims.Capabilities[capKey] = allowed
+			}
+		}
+	}
+
 	// Get user roles
 	roles, err := b.roleRepo.GetUserRoles(ctx, user.ID)
 	if err != nil {
