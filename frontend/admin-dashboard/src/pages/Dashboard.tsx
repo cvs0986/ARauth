@@ -8,6 +8,7 @@ import { tenantApi, userApi, roleApi, permissionApi, systemApi } from '@/service
 import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useNavigate } from 'react-router-dom';
 import { Users, Building2, Shield, Key, TrendingUp, Activity, Globe, Server, Info } from 'lucide-react';
 
