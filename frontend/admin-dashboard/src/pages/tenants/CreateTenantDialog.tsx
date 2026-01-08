@@ -53,7 +53,9 @@ export function CreateTenantDialog({ open, onOpenChange }: CreateTenantDialogPro
   const mutation = useMutation({
     mutationFn: tenantApi.create,
     onSuccess: () => {
+      // Invalidate both query keys to update tenant list page and header dropdown
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['system', 'tenants'] });
       reset();
       setError(null);
       onOpenChange(false);

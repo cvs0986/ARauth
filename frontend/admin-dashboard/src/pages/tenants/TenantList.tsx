@@ -70,7 +70,9 @@ export function TenantList() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => tenantApi.delete(id),
     onSuccess: () => {
+      // Invalidate both query keys to update tenant list page and header dropdown
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['system', 'tenants'] });
       setDeleteTenant(null);
     },
   });
