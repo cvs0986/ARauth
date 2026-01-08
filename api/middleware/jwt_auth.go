@@ -50,8 +50,15 @@ func JWTAuthMiddleware(tokenService token.ServiceInterface) gin.HandlerFunc {
 
 		// Set user context
 		c.Set("user_id", claims.Subject)
-		c.Set("tenant_id", claims.TenantID)
+		if claims.TenantID != "" {
+			c.Set("tenant_id", claims.TenantID)
+		}
+		c.Set("principal_type", claims.PrincipalType)
 		c.Set("user_claims", claims)
+		c.Set("system_roles", claims.SystemRoles)
+		c.Set("system_permissions", claims.SystemPermissions)
+		c.Set("roles", claims.Roles)
+		c.Set("permissions", claims.Permissions)
 
 		c.Next()
 	}
