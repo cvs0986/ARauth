@@ -66,7 +66,10 @@ func (g *Generator) GenerateQRCode(accountName string, secret string) ([]byte, e
 }
 
 // Validate validates a TOTP code
+// Uses a time window of ±1 period (30 seconds) to account for clock skew
 func (g *Generator) Validate(secret string, code string) bool {
+	// Validate with a time window of ±1 period (30 seconds) to account for clock skew
+	// This allows codes from the previous and next time windows to be valid
 	return totp.Validate(code, secret)
 }
 

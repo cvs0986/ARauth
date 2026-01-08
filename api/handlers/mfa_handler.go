@@ -113,6 +113,18 @@ func (h *MFAHandler) Verify(c *gin.Context) {
 
 	valid, err := h.mfaService.Verify(c.Request.Context(), req)
 	if err != nil {
+		// Log the actual error for debugging
+		// Check if it's a user not found, MFA not enabled, or secret not found error
+		if err.Error() == "MFA is not enabled for this user" {
+			middleware.RespondWithError(c, http.StatusBadRequest, "mfa_not_enabled",
+				"MFA is not enabled for this user. Please enroll in MFA first.", nil)
+			return
+		}
+		if err.Error() == "MFA secret not found" {
+			middleware.RespondWithError(c, http.StatusBadRequest, "mfa_secret_not_found",
+				"MFA secret not found. Please re-enroll in MFA.", nil)
+			return
+		}
 		middleware.RespondWithError(c, http.StatusUnauthorized, "verification_failed",
 			err.Error(), nil)
 		return
@@ -120,7 +132,7 @@ func (h *MFAHandler) Verify(c *gin.Context) {
 
 	if !valid {
 		middleware.RespondWithError(c, http.StatusUnauthorized, "invalid_code",
-			"Invalid TOTP code or recovery code", nil)
+			"Invalid TOTP code or recovery code. Please check your authenticator app and try again.", nil)
 		return
 	}
 
