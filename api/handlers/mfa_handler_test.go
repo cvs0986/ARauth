@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/auth/mfa"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -78,10 +79,15 @@ func TestMFAHandler_Enroll(t *testing.T) {
 	router.POST("/api/v1/mfa/enroll", handler.Enroll)
 
 	userID := uuid.New()
-	reqBody := mfa.EnrollRequest{
-		UserID: userID,
-	}
-	body, _ := json.Marshal(reqBody)
+	// Handler gets user ID from JWT claims, not request body
+	// Set up mock claims in context
+	router.Use(func(c *gin.Context) {
+		claims := &claims.Claims{
+			Subject: userID.String(),
+		}
+		c.Set("user_claims", claims)
+		c.Next()
+	})
 
 	expectedResponse := &mfa.EnrollResponse{
 		Secret:        "test-secret",
@@ -89,9 +95,11 @@ func TestMFAHandler_Enroll(t *testing.T) {
 		RecoveryCodes: []string{"code1", "code2"},
 	}
 
-	mockService.On("Enroll", mock.Anything, mock.AnythingOfType("*mfa.EnrollRequest")).Return(expectedResponse, nil)
+	mockService.On("Enroll", mock.Anything, mock.MatchedBy(func(req *mfa.EnrollRequest) bool {
+		return req.UserID == userID
+	})).Return(expectedResponse, nil)
 
-	req, _ := http.NewRequest("POST", "/api/v1/mfa/enroll", bytes.NewBuffer(body))
+	req, _ := http.NewRequest("POST", "/api/v1/mfa/enroll", bytes.NewBuffer([]byte("{}")))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
