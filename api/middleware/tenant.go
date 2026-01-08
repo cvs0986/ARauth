@@ -20,16 +20,29 @@ type TenantContext struct {
 
 // TenantMiddleware extracts tenant information from request
 // Supports multiple methods:
-// 1. X-Tenant-ID header
-// 2. X-Tenant-Domain header
-// 3. tenant_id query parameter
-// 4. domain query parameter
+// 1. JWT token claims (tenant_id from token - for TENANT users)
+// 2. X-Tenant-ID header
+// 3. X-Tenant-Domain header
+// 4. tenant_id query parameter
+// 5. domain query parameter
 func TenantMiddleware(tenantRepo interfaces.TenantRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var tenantID uuid.UUID
 		var err error
 
-		// Try X-Tenant-ID header first
+		// First, try to get tenant ID from JWT token claims (set by JWTAuthMiddleware)
+		// This is especially important for TENANT users who always have a tenant_id in their token
+		if tenantIDStr, exists := c.Get("tenant_id"); exists {
+			if tenantIDStrStr, ok := tenantIDStr.(string); ok && tenantIDStrStr != "" {
+				tenantID, err = uuid.Parse(tenantIDStrStr)
+				if err == nil && tenantID != uuid.Nil {
+					// Tenant ID found in JWT claims, use it
+					// But allow header to override if provided (for SYSTEM users selecting tenant context)
+				}
+			}
+		}
+
+		// Try X-Tenant-ID header (can override JWT claims for SYSTEM users)
 		if tenantIDStr := c.GetHeader("X-Tenant-ID"); tenantIDStr != "" {
 			tenantID, err = uuid.Parse(tenantIDStr)
 			if err != nil {
