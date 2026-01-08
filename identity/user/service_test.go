@@ -69,6 +69,14 @@ func (m *MockUserRepository) Count(ctx context.Context, tenantID uuid.UUID, filt
 	return args.Int(0), args.Error(1)
 }
 
+func (m *MockUserRepository) GetByEmailSystem(ctx context.Context, email string) (*models.User, error) {
+	args := m.Called(ctx, email)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.User), args.Error(1)
+}
+
 func TestService_Create(t *testing.T) {
 	mockRepo := new(MockUserRepository)
 	service := NewService(mockRepo)
@@ -86,7 +94,7 @@ func TestService_Create(t *testing.T) {
 
 	expectedUser := &models.User{
 		ID:       uuid.New(),
-		TenantID: tenantID,
+		TenantID: &tenantID,
 		Username: req.Username,
 		Email:    req.Email,
 	}
@@ -162,7 +170,7 @@ func TestService_Update(t *testing.T) {
 	tenantID := uuid.New()
 	existingUser := &models.User{
 		ID:       userID,
-		TenantID: tenantID,
+		TenantID: &tenantID,
 		Username: "testuser",
 		Email:    "test@example.com",
 	}

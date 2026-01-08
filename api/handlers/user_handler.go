@@ -75,7 +75,7 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 	}
 
 	// Verify user belongs to tenant
-	if u.TenantID != tenantID {
+	if u.TenantID == nil || *u.TenantID != tenantID {
 		middleware.RespondWithError(c, http.StatusForbidden, "access_denied",
 			"User does not belong to this tenant", nil)
 		return
@@ -192,7 +192,7 @@ func (h *UserHandler) Delete(c *gin.Context) {
 			"User not found", nil)
 		return
 	}
-	if existingUser.TenantID != tenantID {
+	if existingUser.TenantID == nil || *existingUser.TenantID != tenantID {
 		middleware.RespondWithError(c, http.StatusForbidden, "access_denied",
 			"User does not belong to this tenant", nil)
 		return

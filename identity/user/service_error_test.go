@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/arauth-identity/iam/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -27,7 +26,7 @@ func TestService_Create_InvalidEmail(t *testing.T) {
 }
 
 func TestService_Create_EmptyUsername(t *testing.T) {
-	mockRepo := new(testutil.MockUserRepository)
+	mockRepo := new(MockUserRepository)
 	service := NewService(mockRepo)
 
 	req := &CreateUserRequest{
@@ -42,7 +41,7 @@ func TestService_Create_EmptyUsername(t *testing.T) {
 }
 
 func TestService_GetByID_NotFound(t *testing.T) {
-	mockRepo := new(testutil.MockUserRepository)
+	mockRepo := new(MockUserRepository)
 	service := NewService(mockRepo)
 
 	nonExistentID := uuid.New()
@@ -54,7 +53,7 @@ func TestService_GetByID_NotFound(t *testing.T) {
 }
 
 func TestService_GetByUsername_NotFound(t *testing.T) {
-	mockRepo := new(testutil.MockUserRepository)
+	mockRepo := new(MockUserRepository)
 	service := NewService(mockRepo)
 
 	tenantID := uuid.New()
@@ -67,7 +66,7 @@ func TestService_GetByUsername_NotFound(t *testing.T) {
 }
 
 func TestService_Update_NotFound(t *testing.T) {
-	mockRepo := new(testutil.MockUserRepository)
+	mockRepo := new(MockUserRepository)
 	service := NewService(mockRepo)
 
 	req := &UpdateUserRequest{
@@ -83,7 +82,7 @@ func TestService_Update_NotFound(t *testing.T) {
 }
 
 func TestService_Delete_NotFound(t *testing.T) {
-	mockRepo := new(testutil.MockUserRepository)
+	mockRepo := new(MockUserRepository)
 	service := NewService(mockRepo)
 
 	nonExistentID := uuid.New()

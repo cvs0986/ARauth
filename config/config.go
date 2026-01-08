@@ -129,3 +129,19 @@ type MetricsConfig struct {
 	Port    int    `yaml:"port" env:"METRICS_PORT" envDefault:"9090"`
 }
 
+// BootstrapConfig holds bootstrap configuration for master user creation
+type BootstrapConfig struct {
+	Enabled    bool              `yaml:"enabled" env:"BOOTSTRAP_ENABLED" envDefault:"false"`
+	Force      bool              `yaml:"force" env:"BOOTSTRAP_FORCE" envDefault:"false"`
+	MasterUser BootstrapUserConfig `yaml:"master_user"`
+}
+
+// BootstrapUserConfig holds master user configuration
+type BootstrapUserConfig struct {
+	Username  string `yaml:"username" env:"BOOTSTRAP_USERNAME" envDefault:"admin"`
+	Email     string `yaml:"email" env:"BOOTSTRAP_EMAIL" envDefault:"admin@arauth.io"`
+	Password  string `yaml:"password" env:"BOOTSTRAP_PASSWORD"` // Required if enabled
+	FirstName string `yaml:"first_name" env:"BOOTSTRAP_FIRST_NAME" envDefault:"System"`
+	LastName  string `yaml:"last_name" env:"BOOTSTRAP_LAST_NAME" envDefault:"Administrator"`
+}
+

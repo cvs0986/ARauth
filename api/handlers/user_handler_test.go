@@ -95,7 +95,7 @@ func TestUserHandler_Create(t *testing.T) {
 	router.POST("/api/v1/users", handler.Create)
 
 	reqBody := user.CreateUserRequest{
-		TenantID: tenantID, // Required by binding, but handler will override from context
+		TenantID: &tenantID, // Required by binding, but handler will override from context
 		Username: "testuser",
 		Email:    "test@example.com",
 	}
@@ -103,7 +103,7 @@ func TestUserHandler_Create(t *testing.T) {
 
 	expectedUser := &models.User{
 		ID:       uuid.New(),
-		TenantID: tenantID,
+		TenantID: &tenantID,
 		Username: reqBody.Username,
 		Email:    reqBody.Email,
 		Status:   "active",
@@ -132,7 +132,7 @@ func TestUserHandler_GetByID(t *testing.T) {
 	tenantID := uuid.New()
 	expectedUser := &models.User{
 		ID:       userID,
-		TenantID: tenantID,
+		TenantID: &tenantID,
 		Username: "testuser",
 		Email:    "test@example.com",
 	}

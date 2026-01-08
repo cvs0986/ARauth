@@ -89,14 +89,15 @@ func (s *Service) Create(ctx context.Context, req *CreateUserRequest) (*models.U
 
 	// Create user
 	u := &models.User{
-		ID:        uuid.New(),
-		TenantID:  req.TenantID,
-		Username:  req.Username,
-		Email:     req.Email,
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Status:    status,
-		Metadata:  req.Metadata,
+		ID:            uuid.New(),
+		TenantID:      &req.TenantID, // Convert to pointer
+		PrincipalType: models.PrincipalTypeTenant, // Default to TENANT
+		Username:      req.Username,
+		Email:         req.Email,
+		FirstName:     req.FirstName,
+		LastName:      req.LastName,
+		Status:        status,
+		Metadata:      req.Metadata,
 	}
 
 	if err := s.repo.Create(ctx, u); err != nil {
@@ -139,9 +140,11 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, req *UpdateUserReque
 			return nil, fmt.Errorf("username must be at least 3 characters")
 		}
 		// Check if username is already taken by another user
-		existing, _ := s.repo.GetByUsername(ctx, username, u.TenantID)
-		if existing != nil && existing.ID != id {
-			return nil, fmt.Errorf("username already exists")
+		if u.TenantID != nil {
+			existing, _ := s.repo.GetByUsername(ctx, username, *u.TenantID)
+			if existing != nil && existing.ID != id {
+				return nil, fmt.Errorf("username already exists")
+			}
 		}
 		u.Username = username
 	}
@@ -152,9 +155,11 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, req *UpdateUserReque
 			return nil, fmt.Errorf("invalid email format")
 		}
 		// Check if email is already taken by another user
-		existing, _ := s.repo.GetByEmail(ctx, email, u.TenantID)
-		if existing != nil && existing.ID != id {
-			return nil, fmt.Errorf("email already exists")
+		if u.TenantID != nil {
+			existing, _ := s.repo.GetByEmail(ctx, email, *u.TenantID)
+			if existing != nil && existing.ID != id {
+				return nil, fmt.Errorf("email already exists")
+			}
 		}
 		u.Email = email
 	}

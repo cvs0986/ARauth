@@ -48,7 +48,11 @@ func (r *cachedUserRepository) Create(ctx context.Context, user *models.User) er
 	}
 
 	// Invalidate related cache entries
-	r.invalidateUserCache(ctx, user.ID, user.TenantID, user.Username, user.Email)
+	var tenantID uuid.UUID
+	if user.TenantID != nil {
+		tenantID = *user.TenantID
+	}
+	r.invalidateUserCache(ctx, user.ID, tenantID, user.Username, user.Email)
 	return nil
 }
 
@@ -143,9 +147,17 @@ func (r *cachedUserRepository) Update(ctx context.Context, user *models.User) er
 
 	// Invalidate cache
 	if oldUser != nil {
-		r.invalidateUserCache(ctx, user.ID, user.TenantID, oldUser.Username, oldUser.Email)
+		var oldTenantID uuid.UUID
+		if oldUser.TenantID != nil {
+			oldTenantID = *oldUser.TenantID
+		}
+		r.invalidateUserCache(ctx, user.ID, oldTenantID, oldUser.Username, oldUser.Email)
 	}
-	r.invalidateUserCache(ctx, user.ID, user.TenantID, user.Username, user.Email)
+	var tenantID uuid.UUID
+	if user.TenantID != nil {
+		tenantID = *user.TenantID
+	}
+	r.invalidateUserCache(ctx, user.ID, tenantID, user.Username, user.Email)
 
 	return nil
 }
@@ -162,7 +174,11 @@ func (r *cachedUserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 	// Invalidate cache
 	if user != nil {
-		r.invalidateUserCache(ctx, id, user.TenantID, user.Username, user.Email)
+		var tenantID uuid.UUID
+		if user.TenantID != nil {
+			tenantID = *user.TenantID
+		}
+		r.invalidateUserCache(ctx, id, tenantID, user.Username, user.Email)
 	}
 
 	return nil
@@ -177,6 +193,12 @@ func (r *cachedUserRepository) List(ctx context.Context, tenantID uuid.UUID, fil
 // Count returns the total number of users (not cached)
 func (r *cachedUserRepository) Count(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) (int, error) {
 	return r.repo.Count(ctx, tenantID, filters)
+}
+
+// GetByEmailSystem retrieves a SYSTEM user by email (no tenant ID required)
+func (r *cachedUserRepository) GetByEmailSystem(ctx context.Context, email string) (*models.User, error) {
+	// SYSTEM users are not cached by email (they're rare and should be looked up directly)
+	return r.repo.GetByEmailSystem(ctx, email)
 }
 
 // invalidateUserCache invalidates all cache entries for a user

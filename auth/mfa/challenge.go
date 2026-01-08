@@ -32,7 +32,7 @@ func (s *Service) CreateChallenge(ctx context.Context, req *ChallengeRequest) (*
 	}
 
 	// Verify tenant matches
-	if user.TenantID != req.TenantID {
+	if user.TenantID == nil || *user.TenantID != req.TenantID {
 		return nil, fmt.Errorf("tenant mismatch")
 	}
 
