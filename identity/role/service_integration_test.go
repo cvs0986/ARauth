@@ -81,7 +81,7 @@ func TestService_AssignRoleToUser_Integration(t *testing.T) {
 	userID := uuid.New()
 	user := &models.User{
 		ID:       userID,
-		TenantID: tenantID,
+		TenantID: &tenantID,
 		Username: "rbacuser",
 		Email:    "rbac@example.com",
 		Status:   "active",
