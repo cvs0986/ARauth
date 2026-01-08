@@ -172,7 +172,7 @@ func main() {
 	tenantHandler := handlers.NewTenantHandler(tenantService)
 	userHandler := handlers.NewUserHandler(userService)
 	authHandler := handlers.NewAuthHandler(loginService, refreshService)
-	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger)
+	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger, tokenService, claimsBuilder, userRepo, lifetimeResolver)
 	roleHandler := handlers.NewRoleHandler(roleService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
 	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo, tenantSettingsRepo) // NEW: System handler with tenant settings
