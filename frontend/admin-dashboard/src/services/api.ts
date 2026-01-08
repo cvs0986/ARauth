@@ -122,8 +122,8 @@ export const userApi = {
 // Role API
 export const roleApi = {
   list: async (): Promise<Role[]> => {
-    const response = await apiClient.get<Role[]>(API_ENDPOINTS.ROLES.BASE);
-    return response.data;
+    const response = await apiClient.get<{ roles: Role[]; page: number; page_size: number; total: number }>(API_ENDPOINTS.ROLES.BASE);
+    return response.data.roles || [];
   },
   
   getById: async (id: string): Promise<Role> => {
@@ -174,10 +174,10 @@ export const roleApi = {
 // Permission API
 export const permissionApi = {
   list: async (): Promise<Permission[]> => {
-    const response = await apiClient.get<Permission[]>(
+    const response = await apiClient.get<{ permissions: Permission[]; page: number; page_size: number; total: number }>(
       API_ENDPOINTS.PERMISSIONS.BASE
     );
-    return response.data;
+    return response.data.permissions || [];
   },
   
   getById: async (id: string): Promise<Permission> => {
