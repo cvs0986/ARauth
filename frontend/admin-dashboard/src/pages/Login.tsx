@@ -65,14 +65,20 @@ export function Login() {
 
       // Check if MFA is required
       if (response.mfa_required) {
+        if (!response.user_id) {
+          setError('MFA is required but user ID is missing');
+          setIsLoading(false);
+          return;
+        }
         setMfaRequired(true);
-        // Initiate MFA challenge
+        // Initiate MFA challenge with user_id and tenant_id from login response
         try {
           const challengeResponse = await mfaApi.challenge({
-            user_id: '', // Will be set by backend from login context
-            tenant_id: data.tenantId,
+            user_id: response.user_id,
+            tenant_id: response.tenant_id || data.tenantId || '',
           });
-          setMfaChallengeId(challengeResponse.challenge_id);
+          // The response might have challenge_id or session_id
+          setMfaChallengeId(challengeResponse.challenge_id || (challengeResponse as any).session_id);
         } catch (err) {
           setError('Failed to initiate MFA challenge: ' + handleApiError(err));
           setMfaRequired(false);

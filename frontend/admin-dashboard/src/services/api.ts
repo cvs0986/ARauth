@@ -296,7 +296,7 @@ export const mfaApi = {
     await apiClient.post(API_ENDPOINTS.MFA.VERIFY, data);
   },
   
-  challenge: async (data: { user_id: string; tenant_id?: string }): Promise<{ challenge_id: string }> => {
+  challenge: async (data: { user_id: string; tenant_id: string }): Promise<{ challenge_id: string }> => {
     const response = await apiClient.post<{ challenge_id: string }>(
       API_ENDPOINTS.MFA.CHALLENGE,
       data

@@ -37,6 +37,8 @@ export interface LoginResponse {
   remember_me?: boolean;
   mfa_required?: boolean;
   mfa_session_id?: string;
+  user_id?: string;   // Returned when MFA is required
+  tenant_id?: string; // Returned when MFA is required
   redirect_to?: string;
 }
 

@@ -70,6 +70,8 @@ type LoginResponse struct {
 	RememberMe       bool   `json:"remember_me,omitempty"`
 	MFARequired      bool   `json:"mfa_required"`
 	MFASessionID     string `json:"mfa_session_id,omitempty"`
+	UserID           string `json:"user_id,omitempty"`   // Return user ID when MFA is required
+	TenantID         string `json:"tenant_id,omitempty"` // Return tenant ID when MFA is required
 	RedirectTo       string `json:"redirect_to,omitempty"` // For OAuth2 flow
 }
 
@@ -178,12 +180,16 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 	}
 	
 	if mfaRequired {
-		// MFA is required - client should call /api/v1/mfa/challenge endpoint
-		// with username and password to get a challenge session
-		// Note: We don't return tokens yet, user must complete MFA verification
+		// MFA is required - return user info so client can call MFA challenge
+		// The client will need to call /api/v1/mfa/challenge with user_id and tenant_id
+		var tenantIDStr string
+		if user.TenantID != nil {
+			tenantIDStr = user.TenantID.String()
+		}
 		return &LoginResponse{
 			MFARequired: true,
-			// Client should call MFA challenge endpoint with username/password
+			UserID:     user.ID.String(),
+			TenantID:   tenantIDStr,
 		}, nil
 	}
 
