@@ -38,17 +38,20 @@ export function Dashboard() {
   const currentTenantId = isSystemUser() ? selectedTenantId : tenantId;
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['users', currentTenantId],
-    queryFn: () => userApi.list(),
+    queryFn: () => userApi.list(currentTenantId || undefined),
+    enabled: isSystemUser() ? true : !!tenantId, // For SYSTEM users, allow even if no tenant selected (will show empty)
   });
 
   const { data: roles, isLoading: rolesLoading } = useQuery({
     queryKey: ['roles', currentTenantId],
-    queryFn: () => roleApi.list(),
+    queryFn: () => roleApi.list(currentTenantId || undefined),
+    enabled: isSystemUser() ? true : !!tenantId, // For SYSTEM users, allow even if no tenant selected (will show empty)
   });
 
   const { data: permissions, isLoading: permissionsLoading } = useQuery({
     queryKey: ['permissions', currentTenantId],
-    queryFn: () => permissionApi.list(),
+    queryFn: () => permissionApi.list(currentTenantId || undefined),
+    enabled: isSystemUser() ? true : !!tenantId, // For SYSTEM users, allow even if no tenant selected (will show empty)
   });
 
   const isLoading = tenantsLoading || usersLoading || rolesLoading || permissionsLoading;

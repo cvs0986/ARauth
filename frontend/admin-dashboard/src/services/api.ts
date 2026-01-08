@@ -177,8 +177,14 @@ export const userApi = {
 
 // Role API
 export const roleApi = {
-  list: async (): Promise<Role[]> => {
-    const response = await apiClient.get<{ roles: Role[]; page: number; page_size: number; total: number }>(API_ENDPOINTS.ROLES.BASE);
+  list: async (tenantId?: string | null): Promise<Role[]> => {
+    // For SYSTEM users, tenantId is passed as header
+    // For TENANT users, tenant context is automatically set via middleware
+    const config = tenantId ? { headers: { 'X-Tenant-ID': tenantId } } : undefined;
+    const response = await apiClient.get<{ roles: Role[]; page: number; page_size: number; total: number }>(
+      API_ENDPOINTS.ROLES.BASE,
+      config
+    );
     return response.data.roles || [];
   },
   
@@ -229,9 +235,13 @@ export const roleApi = {
 
 // Permission API
 export const permissionApi = {
-  list: async (): Promise<Permission[]> => {
+  list: async (tenantId?: string | null): Promise<Permission[]> => {
+    // For SYSTEM users, tenantId is passed as header
+    // For TENANT users, tenant context is automatically set via middleware
+    const config = tenantId ? { headers: { 'X-Tenant-ID': tenantId } } : undefined;
     const response = await apiClient.get<{ permissions: Permission[]; page: number; page_size: number; total: number }>(
-      API_ENDPOINTS.PERMISSIONS.BASE
+      API_ENDPOINTS.PERMISSIONS.BASE,
+      config
     );
     return response.data.permissions || [];
   },
