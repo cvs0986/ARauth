@@ -49,8 +49,8 @@ export const authApi = {
 // Tenant API
 export const tenantApi = {
   list: async (): Promise<Tenant[]> => {
-    const response = await apiClient.get<Tenant[]>(API_ENDPOINTS.TENANTS.BASE);
-    return response.data;
+    const response = await apiClient.get<{ tenants: Tenant[]; page: number; page_size: number }>(API_ENDPOINTS.TENANTS.BASE);
+    return response.data.tenants || [];
   },
   
   getById: async (id: string): Promise<Tenant> => {
@@ -89,8 +89,8 @@ export const tenantApi = {
 // User API
 export const userApi = {
   list: async (): Promise<User[]> => {
-    const response = await apiClient.get<User[]>(API_ENDPOINTS.USERS.BASE);
-    return response.data;
+    const response = await apiClient.get<{ users: User[]; page: number; page_size: number; total: number }>(API_ENDPOINTS.USERS.BASE);
+    return response.data.users || [];
   },
   
   getById: async (id: string): Promise<User> => {

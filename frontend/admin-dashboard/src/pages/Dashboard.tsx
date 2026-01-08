@@ -35,21 +35,21 @@ export function Dashboard() {
 
   const isLoading = tenantsLoading || usersLoading || rolesLoading || permissionsLoading;
 
-  // Calculate statistics
+  // Calculate statistics - ensure data is always an array
   const stats = {
     tenants: {
-      total: tenants?.length || 0,
-      active: tenants?.filter((t) => t.status === 'active').length || 0,
+      total: Array.isArray(tenants) ? tenants.length : 0,
+      active: Array.isArray(tenants) ? tenants.filter((t) => t.status === 'active').length : 0,
     },
     users: {
-      total: users?.length || 0,
-      active: users?.filter((u) => u.status === 'active').length || 0,
+      total: Array.isArray(users) ? users.length : 0,
+      active: Array.isArray(users) ? users.filter((u) => u.status === 'active').length : 0,
     },
     roles: {
-      total: roles?.length || 0,
+      total: Array.isArray(roles) ? roles.length : 0,
     },
     permissions: {
-      total: permissions?.length || 0,
+      total: Array.isArray(permissions) ? permissions.length : 0,
     },
   };
 
