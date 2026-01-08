@@ -11,6 +11,7 @@ Quick reference guide to all documentation in ARauth Identity.
 - **Completion Summary**: [`status/COMPLETION_STATUS.md`](status/COMPLETION_STATUS.md) - Hybrid auth completion summary
 - **Secure Auth Status**: [`status/SECURE_AUTH_IMPLEMENTATION_STATUS.md`](status/SECURE_AUTH_IMPLEMENTATION_STATUS.md) - Secure auth recommendation implementation
 - **Hybrid Auth Progress**: [`status/HYBRID_AUTH_IMPLEMENTATION.md`](status/HYBRID_AUTH_IMPLEMENTATION.md) - Hybrid auth implementation progress
+- **Capability Model Status**: [`status/CAPABILITY_MODEL_STATUS.md`](status/CAPABILITY_MODEL_STATUS.md) - Capability model implementation progress tracking
 - **Progress History**: [`status/progress/`](status/progress/) - Historical progress tracking
 - **Fixes**: [`status/fixes/`](status/fixes/) - Fix documentation
 
@@ -47,6 +48,9 @@ Quick reference guide to all documentation in ARauth Identity.
 - **Data Flow**: [`architecture/data-flow.md`](architecture/data-flow.md) - Data flow diagrams
 - **Scalability**: [`architecture/scalability.md`](architecture/scalability.md) - Scalability architecture
 - **Frontend-Backend**: [`architecture/frontend-backend-integration.md`](architecture/frontend-backend-integration.md) - Frontend-backend integration
+- **Design Validation**: [`architecture/DESIGN_VALIDATION.md`](architecture/DESIGN_VALIDATION.md) - Design validation against industry best practices
+- **Admin Dashboard V2**: [`architecture/frontend/ADMIN_DASHBOARD_V2_ARCHITECTURE.md`](architecture/frontend/ADMIN_DASHBOARD_V2_ARCHITECTURE.md) - Admin dashboard architecture
+- **Tenant Settings**: [`architecture/backend/TENANT_SETTINGS_MANAGEMENT.md`](architecture/backend/TENANT_SETTINGS_MANAGEMENT.md) - Tenant settings management
 
 ### 🔒 Security
 - **Security Technical**: [`technical/security.md`](technical/security.md) - Security technical details
@@ -60,6 +64,10 @@ Quick reference guide to all documentation in ARauth Identity.
 - **Timeline**: [`planning/timeline.md`](planning/timeline.md) - Project timeline
 - **Strategy**: [`planning/strategy.md`](planning/strategy.md) - Project strategy
 - **Risk Analysis**: [`planning/risk-analysis.md`](planning/risk-analysis.md) - Risk analysis
+- **Capability Model Implementation**: [`planning/CAPABILITY_MODEL_IMPLEMENTATION_PLAN.md`](planning/CAPABILITY_MODEL_IMPLEMENTATION_PLAN.md) - Comprehensive implementation plan for three-layer capability model
+- **Capability Model Summary**: [`planning/CAPABILITY_MODEL_SUMMARY.md`](planning/CAPABILITY_MODEL_SUMMARY.md) - Quick reference guide for capability model
+- **GitHub Issues**: [`planning/GITHUB_ISSUES.md`](planning/GITHUB_ISSUES.md) - All GitHub issues for capability model implementation
+- **GitHub Tags**: [`planning/GITHUB_TAGS.md`](planning/GITHUB_TAGS.md) - Tag structure for GitHub issues
 
 ### 🔧 Technical
 - **API Design**: [`technical/api-design.md`](technical/api-design.md) - API design specifications
