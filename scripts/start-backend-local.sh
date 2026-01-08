@@ -7,7 +7,7 @@
 
 set -e
 
-echo "🚀 Starting Nuage Identity IAM Backend..."
+echo "🚀 Starting ARauth Identity IAM Backend..."
 echo ""
 
 # Set database configuration
