@@ -98,6 +98,7 @@ func TestUserHandler_Create(t *testing.T) {
 		TenantID: tenantID, // Required by binding, but handler will override from context
 		Username: "testuser",
 		Email:    "test@example.com",
+		Password: "TestPassword@123",
 	}
 	body, _ := json.Marshal(reqBody)
 

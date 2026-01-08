@@ -126,6 +126,7 @@ func TestService_Create(t *testing.T) {
 		TenantID:  tenantID,
 		Username:  "testuser",
 		Email:     "test@example.com",
+		Password:  "TestPassword@123",
 		FirstName: &firstName,
 		LastName:  &lastName,
 	}
