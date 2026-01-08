@@ -81,11 +81,15 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 		// Tenant ID provided - try to find TENANT user first
 		user, err = s.userRepo.GetByUsername(ctx, req.Username, req.TenantID)
 		if err != nil || user == nil {
+			// User not found in tenant - return generic error for security
+			// Don't reveal whether username or tenant is wrong
 			return nil, fmt.Errorf("invalid credentials")
 		}
 		
 		// Verify the user is actually a TENANT user
 		if user.PrincipalType != models.PrincipalTypeTenant {
+			// User exists but is not a TENANT user (might be SYSTEM user)
+			// Return generic error for security
 			return nil, fmt.Errorf("invalid credentials")
 		}
 		
