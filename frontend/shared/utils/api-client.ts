@@ -27,9 +27,27 @@ export function createApiClient(baseURL: string = API_BASE_URL): AxiosInstance {
         config.headers.Authorization = `Bearer ${token}`;
       }
 
-      // Get tenant ID from localStorage
+      // Get principal type and tenant ID from localStorage
+      const principalType = localStorage.getItem('principal_type');
       const tenantId = localStorage.getItem('tenant_id');
-      if (tenantId) {
+      const selectedTenantId = localStorage.getItem('selected_tenant_id');
+
+      // For SYSTEM users:
+      // - Use selectedTenantId if available (for tenant-scoped operations)
+      // - Don't add X-Tenant-ID header if no tenant is selected (for system-level operations)
+      // For TENANT users:
+      // - Always use tenantId from localStorage
+      if (principalType === 'SYSTEM') {
+        // SYSTEM users: only add X-Tenant-ID if they've selected a tenant context
+        if (selectedTenantId) {
+          config.headers['X-Tenant-ID'] = selectedTenantId;
+        }
+        // If no selectedTenantId, don't add X-Tenant-ID header (for system-level APIs)
+      } else if (principalType === 'TENANT' && tenantId) {
+        // TENANT users: always add their tenant_id
+        config.headers['X-Tenant-ID'] = tenantId;
+      } else if (tenantId) {
+        // Fallback: if principal_type is not set, use tenantId (for backward compatibility)
         config.headers['X-Tenant-ID'] = tenantId;
       }
 
