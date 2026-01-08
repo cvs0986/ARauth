@@ -107,6 +107,11 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 
 		// Tenant-scoped routes (require tenant context)
 		tenantScoped := v1.Group("")
+		// Apply JWT authentication middleware first
+		if ts, ok := tokenService.(token.ServiceInterface); ok {
+			tenantScoped.Use(middleware.JWTAuthMiddleware(ts))
+			tenantScoped.Use(middleware.RequireTenantUser(ts))
+		}
 		tenantScoped.Use(middleware.TenantMiddleware(tenantRepo))
 		{
 			// User routes (tenant-scoped)
