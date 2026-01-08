@@ -62,12 +62,18 @@ export function Login() {
       const { extractUserInfo } = await import('@/../../shared/utils/jwt-decoder');
       const userInfo = extractUserInfo(response.access_token);
 
+      // Ensure principalType is valid (SYSTEM or TENANT only, not SERVICE)
+      const validPrincipalType: 'SYSTEM' | 'TENANT' = 
+        (userInfo.principalType === 'SYSTEM' || userInfo.principalType === 'TENANT')
+          ? userInfo.principalType
+          : 'TENANT'; // Default to TENANT if invalid or SERVICE
+
       // Store auth data (including principal_type and permissions)
       setAuth({
         accessToken: response.access_token,
         refreshToken: response.refresh_token,
         tenantId: userInfo.tenantId || data.tenantId || null,
-        principalType: userInfo.principalType || 'TENANT', // Default to TENANT if not specified
+        principalType: validPrincipalType,
         systemPermissions: userInfo.systemPermissions,
         permissions: userInfo.permissions,
       });

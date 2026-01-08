@@ -10,7 +10,7 @@ import { TenantSelector } from '@/components/TenantSelector';
 import { Shield, Building2 } from 'lucide-react';
 
 export function Header() {
-  const { clearAuth, isAuthenticated, isSystemUser, tenantId, selectedTenantId } = useAuthStore();
+  const { clearAuth, isAuthenticated, isSystemUser, tenantId } = useAuthStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -21,9 +21,6 @@ export function Header() {
   if (!isAuthenticated) {
     return null;
   }
-
-  // Get current tenant context
-  const currentTenantId = isSystemUser() ? selectedTenantId : tenantId;
 
   return (
     <header className="border-b bg-white">
