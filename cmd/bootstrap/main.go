@@ -10,7 +10,6 @@ import (
 	"os"
 
 	"github.com/arauth-identity/iam/cmd/bootstrap"
-	"github.com/arauth-identity/iam/config"
 	"github.com/arauth-identity/iam/config/loader"
 	"github.com/arauth-identity/iam/storage/postgres"
 	"go.uber.org/zap"

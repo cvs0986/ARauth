@@ -32,13 +32,31 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Try to get tenant ID from context (may not exist for SYSTEM users)
-	// For SYSTEM users, tenant_id is not required
+	// Try to get tenant ID from multiple sources (optional for SYSTEM users)
+	// 1. From X-Tenant-ID header
+	if tenantIDStr := c.GetHeader("X-Tenant-ID"); tenantIDStr != "" {
+		if tenantID, err := uuid.Parse(tenantIDStr); err == nil {
+			req.TenantID = tenantID
+		}
+	}
+	
+	// 2. From query parameter
+	if tenantIDStr := c.Query("tenant_id"); tenantIDStr != "" && req.TenantID == uuid.Nil {
+		if tenantID, err := uuid.Parse(tenantIDStr); err == nil {
+			req.TenantID = tenantID
+		}
+	}
+	
+	// 3. From request body (if provided)
+	// Note: LoginRequest.TenantID is already bound from JSON if present
+	
+	// 4. From context (if TenantMiddleware was applied)
 	tenantID, exists := middleware.GetTenantID(c)
-	if exists {
+	if exists && req.TenantID == uuid.Nil {
 		req.TenantID = tenantID
 	}
-	// If tenant_id doesn't exist in context, it will remain uuid.Nil
+	
+	// For SYSTEM users, tenant_id will remain uuid.Nil
 	// Login service will handle SYSTEM users (no tenant_id required)
 
 	resp, err := h.loginService.Login(c.Request.Context(), &req)

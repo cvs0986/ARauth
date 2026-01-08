@@ -81,7 +81,7 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		// systemAPI.PUT("/settings", systemHandler.UpdateSystemSettings)
 	}
 
-	// API v1 routes (tenant-scoped)
+	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
 
@@ -96,6 +96,15 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			tenants.GET("", tenantHandler.List)
 		}
 
+		// Auth routes (public - no tenant middleware required)
+		// SYSTEM users can login without tenant, TENANT users can provide tenant_id in request
+		auth := v1.Group("/auth")
+		{
+			auth.POST("/login", authHandler.Login)
+			auth.POST("/refresh", authHandler.RefreshToken)
+			auth.POST("/revoke", authHandler.RevokeToken)
+		}
+
 		// Tenant-scoped routes (require tenant context)
 		tenantScoped := v1.Group("")
 		tenantScoped.Use(middleware.TenantMiddleware(tenantRepo))
@@ -108,14 +117,6 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 				users.GET("/:id", userHandler.GetByID)
 				users.PUT("/:id", userHandler.Update)
 				users.DELETE("/:id", userHandler.Delete)
-			}
-
-			// Auth routes (tenant-scoped)
-			auth := tenantScoped.Group("/auth")
-			{
-				auth.POST("/login", authHandler.Login)
-				auth.POST("/refresh", authHandler.RefreshToken)
-				auth.POST("/revoke", authHandler.RevokeToken)
 			}
 
 			// MFA routes (tenant-scoped)
