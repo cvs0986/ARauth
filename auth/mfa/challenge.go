@@ -31,9 +31,16 @@ func (s *Service) CreateChallenge(ctx context.Context, req *ChallengeRequest) (*
 		return nil, fmt.Errorf("MFA is not enabled for this user")
 	}
 
-	// Verify tenant matches
-	if user.TenantID == nil || *user.TenantID != req.TenantID {
-		return nil, fmt.Errorf("tenant mismatch")
+	// Verify tenant matches (skip for SYSTEM users where tenantID is uuid.Nil)
+	if req.TenantID != uuid.Nil {
+		if user.TenantID == nil || *user.TenantID != req.TenantID {
+			return nil, fmt.Errorf("tenant mismatch")
+		}
+	} else {
+		// For SYSTEM users, verify they don't have a tenant_id
+		if user.TenantID != nil {
+			return nil, fmt.Errorf("tenant mismatch: user has tenant but SYSTEM user expected")
+		}
 	}
 
 	// Create MFA session

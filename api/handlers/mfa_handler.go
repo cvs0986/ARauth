@@ -143,14 +143,41 @@ func (h *MFAHandler) Verify(c *gin.Context) {
 
 // Challenge handles POST /api/v1/mfa/challenge
 func (h *MFAHandler) Challenge(c *gin.Context) {
-	var req mfa.ChallengeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	// Parse request body - tenant_id is optional for SYSTEM users
+	var body struct {
+		UserID   string `json:"user_id" binding:"required"`
+		TenantID string `json:"tenant_id"` // Optional - empty for SYSTEM users
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
 		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
 			"Request validation failed", middleware.FormatValidationErrors(err))
 		return
 	}
 
-	resp, err := h.mfaService.CreateChallenge(c.Request.Context(), &req)
+	userID, err := uuid.Parse(body.UserID)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_user_id",
+			"Invalid user ID format", nil)
+		return
+	}
+
+	// For SYSTEM users, tenant_id might be empty
+	var tenantID uuid.UUID
+	if body.TenantID != "" {
+		tenantID, err = uuid.Parse(body.TenantID)
+		if err != nil {
+			middleware.RespondWithError(c, http.StatusBadRequest, "invalid_tenant_id",
+				"Invalid tenant ID format", nil)
+			return
+		}
+	}
+
+	req := &mfa.ChallengeRequest{
+		UserID:   userID,
+		TenantID: tenantID,
+	}
+
+	resp, err := h.mfaService.CreateChallenge(c.Request.Context(), req)
 	if err != nil {
 		middleware.RespondWithError(c, http.StatusBadRequest, "challenge_failed",
 			err.Error(), nil)
