@@ -106,11 +106,15 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		}
 
 		// Tenant-scoped routes (require tenant context)
+		// These routes can be accessed by:
+		// 1. TENANT users (automatically use their tenant from JWT token)
+		// 2. SYSTEM users (must provide X-Tenant-ID header to select tenant context)
 		tenantScoped := v1.Group("")
 		// Apply JWT authentication middleware first
 		if ts, ok := tokenService.(token.ServiceInterface); ok {
 			tenantScoped.Use(middleware.JWTAuthMiddleware(ts))
-			tenantScoped.Use(middleware.RequireTenantUser(ts))
+			// Allow both SYSTEM and TENANT users to access tenant-scoped routes
+			// RequireTenantUser is removed - TenantMiddleware will handle tenant context extraction
 		}
 		tenantScoped.Use(middleware.TenantMiddleware(tenantRepo))
 		{
