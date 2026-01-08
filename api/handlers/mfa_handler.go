@@ -226,7 +226,7 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		RecoveryCode: body.RecoveryCode,
 	}
 
-	resp, err := h.mfaService.VerifyChallenge(c.Request.Context(), &req)
+	resp, err := h.mfaService.VerifyChallenge(c.Request.Context(), req)
 	if err != nil {
 		// Log failed attempt if we have user info
 		if resp != nil && resp.UserID != "" {
