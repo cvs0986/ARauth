@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/arauth-identity/iam/api/handlers"
 	"github.com/arauth-identity/iam/api/middleware"
+	"github.com/arauth-identity/iam/auth/token"
 	"github.com/arauth-identity/iam/internal/cache"
 	"github.com/arauth-identity/iam/storage/interfaces"
 	"github.com/redis/go-redis/v9"
@@ -63,12 +64,12 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		systemTenants := systemAPI.Group("/tenants")
 		{
 			systemTenants.GET("", systemHandler.ListTenants)
-			systemTenants.POST("", middleware.RequireSystemPermission("tenant", "create")(systemHandler.CreateTenant))
-			systemTenants.GET("/:id", middleware.RequireSystemPermission("tenant", "read")(systemHandler.GetTenant))
-			systemTenants.PUT("/:id", middleware.RequireSystemPermission("tenant", "update")(systemHandler.UpdateTenant))
-			systemTenants.DELETE("/:id", middleware.RequireSystemPermission("tenant", "delete")(systemHandler.DeleteTenant))
-			systemTenants.POST("/:id/suspend", middleware.RequireSystemPermission("tenant", "suspend")(systemHandler.SuspendTenant))
-			systemTenants.POST("/:id/resume", middleware.RequireSystemPermission("tenant", "resume")(systemHandler.ResumeTenant))
+			systemTenants.POST("", middleware.RequireSystemPermission("tenant", "create"), systemHandler.CreateTenant)
+			systemTenants.GET("/:id", middleware.RequireSystemPermission("tenant", "read"), systemHandler.GetTenant)
+			systemTenants.PUT("/:id", middleware.RequireSystemPermission("tenant", "update"), systemHandler.UpdateTenant)
+			systemTenants.DELETE("/:id", middleware.RequireSystemPermission("tenant", "delete"), systemHandler.DeleteTenant)
+			systemTenants.POST("/:id/suspend", middleware.RequireSystemPermission("tenant", "suspend"), systemHandler.SuspendTenant)
+			systemTenants.POST("/:id/resume", middleware.RequireSystemPermission("tenant", "resume"), systemHandler.ResumeTenant)
 		}
 
 		// System settings management (future)
