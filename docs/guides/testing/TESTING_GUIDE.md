@@ -297,6 +297,15 @@ curl -X POST http://localhost:8080/api/v1/users \
 - [ ] Click **"Save OAuth Settings"**
 - [ ] **✅ Expected**: Success message displayed
 
+**Test Token Settings**:
+- [ ] View token lifetime settings (Access Token TTL, Refresh Token TTL, ID Token TTL)
+- [ ] Modify token lifetimes
+- [ ] Configure "Remember Me" settings
+- [ ] Toggle token rotation
+- [ ] Set MFA requirement for extended sessions
+- [ ] Click **"Save Token Settings"**
+- [ ] **✅ Expected**: Success message displayed
+
 **Test System Configuration**:
 - [ ] View JWT settings
 - [ ] Modify session timeout
@@ -347,8 +356,9 @@ curl -X POST http://localhost:8080/api/v1/users \
    - Username: `testuser` (or `admin`)
    - Password: `Secure@123456` (or `Admin@123456`)
    - Tenant ID: (your tenant ID)
+   - Remember Me: (optional checkbox)
 3. Click **"Login"**
-4. **✅ Expected**: Redirected to Dashboard
+4. **✅ Expected**: Redirected to Dashboard with access token and refresh token
 
 **Test Invalid Credentials**:
 - [ ] Enter wrong password → Should show error
@@ -486,18 +496,32 @@ curl -H "X-Tenant-ID: $TENANT_ID" \
   http://localhost:8080/api/v1/permissions
 
 # Login and get token
-TOKEN=$(curl -X POST http://localhost:8080/api/v1/auth/login \
+LOGIN_RESPONSE=$(curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -H "X-Tenant-ID: $TENANT_ID" \
   -d '{
     "username": "admin",
-    "password": "Admin@123456"
-  }' | jq -r '.access_token')
+    "password": "Admin@123456",
+    "remember_me": false
+  }')
+
+TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.access_token')
+REFRESH_TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.refresh_token')
 
 # Use token for authenticated requests
 curl -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: $TENANT_ID" \
   http://localhost:8080/api/v1/users
+
+# Refresh token (when access token expires)
+curl -X POST http://localhost:8080/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d "{\"refresh_token\": \"$REFRESH_TOKEN\"}"
+
+# Revoke token (logout)
+curl -X POST http://localhost:8080/api/v1/auth/revoke \
+  -H "Content-Type: application/json" \
+  -d "{\"token\": \"$REFRESH_TOKEN\", \"token_type_hint\": \"refresh_token\"}"
 ```
 
 ---
@@ -590,7 +614,10 @@ npm run dev
 - **Redis**: Optional - server works without it (caching disabled)
 - **Hydra**: Optional - OAuth2 features may not work without it
 - **Tenant Context**: Most API calls require `X-Tenant-ID` header
-- **Authentication**: Login endpoint returns JWT token for authenticated requests
+- **Authentication**: Login endpoint returns JWT access token and refresh token
+- **Token Refresh**: Use `/api/v1/auth/refresh` to get new tokens when access token expires
+- **Token Revocation**: Use `/api/v1/auth/revoke` to logout and invalidate refresh tokens
+- **Remember Me**: Extends token lifetimes for longer sessions
 
 ---
 
