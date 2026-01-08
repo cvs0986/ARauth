@@ -201,6 +201,12 @@ func (r *cachedUserRepository) GetByEmailSystem(ctx context.Context, email strin
 	return r.repo.GetByEmailSystem(ctx, email)
 }
 
+// GetSystemUserByUsername retrieves a SYSTEM user by username (no tenant ID required)
+func (r *cachedUserRepository) GetSystemUserByUsername(ctx context.Context, username string) (*models.User, error) {
+	// SYSTEM users are not cached by username (they're rare and should be looked up directly)
+	return r.repo.GetSystemUserByUsername(ctx, username)
+}
+
 // invalidateUserCache invalidates all cache entries for a user
 func (r *cachedUserRepository) invalidateUserCache(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID, username, email string) {
 	keys := []string{

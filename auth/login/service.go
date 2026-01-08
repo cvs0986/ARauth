@@ -75,14 +75,25 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 	var user *models.User
 	var err error
 
-	// For SYSTEM users, try to get by email (no tenant required)
-	// First, try to get as SYSTEM user by email
-	systemUser, systemErr := s.userRepo.GetByEmailSystem(ctx, req.Username) // Try username as email for system users
+	// For SYSTEM users, try to get by username first, then by email (no tenant required)
+	// First, try to get as SYSTEM user by username
+	systemUser, systemErr := s.userRepo.GetSystemUserByUsername(ctx, req.Username)
 	if systemErr == nil && systemUser != nil && systemUser.PrincipalType == models.PrincipalTypeSystem {
 		user = systemUser
 		// SYSTEM users don't need tenant_id
 		req.TenantID = uuid.Nil
 	} else {
+		// If username lookup failed, try by email (username might be email)
+		systemUser, systemErr = s.userRepo.GetByEmailSystem(ctx, req.Username)
+		if systemErr == nil && systemUser != nil && systemUser.PrincipalType == models.PrincipalTypeSystem {
+			user = systemUser
+			// SYSTEM users don't need tenant_id
+			req.TenantID = uuid.Nil
+		}
+	}
+	
+	// If not a SYSTEM user, try as TENANT user
+	if user == nil {
 		// For TENANT users, validate tenant ID is provided
 		if req.TenantID == uuid.Nil {
 			return nil, fmt.Errorf("tenant_id is required for tenant users")

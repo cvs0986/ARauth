@@ -24,6 +24,9 @@ type UserRepository interface {
 	// GetByEmailSystem retrieves a SYSTEM user by email (no tenant ID required)
 	GetByEmailSystem(ctx context.Context, email string) (*models.User, error)
 
+	// GetSystemUserByUsername retrieves a SYSTEM user by username (no tenant ID required)
+	GetSystemUserByUsername(ctx context.Context, username string) (*models.User, error)
+
 	// Update updates an existing user
 	Update(ctx context.Context, u *models.User) error
 

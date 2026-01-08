@@ -316,6 +316,67 @@ func (r *userRepository) GetByEmailSystem(ctx context.Context, email string) (*m
 	return u, nil
 }
 
+// GetSystemUserByUsername retrieves a SYSTEM user by username (no tenant ID required)
+func (r *userRepository) GetSystemUserByUsername(ctx context.Context, username string) (*models.User, error) {
+	query := `
+		SELECT id, tenant_id, principal_type, username, email, first_name, last_name,
+		       status, mfa_enabled, mfa_secret_encrypted, last_login_at,
+		       metadata, created_at, updated_at, deleted_at
+		FROM users
+		WHERE principal_type = 'SYSTEM' AND username = $1 AND deleted_at IS NULL
+	`
+
+	u := &models.User{}
+	var firstName, lastName, mfaSecret sql.NullString
+	var lastLoginAt, deletedAt sql.NullTime
+	var tenantIDStr sql.NullString
+	var principalType string
+	var metadataJSON []byte
+
+	err := r.db.QueryRowContext(ctx, query, username).Scan(
+		&u.ID, &tenantIDStr, &principalType, &u.Username, &u.Email,
+		&firstName, &lastName, &u.Status, &u.MFAEnabled,
+		&mfaSecret, &lastLoginAt, &metadataJSON, &u.CreatedAt,
+		&u.UpdatedAt, &deletedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("system user not found: %w", err)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get system user by username: %w", err)
+	}
+
+	if tenantIDStr.Valid {
+		parsedTenantID, err := uuid.Parse(tenantIDStr.String)
+		if err == nil {
+			u.TenantID = &parsedTenantID
+		}
+	}
+	u.PrincipalType = models.PrincipalType(principalType)
+
+	if firstName.Valid {
+		u.FirstName = &firstName.String
+	}
+	if lastName.Valid {
+		u.LastName = &lastName.String
+	}
+	if mfaSecret.Valid {
+		u.MFASecretEncrypted = &mfaSecret.String
+	}
+	if lastLoginAt.Valid {
+		u.LastLoginAt = &lastLoginAt.Time
+	}
+	if deletedAt.Valid {
+		u.DeletedAt = &deletedAt.Time
+	}
+	if len(metadataJSON) > 0 {
+		_ = json.Unmarshal(metadataJSON, &u.Metadata) // Ignore unmarshal errors for optional metadata
+	}
+
+	return u, nil
+}
+
 // Update updates an existing user
 func (r *userRepository) Update(ctx context.Context, u *models.User) error {
 	query := `
