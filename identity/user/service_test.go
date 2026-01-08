@@ -207,7 +207,8 @@ func TestService_GetByID(t *testing.T) {
 
 func TestService_Update(t *testing.T) {
 	mockRepo := new(MockUserRepository)
-	service := NewService(mockRepo)
+	mockCredRepo := new(MockCredentialRepository)
+	service := NewService(mockRepo, mockCredRepo)
 
 	userID := uuid.New()
 	tenantID := uuid.New()
