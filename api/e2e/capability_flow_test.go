@@ -25,15 +25,15 @@ func TestE2E_CapabilityFlow(t *testing.T) {
 
 	// Setup repositories
 	tenantRepo := postgres.NewTenantRepository(db)
-	userRepo := postgres.NewUserRepository(db)
 	systemCapabilityRepo := postgres.NewSystemCapabilityRepository(db)
 	tenantCapabilityRepo := postgres.NewTenantCapabilityRepository(db)
 	tenantFeatureRepo := postgres.NewTenantFeatureEnablementRepository(db)
 	userCapabilityRepo := postgres.NewUserCapabilityStateRepository(db)
 
 	// Create test tenant
+	tenantID := uuid.New()
 	tenant := &models.Tenant{
-		ID:     uuid.New(),
+		ID:     tenantID,
 		Name:   "Test Tenant",
 		Domain: "test.example.com",
 		Status: models.TenantStatusActive,
@@ -41,19 +41,22 @@ func TestE2E_CapabilityFlow(t *testing.T) {
 	require.NoError(t, tenantRepo.Create(context.Background(), tenant))
 
 	// Create test system user (for system admin operations)
+	systemUserID := uuid.New()
 	systemUser := &models.User{
-		ID:           uuid.New(),
+		ID:           systemUserID,
 		Username:     "systemadmin",
 		Email:        "admin@system.com",
 		Status:       models.UserStatusActive,
 		PrincipalType: models.PrincipalTypeSystem,
 	}
+	userRepo := postgres.NewUserRepository(db)
 	require.NoError(t, userRepo.Create(context.Background(), systemUser))
 
 	// Create test tenant user
+	tenantUserID := uuid.New()
 	tenantUser := &models.User{
-		ID:           uuid.New(),
-		TenantID:     &tenant.ID,
+		ID:           tenantUserID,
+		TenantID:     &tenantID,
 		Username:     "tenantuser",
 		Email:        "user@test.example.com",
 		Status:       models.UserStatusActive,
@@ -80,18 +83,18 @@ func TestE2E_CapabilityFlow(t *testing.T) {
 	// Step 2: System admin assigns capability to tenant
 	t.Run("System admin assigns capability to tenant", func(t *testing.T) {
 		tenantCap := &models.TenantCapability{
-			TenantID:      tenant.ID,
+			TenantID:      tenantID,
 			CapabilityKey: "mfa",
 			Enabled:       true,
-			ConfiguredBy:  &systemUser.ID,
+			ConfiguredBy:  &systemUserID,
 		}
 		err := tenantCapabilityRepo.Create(context.Background(), tenantCap)
 		require.NoError(t, err)
 
 		// Verify it was assigned
-		retrieved, err := tenantCapabilityRepo.GetByTenantIDAndKey(context.Background(), tenant.ID, "mfa")
+		retrieved, err := tenantCapabilityRepo.GetByTenantIDAndKey(context.Background(), tenantID, "mfa")
 		require.NoError(t, err)
-		assert.Equal(t, tenant.ID, retrieved.TenantID)
+		assert.Equal(t, tenantID, retrieved.TenantID)
 		assert.Equal(t, "mfa", retrieved.CapabilityKey)
 		assert.True(t, retrieved.Enabled)
 	})
@@ -99,18 +102,18 @@ func TestE2E_CapabilityFlow(t *testing.T) {
 	// Step 3: Tenant admin enables the feature
 	t.Run("Tenant admin enables feature", func(t *testing.T) {
 		feature := &models.TenantFeatureEnablement{
-			TenantID:   tenant.ID,
+			TenantID:   tenantID,
 			FeatureKey: "mfa",
 			Enabled:    true,
-			EnabledBy:  &tenantUser.ID,
+			EnabledBy:  &tenantUserID,
 		}
 		err := tenantFeatureRepo.Create(context.Background(), feature)
 		require.NoError(t, err)
 
 		// Verify it was enabled
-		retrieved, err := tenantFeatureRepo.GetByTenantIDAndKey(context.Background(), tenant.ID, "mfa")
+		retrieved, err := tenantFeatureRepo.GetByTenantIDAndKey(context.Background(), tenantID, "mfa")
 		require.NoError(t, err)
-		assert.Equal(t, tenant.ID, retrieved.TenantID)
+		assert.Equal(t, tenantID, retrieved.TenantID)
 		assert.Equal(t, "mfa", retrieved.FeatureKey)
 		assert.True(t, retrieved.Enabled)
 	})
@@ -118,7 +121,7 @@ func TestE2E_CapabilityFlow(t *testing.T) {
 	// Step 4: User enrolls in capability
 	t.Run("User enrolls in capability", func(t *testing.T) {
 		userState := &models.UserCapabilityState{
-			UserID:       tenantUser.ID,
+			UserID:       tenantUserID,
 			CapabilityKey: "mfa",
 			Enrolled:     true,
 		}
@@ -126,9 +129,9 @@ func TestE2E_CapabilityFlow(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify user is enrolled
-		retrieved, err := userCapabilityRepo.GetByUserIDAndKey(context.Background(), tenantUser.ID, "mfa")
+		retrieved, err := userCapabilityRepo.GetByUserIDAndKey(context.Background(), tenantUserID, "mfa")
 		require.NoError(t, err)
-		assert.Equal(t, tenantUser.ID, retrieved.UserID)
+		assert.Equal(t, tenantUserID, retrieved.UserID)
 		assert.Equal(t, "mfa", retrieved.CapabilityKey)
 		assert.True(t, retrieved.Enrolled)
 	})
@@ -144,17 +147,17 @@ func TestE2E_CapabilityFlow(t *testing.T) {
 		assert.True(t, systemCap.IsSupported())
 
 		// Tenant level
-		tenantCap, err := tenantCapabilityRepo.GetByTenantIDAndKey(context.Background(), tenant.ID, "mfa")
+		tenantCap, err := tenantCapabilityRepo.GetByTenantIDAndKey(context.Background(), tenantID, "mfa")
 		require.NoError(t, err)
 		assert.True(t, tenantCap.IsAllowed())
 
 		// Feature level
-		feature, err := tenantFeatureRepo.GetByTenantIDAndKey(context.Background(), tenant.ID, "mfa")
+		feature, err := tenantFeatureRepo.GetByTenantIDAndKey(context.Background(), tenantID, "mfa")
 		require.NoError(t, err)
 		assert.True(t, feature.IsEnabled())
 
 		// User level
-		userState, err := userCapabilityRepo.GetByUserIDAndKey(context.Background(), tenantUser.ID, "mfa")
+		userState, err := userCapabilityRepo.GetByUserIDAndKey(context.Background(), tenantUserID, "mfa")
 		require.NoError(t, err)
 		assert.True(t, userState.IsEnrolled())
 	})
@@ -191,7 +194,17 @@ func TestE2E_CapabilityEnforcement(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to get tenant capability (should not exist)
-		_, err = tenantCapabilityRepo.GetByTenantIDAndKey(context.Background(), tenant.ID, "saml")
+		tenantID := uuid.New()
+		tenant := &models.Tenant{
+			ID:     tenantID,
+			Name:   "Test Tenant",
+			Domain: "test.example.com",
+			Status: models.TenantStatusActive,
+		}
+		require.NoError(t, tenantRepo.Create(context.Background(), tenant))
+
+		// Try to get tenant capability (should not exist)
+		_, err = tenantCapabilityRepo.GetByTenantIDAndKey(context.Background(), tenantID, "saml")
 		assert.Error(t, err) // Should not be found
 	})
 }

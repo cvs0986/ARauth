@@ -51,6 +51,7 @@ Quick reference guide to all documentation in ARauth Identity.
 - **Design Validation**: [`architecture/DESIGN_VALIDATION.md`](architecture/DESIGN_VALIDATION.md) - Design validation against industry best practices
 - **Admin Dashboard V2**: [`architecture/frontend/ADMIN_DASHBOARD_V2_ARCHITECTURE.md`](architecture/frontend/ADMIN_DASHBOARD_V2_ARCHITECTURE.md) - Admin dashboard architecture
 - **Tenant Settings**: [`architecture/backend/TENANT_SETTINGS_MANAGEMENT.md`](architecture/backend/TENANT_SETTINGS_MANAGEMENT.md) - Tenant settings management
+- **Capability Model**: [`architecture/CAPABILITY_MODEL.md`](architecture/CAPABILITY_MODEL.md) - Three-layer capability model architecture
 
 ### 🔒 Security
 - **Security Technical**: [`technical/security.md`](technical/security.md) - Security technical details
