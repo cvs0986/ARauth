@@ -57,5 +57,31 @@ export const API_ENDPOINTS = {
     LIVE: '/health/live',
     READY: '/health/ready',
   },
+  
+  // System Capabilities (SYSTEM users only)
+  SYSTEM_CAPABILITIES: {
+    BASE: '/system/capabilities',
+    BY_KEY: (key: string) => `/system/capabilities/${key}`,
+  },
+  
+  // Tenant Capabilities (SYSTEM users only)
+  TENANT_CAPABILITIES: {
+    BASE: (tenantId: string) => `/system/tenants/${tenantId}/capabilities`,
+    BY_KEY: (tenantId: string, key: string) => `/system/tenants/${tenantId}/capabilities/${key}`,
+    EVALUATION: (tenantId: string) => `/system/tenants/${tenantId}/capabilities/evaluation`,
+  },
+  
+  // Tenant Features (TENANT users)
+  TENANT_FEATURES: {
+    BASE: `${API_PREFIX}/tenant/features`,
+    BY_KEY: (key: string) => `${API_PREFIX}/tenant/features/${key}`,
+  },
+  
+  // User Capabilities (TENANT users)
+  USER_CAPABILITIES: {
+    BASE: (userId: string) => `${API_PREFIX}/users/${userId}/capabilities`,
+    BY_KEY: (userId: string, key: string) => `${API_PREFIX}/users/${userId}/capabilities/${key}`,
+    ENROLL: (userId: string, key: string) => `${API_PREFIX}/users/${userId}/capabilities/${key}/enroll`,
+  },
 } as const;
 

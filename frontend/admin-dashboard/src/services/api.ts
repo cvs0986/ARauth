@@ -18,6 +18,15 @@ import type {
   Permission,
   CreatePermissionRequest,
   UpdatePermissionRequest,
+  SystemCapability,
+  TenantCapability,
+  TenantFeature,
+  UserCapabilityState,
+  CapabilityEvaluation,
+  UpdateSystemCapabilityRequest,
+  SetTenantCapabilityRequest,
+  EnableTenantFeatureRequest,
+  EnrollUserCapabilityRequest,
 } from '../../shared/types/api';
 
 // Auth API
@@ -310,6 +319,112 @@ export const mfaApi = {
       data
     );
     return response.data;
+  },
+};
+
+// Capability API (System users only)
+export const systemCapabilityApi = {
+  list: async (): Promise<SystemCapability[]> => {
+    const response = await apiClient.get<{ capabilities: SystemCapability[] }>(
+      API_ENDPOINTS.SYSTEM_CAPABILITIES.BASE
+    );
+    return response.data.capabilities || [];
+  },
+  
+  getByKey: async (key: string): Promise<SystemCapability> => {
+    const response = await apiClient.get<SystemCapability>(
+      API_ENDPOINTS.SYSTEM_CAPABILITIES.BY_KEY(key)
+    );
+    return response.data;
+  },
+  
+  update: async (key: string, data: UpdateSystemCapabilityRequest): Promise<SystemCapability> => {
+    const response = await apiClient.put<SystemCapability>(
+      API_ENDPOINTS.SYSTEM_CAPABILITIES.BY_KEY(key),
+      data
+    );
+    return response.data;
+  },
+};
+
+// Tenant Capability API (System users only)
+export const tenantCapabilityApi = {
+  list: async (tenantId: string): Promise<TenantCapability[]> => {
+    const response = await apiClient.get<{ capabilities: TenantCapability[] }>(
+      API_ENDPOINTS.TENANT_CAPABILITIES.BASE(tenantId)
+    );
+    return response.data.capabilities || [];
+  },
+  
+  set: async (tenantId: string, key: string, data: SetTenantCapabilityRequest): Promise<any> => {
+    const response = await apiClient.put(
+      API_ENDPOINTS.TENANT_CAPABILITIES.BY_KEY(tenantId, key),
+      data
+    );
+    return response.data;
+  },
+  
+  delete: async (tenantId: string, key: string): Promise<void> => {
+    await apiClient.delete(API_ENDPOINTS.TENANT_CAPABILITIES.BY_KEY(tenantId, key));
+  },
+  
+  evaluate: async (tenantId: string, userId?: string): Promise<CapabilityEvaluation[]> => {
+    const url = userId
+      ? `${API_ENDPOINTS.TENANT_CAPABILITIES.EVALUATION(tenantId)}?user_id=${userId}`
+      : API_ENDPOINTS.TENANT_CAPABILITIES.EVALUATION(tenantId);
+    const response = await apiClient.get<{ evaluations: CapabilityEvaluation[] }>(url);
+    return response.data.evaluations || [];
+  },
+};
+
+// Tenant Feature API (Tenant users)
+export const tenantFeatureApi = {
+  list: async (): Promise<TenantFeature[]> => {
+    const response = await apiClient.get<{ features: TenantFeature[] }>(
+      API_ENDPOINTS.TENANT_FEATURES.BASE
+    );
+    return response.data.features || [];
+  },
+  
+  enable: async (key: string, data?: EnableTenantFeatureRequest): Promise<any> => {
+    const response = await apiClient.put(
+      API_ENDPOINTS.TENANT_FEATURES.BY_KEY(key),
+      data || {}
+    );
+    return response.data;
+  },
+  
+  disable: async (key: string): Promise<void> => {
+    await apiClient.delete(API_ENDPOINTS.TENANT_FEATURES.BY_KEY(key));
+  },
+};
+
+// User Capability API (Tenant users)
+export const userCapabilityApi = {
+  list: async (userId: string): Promise<UserCapabilityState[]> => {
+    const response = await apiClient.get<{ states: UserCapabilityState[] }>(
+      API_ENDPOINTS.USER_CAPABILITIES.BASE(userId)
+    );
+    return response.data.states || [];
+  },
+  
+  getByKey: async (userId: string, key: string): Promise<UserCapabilityState> => {
+    const response = await apiClient.get<UserCapabilityState>(
+      API_ENDPOINTS.USER_CAPABILITIES.BY_KEY(userId, key)
+    );
+    return response.data;
+  },
+  
+  enroll: async (userId: string, key: string, data?: EnrollUserCapabilityRequest): Promise<any> => {
+    const response = await apiClient.post(
+      API_ENDPOINTS.USER_CAPABILITIES.ENROLL(userId, key),
+      data || {}
+    );
+    return response.data;
+  },
+  
+  unenroll: async (userId: string, key: string): Promise<void> => {
+    await apiClient.delete(API_ENDPOINTS.USER_CAPABILITIES.BY_KEY(userId, key));
   },
 };
 

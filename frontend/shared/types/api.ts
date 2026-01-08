@@ -152,6 +152,74 @@ export interface MFAVerifyChallengeRequest {
   code: string;
 }
 
+// Capability types
+export interface SystemCapability {
+  capability_key: string;
+  enabled: boolean;
+  default_value?: Record<string, unknown>;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  updated_by?: string;
+}
+
+export interface TenantCapability {
+  tenant_id: string;
+  capability_key: string;
+  enabled: boolean;
+  value?: Record<string, unknown>;
+  configured_at: string;
+  configured_by?: string;
+}
+
+export interface TenantFeature {
+  tenant_id: string;
+  capability_key: string;
+  enabled: boolean;
+  configuration?: Record<string, unknown>;
+  enabled_at: string;
+  enabled_by?: string;
+}
+
+export interface UserCapabilityState {
+  user_id: string;
+  capability_key: string;
+  enrolled: boolean;
+  state_data?: Record<string, unknown>;
+  enrolled_at?: string;
+  last_verified_at?: string;
+}
+
+export interface CapabilityEvaluation {
+  capability_key: string;
+  can_use: boolean;
+  reason?: string;
+  system_supported: boolean;
+  tenant_allowed: boolean;
+  tenant_enabled: boolean;
+  user_enrolled: boolean;
+}
+
+export interface UpdateSystemCapabilityRequest {
+  enabled?: boolean;
+  default_value?: Record<string, unknown>;
+  description?: string;
+}
+
+export interface SetTenantCapabilityRequest {
+  enabled: boolean;
+  value?: Record<string, unknown>;
+}
+
+export interface EnableTenantFeatureRequest {
+  configuration?: Record<string, unknown>;
+}
+
+export interface EnrollUserCapabilityRequest {
+  state_data?: Record<string, unknown>;
+}
+
 // Error types
 export interface ApiError {
   message: string;
