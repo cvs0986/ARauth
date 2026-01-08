@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
-import { Shield, Key, Settings as SettingsIcon, Clock, Building2, Server } from 'lucide-react';
+import { Shield, Key, Building2, Server } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { systemApi } from '@/services/api';
 
@@ -136,11 +136,12 @@ export function Settings() {
     },
   });
 
-  // Token Settings Form
+  // Token Settings Form (for tenant settings)
   const {
     register: registerToken,
     handleSubmit: handleSubmitToken,
-    watch,
+    watch: watchToken,
+    setValue: setTokenValue,
     formState: { errors: tokenErrors },
   } = useForm<TokenSettings>({
     resolver: zodResolver(tokenSettingsSchema),
@@ -156,7 +157,21 @@ export function Settings() {
     },
   });
 
-  const rememberMeEnabled = watch('rememberMeEnabled');
+  const rememberMeEnabled = watchToken('rememberMeEnabled');
+
+  // Update form when tenant settings are loaded
+  useEffect(() => {
+    if (tenantSettings && !settingsLoading && currentTenantId) {
+      setTokenValue('accessTokenTTLMinutes', tenantSettings.access_token_ttl_minutes || 15);
+      setTokenValue('refreshTokenTTLDays', tenantSettings.refresh_token_ttl_days || 30);
+      setTokenValue('idTokenTTLMinutes', tenantSettings.id_token_ttl_minutes || 60);
+      setTokenValue('rememberMeEnabled', tenantSettings.remember_me_enabled ?? true);
+      setTokenValue('rememberMeRefreshTokenTTLDays', tenantSettings.remember_me_refresh_token_ttl_days || 90);
+      setTokenValue('rememberMeAccessTokenTTLMinutes', tenantSettings.remember_me_access_token_ttl_minutes || 60);
+      setTokenValue('tokenRotationEnabled', tenantSettings.token_rotation_enabled ?? true);
+      setTokenValue('requireMFAForExtendedSessions', tenantSettings.require_mfa_for_extended_sessions ?? false);
+    }
+  }, [tenantSettings, settingsLoading, currentTenantId, setTokenValue]);
 
   const onSecuritySubmit = async (data: SecuritySettings) => {
     setIsLoading(true);
@@ -194,22 +209,6 @@ export function Settings() {
     }
   };
 
-  const onTokenSubmit = async (data: TokenSettings) => {
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      // TODO: Implement API call to save token settings
-      // await tokenSettingsApi.update(data);
-      console.log('Token settings:', data);
-      setSuccess('Token settings saved successfully');
-    } catch (err) {
-      setError('Failed to save token settings');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const onSystemSubmit = async (data: SystemSettings) => {
     setIsLoading(true);
@@ -229,11 +228,66 @@ export function Settings() {
     }
   };
 
+  // Determine initial tab based on user type
+  useEffect(() => {
+    if (!isSystemUser()) {
+      // TENANT users should start on tenant settings
+      setActiveTab('tenant');
+    }
+  }, [isSystemUser()]);
+
+  // Update token form when tenant settings are loaded
+  useEffect(() => {
+    if (tenantSettings && !settingsLoading) {
+      // Populate form with tenant settings
+      // Note: This would require setValue from react-hook-form
+    }
+  }, [tenantSettings, settingsLoading]);
+
+  // Save tenant settings mutation
+  const saveTenantSettingsMutation = useMutation({
+    mutationFn: async (data: TokenSettings) => {
+      if (!currentTenantId) throw new Error('No tenant selected');
+      return systemApi.tenants.updateSettings(currentTenantId, data);
+    },
+    onSuccess: () => {
+      setSuccess('Tenant settings saved successfully');
+      queryClient.invalidateQueries({ queryKey: ['tenant-settings', currentTenantId] });
+      setTimeout(() => setSuccess(null), 3000);
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Failed to save tenant settings');
+      setTimeout(() => setError(null), 5000);
+    },
+  });
+
+  const onTenantTokenSubmit = async (data: TokenSettings) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await saveTenantSettingsMutation.mutateAsync(data);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">System Settings</h1>
-        <p className="text-gray-600 mt-1">Configure system-wide settings and policies</p>
+        <h1 className="text-3xl font-bold">
+          {isSystemUser() ? 'System & Tenant Settings' : 'Tenant Settings'}
+        </h1>
+        <p className="text-gray-600 mt-1">
+          {isSystemUser()
+            ? 'Configure system-wide settings and tenant-specific configurations'
+            : 'Configure settings for your tenant'}
+        </p>
+        {isSystemUser() && !currentTenantId && (
+          <Alert className="mt-4 bg-yellow-50 border-yellow-200 text-yellow-800">
+            <Building2 className="h-4 w-4 mr-2" />
+            Select a tenant from the header to configure tenant-specific settings.
+          </Alert>
+        )}
       </div>
 
       {error && (
@@ -250,26 +304,31 @@ export function Settings() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="security">
-            <Shield className="mr-2 h-4 w-4" />
-            Security
-          </TabsTrigger>
-          <TabsTrigger value="oauth">
-            <Key className="mr-2 h-4 w-4" />
-            OAuth2/OIDC
-          </TabsTrigger>
-          <TabsTrigger value="system">
-            <SettingsIcon className="mr-2 h-4 w-4" />
-            System
-          </TabsTrigger>
-          <TabsTrigger value="tokens">
-            <Clock className="mr-2 h-4 w-4" />
-            Token Settings
+          {isSystemUser() && (
+            <>
+              <TabsTrigger value="system">
+                <Server className="mr-2 h-4 w-4" />
+                System Settings
+              </TabsTrigger>
+              <TabsTrigger value="security">
+                <Shield className="mr-2 h-4 w-4" />
+                Security
+              </TabsTrigger>
+              <TabsTrigger value="oauth">
+                <Key className="mr-2 h-4 w-4" />
+                OAuth2/OIDC
+              </TabsTrigger>
+            </>
+          )}
+          <TabsTrigger value="tenant">
+            <Building2 className="mr-2 h-4 w-4" />
+            {isSystemUser() ? 'Tenant Settings' : 'Token Settings'}
           </TabsTrigger>
         </TabsList>
 
-        {/* Security Settings */}
-        <TabsContent value="security">
+        {/* Security Settings Tab - Only for SYSTEM users */}
+        {isSystemUser() && (
+          <TabsContent value="security">
           <Card>
             <CardHeader>
               <CardTitle>Security Settings</CardTitle>
@@ -408,9 +467,11 @@ export function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
-        {/* OAuth2/OIDC Settings */}
-        <TabsContent value="oauth">
+        {/* OAuth2/OIDC Settings Tab - Only for SYSTEM users */}
+        {isSystemUser() && (
+          <TabsContent value="oauth">
           <Card>
             <CardHeader>
               <CardTitle>OAuth2/OIDC Settings</CardTitle>
@@ -493,257 +554,276 @@ export function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
+        )}
 
-        {/* System Settings */}
-        <TabsContent value="system">
+        {/* System Settings Tab - Only for SYSTEM users */}
+        {isSystemUser() && (
+          <TabsContent value="system">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Configuration</CardTitle>
+                <CardDescription>
+                  Configure JWT settings, session management, and security policies
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmitSystem(onSystemSubmit)} className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">JWT Configuration</h3>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="jwtSecret">JWT Secret (leave empty to keep current)</Label>
+                        <Input
+                          id="jwtSecret"
+                          type="password"
+                          {...registerSystem('jwtSecret')}
+                          disabled={isLoading}
+                          placeholder="Enter new secret (min 32 characters)"
+                        />
+                        {systemErrors.jwtSecret && (
+                          <p className="text-sm text-red-600">{systemErrors.jwtSecret.message}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="jwtIssuer">JWT Issuer</Label>
+                        <Input
+                          id="jwtIssuer"
+                          {...registerSystem('jwtIssuer')}
+                          disabled={isLoading}
+                          placeholder="arauth-identity"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="jwtAudience">JWT Audience</Label>
+                        <Input
+                          id="jwtAudience"
+                          {...registerSystem('jwtAudience')}
+                          disabled={isLoading}
+                          placeholder="Optional"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Session Management</h3>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="sessionTimeout">Session Timeout (seconds)</Label>
+                        <Input
+                          id="sessionTimeout"
+                          type="number"
+                          {...registerSystem('sessionTimeout', { valueAsNumber: true })}
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Account Lockout</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="maxLoginAttempts">Max Login Attempts</Label>
+                        <Input
+                          id="maxLoginAttempts"
+                          type="number"
+                          {...registerSystem('maxLoginAttempts', { valueAsNumber: true })}
+                          disabled={isLoading}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lockoutDuration">Lockout Duration (seconds)</Label>
+                        <Input
+                          id="lockoutDuration"
+                          type="number"
+                          {...registerSystem('lockoutDuration', { valueAsNumber: true })}
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? 'Saving...' : 'Save System Settings'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* Tenant Settings / Token Settings Tab - For all users */}
+        <TabsContent value="tenant">
           <Card>
             <CardHeader>
-              <CardTitle>System Configuration</CardTitle>
+              <CardTitle>
+                {isSystemUser() ? 'Tenant Token Settings' : 'Token Settings'}
+              </CardTitle>
               <CardDescription>
-                Configure JWT settings, session management, and security policies
+                {isSystemUser()
+                  ? `Configure token lifetimes and security settings for ${currentTenantId ? 'selected tenant' : 'a tenant'}`
+                  : 'Configure token lifetimes and security settings for your tenant'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmitSystem(onSystemSubmit)} className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">JWT Configuration</h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="jwtSecret">JWT Secret (leave empty to keep current)</Label>
-                      <Input
-                        id="jwtSecret"
-                        type="password"
-                        {...registerSystem('jwtSecret')}
-                        disabled={isLoading}
-                        placeholder="Enter new secret (min 32 characters)"
-                      />
-                      {systemErrors.jwtSecret && (
-                        <p className="text-sm text-red-600">{systemErrors.jwtSecret.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="jwtIssuer">JWT Issuer</Label>
-                      <Input
-                        id="jwtIssuer"
-                        {...registerSystem('jwtIssuer')}
-                        disabled={isLoading}
-                        placeholder="arauth-identity"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="jwtAudience">JWT Audience</Label>
-                      <Input
-                        id="jwtAudience"
-                        {...registerSystem('jwtAudience')}
-                        disabled={isLoading}
-                        placeholder="Optional"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Session Management</h3>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="sessionTimeout">Session Timeout (seconds)</Label>
-                      <Input
-                        id="sessionTimeout"
-                        type="number"
-                        {...registerSystem('sessionTimeout', { valueAsNumber: true })}
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Account Lockout</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="maxLoginAttempts">Max Login Attempts</Label>
-                      <Input
-                        id="maxLoginAttempts"
-                        type="number"
-                        {...registerSystem('maxLoginAttempts', { valueAsNumber: true })}
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lockoutDuration">Lockout Duration (seconds)</Label>
-                      <Input
-                        id="lockoutDuration"
-                        type="number"
-                        {...registerSystem('lockoutDuration', { valueAsNumber: true })}
-                        disabled={isLoading}
-                      />
+              {isSystemUser() && !currentTenantId ? (
+                <Alert className="bg-blue-50 border-blue-200 text-blue-800">
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Please select a tenant from the header dropdown to configure tenant settings.
+                </Alert>
+              ) : (
+                <form onSubmit={handleSubmitToken(onTenantTokenSubmit)} className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Default Token Lifetimes</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="accessTokenTTLMinutes">Access Token TTL (minutes)</Label>
+                        <Input
+                          id="accessTokenTTLMinutes"
+                          type="number"
+                          {...registerToken('accessTokenTTLMinutes', { valueAsNumber: true })}
+                          disabled={isLoading}
+                          placeholder="15"
+                        />
+                        {tokenErrors.accessTokenTTLMinutes && (
+                          <p className="text-sm text-red-600">
+                            {tokenErrors.accessTokenTTLMinutes.message}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="refreshTokenTTLDays">Refresh Token TTL (days)</Label>
+                        <Input
+                          id="refreshTokenTTLDays"
+                          type="number"
+                          {...registerToken('refreshTokenTTLDays', { valueAsNumber: true })}
+                          disabled={isLoading}
+                          placeholder="30"
+                        />
+                        {tokenErrors.refreshTokenTTLDays && (
+                          <p className="text-sm text-red-600">
+                            {tokenErrors.refreshTokenTTLDays.message}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="idTokenTTLMinutes">ID Token TTL (minutes)</Label>
+                        <Input
+                          id="idTokenTTLMinutes"
+                          type="number"
+                          {...registerToken('idTokenTTLMinutes', { valueAsNumber: true })}
+                          disabled={isLoading}
+                          placeholder="60"
+                        />
+                        {tokenErrors.idTokenTTLMinutes && (
+                          <p className="text-sm text-red-600">
+                            {tokenErrors.idTokenTTLMinutes.message}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? 'Saving...' : 'Save System Settings'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Remember Me Settings</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="rememberMeEnabled"
+                          {...registerToken('rememberMeEnabled')}
+                          disabled={isLoading}
+                          className="rounded"
+                        />
+                        <Label htmlFor="rememberMeEnabled">Enable Remember Me</Label>
+                      </div>
 
-        {/* Token Settings */}
-        <TabsContent value="tokens">
-          <Card>
-            <CardHeader>
-              <CardTitle>Token Lifetime Settings</CardTitle>
-              <CardDescription>
-                Configure JWT token lifetimes and Remember Me settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmitToken(onTokenSubmit)} className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Default Token Lifetimes</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="accessTokenTTLMinutes">Access Token TTL (minutes)</Label>
-                      <Input
-                        id="accessTokenTTLMinutes"
-                        type="number"
-                        {...registerToken('accessTokenTTLMinutes', { valueAsNumber: true })}
-                        disabled={isLoading}
-                        placeholder="15"
-                      />
-                      {tokenErrors.accessTokenTTLMinutes && (
-                        <p className="text-sm text-red-600">
-                          {tokenErrors.accessTokenTTLMinutes.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="refreshTokenTTLDays">Refresh Token TTL (days)</Label>
-                      <Input
-                        id="refreshTokenTTLDays"
-                        type="number"
-                        {...registerToken('refreshTokenTTLDays', { valueAsNumber: true })}
-                        disabled={isLoading}
-                        placeholder="30"
-                      />
-                      {tokenErrors.refreshTokenTTLDays && (
-                        <p className="text-sm text-red-600">
-                          {tokenErrors.refreshTokenTTLDays.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="idTokenTTLMinutes">ID Token TTL (minutes)</Label>
-                      <Input
-                        id="idTokenTTLMinutes"
-                        type="number"
-                        {...registerToken('idTokenTTLMinutes', { valueAsNumber: true })}
-                        disabled={isLoading}
-                        placeholder="60"
-                      />
-                      {tokenErrors.idTokenTTLMinutes && (
-                        <p className="text-sm text-red-600">
-                          {tokenErrors.idTokenTTLMinutes.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Remember Me Settings</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="rememberMeEnabled"
-                        {...registerToken('rememberMeEnabled')}
-                        disabled={isLoading}
-                        className="rounded"
-                      />
-                      <Label htmlFor="rememberMeEnabled">Enable Remember Me</Label>
-                    </div>
-
-                    {rememberMeEnabled && (
-                      <div className="ml-6 space-y-4 border-l-2 pl-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="rememberMeRefreshTokenTTLDays">
-                              Remember Me Refresh Token TTL (days)
-                            </Label>
-                            <Input
-                              id="rememberMeRefreshTokenTTLDays"
-                              type="number"
-                              {...registerToken('rememberMeRefreshTokenTTLDays', { valueAsNumber: true })}
-                              disabled={isLoading}
-                              placeholder="90"
-                            />
-                            {tokenErrors.rememberMeRefreshTokenTTLDays && (
-                              <p className="text-sm text-red-600">
-                                {tokenErrors.rememberMeRefreshTokenTTLDays.message}
-                              </p>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="rememberMeAccessTokenTTLMinutes">
-                              Remember Me Access Token TTL (minutes)
-                            </Label>
-                            <Input
-                              id="rememberMeAccessTokenTTLMinutes"
-                              type="number"
-                              {...registerToken('rememberMeAccessTokenTTLMinutes', { valueAsNumber: true })}
-                              disabled={isLoading}
-                              placeholder="60"
-                            />
-                            {tokenErrors.rememberMeAccessTokenTTLMinutes && (
-                              <p className="text-sm text-red-600">
-                                {tokenErrors.rememberMeAccessTokenTTLMinutes.message}
-                              </p>
-                            )}
+                      {rememberMeEnabled && (
+                        <div className="ml-6 space-y-4 border-l-2 pl-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="rememberMeRefreshTokenTTLDays">
+                                Remember Me Refresh Token TTL (days)
+                              </Label>
+                              <Input
+                                id="rememberMeRefreshTokenTTLDays"
+                                type="number"
+                                {...registerToken('rememberMeRefreshTokenTTLDays', { valueAsNumber: true })}
+                                disabled={isLoading}
+                                placeholder="90"
+                              />
+                              {tokenErrors.rememberMeRefreshTokenTTLDays && (
+                                <p className="text-sm text-red-600">
+                                  {tokenErrors.rememberMeRefreshTokenTTLDays.message}
+                                </p>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="rememberMeAccessTokenTTLMinutes">
+                                Remember Me Access Token TTL (minutes)
+                              </Label>
+                              <Input
+                                id="rememberMeAccessTokenTTLMinutes"
+                                type="number"
+                                {...registerToken('rememberMeAccessTokenTTLMinutes', { valueAsNumber: true })}
+                                disabled={isLoading}
+                                placeholder="60"
+                              />
+                              {tokenErrors.rememberMeAccessTokenTTLMinutes && (
+                                <p className="text-sm text-red-600">
+                                  {tokenErrors.rememberMeAccessTokenTTLMinutes.message}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Security Options</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="tokenRotationEnabled"
+                          {...registerToken('tokenRotationEnabled')}
+                          disabled={isLoading}
+                          className="rounded"
+                        />
+                        <Label htmlFor="tokenRotationEnabled">
+                          Enable Token Rotation (recommended)
+                        </Label>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Security Options</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="tokenRotationEnabled"
-                        {...registerToken('tokenRotationEnabled')}
-                        disabled={isLoading}
-                        className="rounded"
-                      />
-                      <Label htmlFor="tokenRotationEnabled">
-                        Enable Token Rotation (recommended)
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="requireMFAForExtendedSessions"
-                        {...registerToken('requireMFAForExtendedSessions')}
-                        disabled={isLoading}
-                        className="rounded"
-                      />
-                      <Label htmlFor="requireMFAForExtendedSessions">
-                        Require MFA for extended sessions (Remember Me)
-                      </Label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="requireMFAForExtendedSessions"
+                          {...registerToken('requireMFAForExtendedSessions')}
+                          disabled={isLoading}
+                          className="rounded"
+                        />
+                        <Label htmlFor="requireMFAForExtendedSessions">
+                          Require MFA for extended sessions (Remember Me)
+                        </Label>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? 'Saving...' : 'Save Token Settings'}
-                </Button>
-              </form>
+                  <div className="flex justify-end space-x-4">
+                    <Button type="button" variant="outline" onClick={() => setActiveTab(isSystemUser() ? 'system' : 'tenant')}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? 'Saving...' : isSystemUser() ? 'Save Tenant Settings' : 'Save Token Settings'}
+                    </Button>
+                  </div>
+                </form>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
