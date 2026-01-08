@@ -68,17 +68,20 @@ func (s *Service) GenerateAccessToken(claimsObj *claims.Claims, expiresIn time.D
 
 	// Build JWT claims
 	tokenClaims := jwt.MapClaims{
-		"sub":         claimsObj.Subject,
-		"tenant_id":   claimsObj.TenantID,
-		"email":       claimsObj.Email,
-		"username":    claimsObj.Username,
-		"roles":       claimsObj.Roles,
-		"permissions": claimsObj.Permissions,
-		"scope":       claimsObj.Scope,
-		"iss":         s.issuer,
-		"iat":         now.Unix(),
-		"exp":         now.Add(expiresIn).Unix(),
-		"jti":         uuid.New().String(),
+		"sub":                claimsObj.Subject,
+		"principal_type":     claimsObj.PrincipalType, // NEW: Include principal_type
+		"tenant_id":          claimsObj.TenantID,
+		"email":              claimsObj.Email,
+		"username":           claimsObj.Username,
+		"roles":              claimsObj.Roles,
+		"permissions":        claimsObj.Permissions,
+		"system_roles":       claimsObj.SystemRoles,       // NEW: Include system_roles
+		"system_permissions": claimsObj.SystemPermissions, // NEW: Include system_permissions
+		"scope":              claimsObj.Scope,
+		"iss":                s.issuer,
+		"iat":                now.Unix(),
+		"exp":                now.Add(expiresIn).Unix(),
+		"jti":                uuid.New().String(),
 	}
 
 	// Create token
