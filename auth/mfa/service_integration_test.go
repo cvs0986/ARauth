@@ -136,7 +136,7 @@ func TestService_Verify_Integration(t *testing.T) {
 	userID := uuid.New()
 	user := &models.User{
 		ID:       userID,
-		TenantID: tenantID,
+		TenantID: &tenantID,
 		Username: "verifyuser",
 		Email:    "verify@example.com",
 		Status:   "active",
@@ -164,7 +164,14 @@ func TestService_Verify_Integration(t *testing.T) {
 	cacheClient := cache.NewCache(nil)
 	sessionManager := NewSessionManager(cacheClient)
 
-	service := NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, sessionManager)
+	// Create capability service
+	systemCapabilityRepo := postgres.NewSystemCapabilityRepository(db)
+	tenantCapabilityRepo := postgres.NewTenantCapabilityRepository(db)
+	tenantFeatureRepo := postgres.NewTenantFeatureEnablementRepository(db)
+	userCapabilityRepo := postgres.NewUserCapabilityStateRepository(db)
+	capabilityService := capability.NewService(systemCapabilityRepo, tenantCapabilityRepo, tenantFeatureRepo, userCapabilityRepo)
+
+	service := NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, sessionManager, capabilityService)
 
 	// Enroll user first
 	enrollReq := &EnrollRequest{
@@ -213,7 +220,7 @@ func TestService_CreateChallenge_Integration(t *testing.T) {
 	userID := uuid.New()
 	user := &models.User{
 		ID:         userID,
-		TenantID:   tenantID,
+		TenantID:   &tenantID,
 		Username:   "challengeuser",
 		Email:      "challenge@example.com",
 		Status:     "active",
@@ -267,7 +274,14 @@ func TestService_CreateChallenge_Integration(t *testing.T) {
 	cacheClient := cache.NewCache(redisClient)
 	sessionManager := NewSessionManager(cacheClient)
 
-	service := NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, sessionManager)
+	// Create capability service
+	systemCapabilityRepo := postgres.NewSystemCapabilityRepository(db)
+	tenantCapabilityRepo := postgres.NewTenantCapabilityRepository(db)
+	tenantFeatureRepo := postgres.NewTenantFeatureEnablementRepository(db)
+	userCapabilityRepo := postgres.NewUserCapabilityStateRepository(db)
+	capabilityService := capability.NewService(systemCapabilityRepo, tenantCapabilityRepo, tenantFeatureRepo, userCapabilityRepo)
+
+	service := NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, sessionManager, capabilityService)
 
 	// Test challenge creation
 	req := &ChallengeRequest{

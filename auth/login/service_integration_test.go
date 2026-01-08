@@ -131,7 +131,7 @@ func TestService_Login_InvalidPassword_Integration(t *testing.T) {
 	userID := uuid.New()
 	user := &models.User{
 		ID:       userID,
-		TenantID: tenantID,
+		TenantID: &tenantID,
 		Username: "testuser",
 		Email:    "test@example.com",
 		Status:   "active",
@@ -149,8 +149,20 @@ func TestService_Login_InvalidPassword_Integration(t *testing.T) {
 	err = credentialRepo.Create(context.Background(), cred)
 	require.NoError(t, err)
 
-	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo)
-	service := NewService(userRepo, credentialRepo, nil, claimsBuilder)
+	// Create capability repositories and service
+	systemCapabilityRepo := postgres.NewSystemCapabilityRepository(db)
+	tenantCapabilityRepo := postgres.NewTenantCapabilityRepository(db)
+	tenantFeatureRepo := postgres.NewTenantFeatureEnablementRepository(db)
+	userCapabilityRepo := postgres.NewUserCapabilityStateRepository(db)
+	capabilityService := capability.NewService(systemCapabilityRepo, tenantCapabilityRepo, tenantFeatureRepo, userCapabilityRepo)
+	
+	// Create system role repository
+	systemRoleRepo := postgres.NewSystemRoleRepository(db)
+	
+	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo, systemRoleRepo, capabilityService)
+	refreshTokenRepo := postgres.NewRefreshTokenRepository(db)
+	tenantSettingsRepo := postgres.NewTenantSettingsRepository(db)
+	service := NewService(userRepo, credentialRepo, refreshTokenRepo, tenantSettingsRepo, nil, claimsBuilder, nil, nil, capabilityService)
 
 	req := &LoginRequest{
 		TenantID: tenantID,
@@ -176,8 +188,20 @@ func TestService_Login_UserNotFound_Integration(t *testing.T) {
 	roleRepo := postgres.NewRoleRepository(db)
 	permissionRepo := postgres.NewPermissionRepository(db)
 
-	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo)
-	service := NewService(userRepo, credentialRepo, nil, claimsBuilder)
+	// Create capability repositories and service
+	systemCapabilityRepo := postgres.NewSystemCapabilityRepository(db)
+	tenantCapabilityRepo := postgres.NewTenantCapabilityRepository(db)
+	tenantFeatureRepo := postgres.NewTenantFeatureEnablementRepository(db)
+	userCapabilityRepo := postgres.NewUserCapabilityStateRepository(db)
+	capabilityService := capability.NewService(systemCapabilityRepo, tenantCapabilityRepo, tenantFeatureRepo, userCapabilityRepo)
+	
+	// Create system role repository
+	systemRoleRepo := postgres.NewSystemRoleRepository(db)
+	
+	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo, systemRoleRepo, capabilityService)
+	refreshTokenRepo := postgres.NewRefreshTokenRepository(db)
+	tenantSettingsRepo := postgres.NewTenantSettingsRepository(db)
+	service := NewService(userRepo, credentialRepo, refreshTokenRepo, tenantSettingsRepo, nil, claimsBuilder, nil, nil, capabilityService)
 
 	req := &LoginRequest{
 		TenantID: uuid.New(),
