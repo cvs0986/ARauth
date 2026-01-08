@@ -116,6 +116,7 @@ func (s *Service) Enroll(ctx context.Context, req *EnrollRequest) (*EnrollRespon
 }
 
 // Verify verifies a TOTP code or recovery code
+// This method also enables MFA after first successful verification
 func (s *Service) Verify(ctx context.Context, req *VerifyRequest) (bool, error) {
 	// Get user
 	user, err := s.userRepo.GetByID(ctx, req.UserID)
@@ -123,17 +124,13 @@ func (s *Service) Verify(ctx context.Context, req *VerifyRequest) (bool, error) 
 		return false, fmt.Errorf("user not found: %w", err)
 	}
 
-	// Check if MFA is enabled
-	if !user.MFAEnabled {
-		return false, fmt.Errorf("MFA is not enabled for this user")
+	// Check if MFA secret exists (MFA may be enrolled but not yet verified)
+	if user.MFASecretEncrypted == nil {
+		return false, fmt.Errorf("MFA secret not found. Please enroll in MFA first.")
 	}
 
 	if req.TOTPCode != "" {
 		// Get and decrypt TOTP secret
-		if user.MFASecretEncrypted == nil {
-			return false, fmt.Errorf("MFA secret not found")
-		}
-
 		secret, err := s.encryptor.Decrypt(*user.MFASecretEncrypted)
 		if err != nil {
 			return false, fmt.Errorf("failed to decrypt TOTP secret: %w", err)
@@ -141,6 +138,18 @@ func (s *Service) Verify(ctx context.Context, req *VerifyRequest) (bool, error) 
 
 		// Verify TOTP code
 		valid := s.totpGenerator.Validate(secret, req.TOTPCode)
+		
+		// If verification is successful and MFA is not yet enabled, enable it now
+		// This allows enrollment without immediate verification, but requires verification before MFA is active
+		if valid && !user.MFAEnabled {
+			user.MFAEnabled = true
+			if err := s.userRepo.Update(ctx, user); err != nil {
+				// Log error but don't fail verification - MFA is already working
+				// The flag will be set on next successful verification
+				fmt.Printf("Warning: Failed to enable MFA flag after verification: %v\n", err)
+			}
+		}
+		
 		return valid, nil
 	}
 
