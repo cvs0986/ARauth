@@ -154,6 +154,11 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 				permissions.DELETE("/:id", permissionHandler.Delete)
 			}
 
+			// Tenant settings routes (tenant-scoped - TENANT users can access their own settings)
+			// Route: GET/PUT /api/v1/tenant/settings (uses tenant from context)
+			tenantScoped.GET("/tenant/settings", systemHandler.GetTenantSettingsFromContext)
+			tenantScoped.PUT("/tenant/settings", systemHandler.UpdateTenantSettingsFromContext)
+
 		}
 	}
 }

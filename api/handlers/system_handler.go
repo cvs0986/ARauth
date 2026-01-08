@@ -278,21 +278,33 @@ func (h *SystemHandler) GetTenantSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, settings)
 }
 
-// UpdateTenantSettings handles PUT /system/tenants/:id/settings - Update tenant settings (system admin only)
-func (h *SystemHandler) UpdateTenantSettings(c *gin.Context) {
-	tenantIDStr := c.Param("id")
-	tenantID, err := uuid.Parse(tenantIDStr)
-	if err != nil {
-		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_id",
-			"Invalid tenant ID", nil)
+// GetTenantSettingsFromContext handles GET /api/v1/tenant/settings - Get tenant settings from context (TENANT users)
+func (h *SystemHandler) GetTenantSettingsFromContext(c *gin.Context) {
+	// Get tenant ID from context (set by TenantMiddleware)
+	tenantID, ok := middleware.RequireTenant(c)
+	if !ok {
 		return
 	}
 
-	// Verify tenant exists
-	_, err = h.tenantRepo.GetByID(c.Request.Context(), tenantID)
+	// Get tenant settings
+	settings, err := h.tenantSettingsRepo.GetByTenantID(c.Request.Context(), tenantID)
 	if err != nil {
-		middleware.RespondWithError(c, http.StatusNotFound, "not_found",
-			"Tenant not found", nil)
+		// If settings don't exist, return default/empty settings
+		c.JSON(http.StatusOK, gin.H{
+			"tenant_id": tenantID,
+			"message":   "Tenant settings not configured. Use PUT to create/update.",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, settings)
+}
+
+// UpdateTenantSettingsFromContext handles PUT /api/v1/tenant/settings - Update tenant settings from context (TENANT users)
+func (h *SystemHandler) UpdateTenantSettingsFromContext(c *gin.Context) {
+	// Get tenant ID from context (set by TenantMiddleware)
+	tenantID, ok := middleware.RequireTenant(c)
+	if !ok {
 		return
 	}
 
@@ -305,6 +317,16 @@ func (h *SystemHandler) UpdateTenantSettings(c *gin.Context) {
 		RememberMeAccessTokenTTLMinutes *int  `json:"remember_me_access_token_ttl_minutes,omitempty"`
 		TokenRotationEnabled            *bool `json:"token_rotation_enabled,omitempty"`
 		RequireMFAForExtendedSessions   *bool `json:"require_mfa_for_extended_sessions,omitempty"`
+		// Security settings
+		MinPasswordLength                *int  `json:"min_password_length,omitempty"`
+		RequireUppercase                  *bool `json:"require_uppercase,omitempty"`
+		RequireLowercase                  *bool `json:"require_lowercase,omitempty"`
+		RequireNumbers                    *bool `json:"require_numbers,omitempty"`
+		RequireSpecialChars               *bool `json:"require_special_chars,omitempty"`
+		PasswordExpiryDays                *int  `json:"password_expiry_days,omitempty"`
+		MFARequired                       *bool `json:"mfa_required,omitempty"`
+		RateLimitRequests                 *int  `json:"rate_limit_requests,omitempty"`
+		RateLimitWindowSeconds            *int  `json:"rate_limit_window_seconds,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -319,14 +341,23 @@ func (h *SystemHandler) UpdateTenantSettings(c *gin.Context) {
 		// Settings don't exist, create new with defaults
 		settings = &interfaces.TenantSettings{
 			TenantID:                          tenantID,
-			AccessTokenTTLMinutes:            15,  // Default: 15 minutes
-			RefreshTokenTTLDays:              30,  // Default: 30 days
-			IDTokenTTLMinutes:               60,  // Default: 60 minutes
+			AccessTokenTTLMinutes:            15,
+			RefreshTokenTTLDays:              30,
+			IDTokenTTLMinutes:               60,
 			RememberMeEnabled:                true,
-			RememberMeRefreshTokenTTLDays:    90,  // Default: 90 days
-			RememberMeAccessTokenTTLMinutes:  60,  // Default: 60 minutes
+			RememberMeRefreshTokenTTLDays:    90,
+			RememberMeAccessTokenTTLMinutes:  60,
 			TokenRotationEnabled:             true,
 			RequireMFAForExtendedSessions:    false,
+			MinPasswordLength:               12,
+			RequireUppercase:                 true,
+			RequireLowercase:                 true,
+			RequireNumbers:                   true,
+			RequireSpecialChars:              true,
+			PasswordExpiryDays:               nil,
+			MFARequired:                     false,
+			RateLimitRequests:                100,
+			RateLimitWindowSeconds:           60,
 		}
 	}
 
@@ -355,6 +386,189 @@ func (h *SystemHandler) UpdateTenantSettings(c *gin.Context) {
 	if req.RequireMFAForExtendedSessions != nil {
 		settings.RequireMFAForExtendedSessions = *req.RequireMFAForExtendedSessions
 	}
+	if req.MinPasswordLength != nil {
+		settings.MinPasswordLength = *req.MinPasswordLength
+	}
+	if req.RequireUppercase != nil {
+		settings.RequireUppercase = *req.RequireUppercase
+	}
+	if req.RequireLowercase != nil {
+		settings.RequireLowercase = *req.RequireLowercase
+	}
+	if req.RequireNumbers != nil {
+		settings.RequireNumbers = *req.RequireNumbers
+	}
+	if req.RequireSpecialChars != nil {
+		settings.RequireSpecialChars = *req.RequireSpecialChars
+	}
+	if req.PasswordExpiryDays != nil {
+		settings.PasswordExpiryDays = req.PasswordExpiryDays
+	}
+	if req.MFARequired != nil {
+		settings.MFARequired = *req.MFARequired
+	}
+	if req.RateLimitRequests != nil {
+		settings.RateLimitRequests = *req.RateLimitRequests
+	}
+	if req.RateLimitWindowSeconds != nil {
+		settings.RateLimitWindowSeconds = *req.RateLimitWindowSeconds
+	}
+
+	// Save settings
+	if settings.ID == uuid.Nil {
+		if err := h.tenantSettingsRepo.Create(c.Request.Context(), settings); err != nil {
+			middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
+				"Failed to create tenant settings: "+err.Error(), nil)
+			return
+		}
+	} else {
+		if err := h.tenantSettingsRepo.Update(c.Request.Context(), settings); err != nil {
+			middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
+				"Failed to update tenant settings: "+err.Error(), nil)
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, settings)
+}
+
+// UpdateTenantSettings handles PUT /system/tenants/:id/settings or PUT /api/v1/tenants/:id/settings
+// For SYSTEM users: can update any tenant's settings
+// For TENANT users: can only update their own tenant's settings
+func (h *SystemHandler) UpdateTenantSettings(c *gin.Context) {
+	tenantIDStr := c.Param("id")
+	tenantID, err := uuid.Parse(tenantIDStr)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_id",
+			"Invalid tenant ID", nil)
+		return
+	}
+
+	// Verify tenant exists
+	_, err = h.tenantRepo.GetByID(c.Request.Context(), tenantID)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusNotFound, "not_found",
+			"Tenant not found", nil)
+		return
+	}
+
+	// For TENANT users: verify they can only update their own tenant's settings
+	// Get tenant ID from context (set by TenantMiddleware)
+	if contextTenantID, exists := middleware.GetTenantID(c); exists {
+		if contextTenantID != tenantID {
+			middleware.RespondWithError(c, http.StatusForbidden, "access_denied",
+				"You can only update your own tenant's settings", nil)
+			return
+		}
+	}
+
+	var req struct {
+		AccessTokenTTLMinutes            *int  `json:"access_token_ttl_minutes,omitempty"`
+		RefreshTokenTTLDays              *int  `json:"refresh_token_ttl_days,omitempty"`
+		IDTokenTTLMinutes               *int  `json:"id_token_ttl_minutes,omitempty"`
+		RememberMeEnabled               *bool `json:"remember_me_enabled,omitempty"`
+		RememberMeRefreshTokenTTLDays   *int  `json:"remember_me_refresh_token_ttl_days,omitempty"`
+		RememberMeAccessTokenTTLMinutes *int  `json:"remember_me_access_token_ttl_minutes,omitempty"`
+		TokenRotationEnabled            *bool `json:"token_rotation_enabled,omitempty"`
+		RequireMFAForExtendedSessions   *bool `json:"require_mfa_for_extended_sessions,omitempty"`
+		// Security settings
+		MinPasswordLength                *int  `json:"min_password_length,omitempty"`
+		RequireUppercase                  *bool `json:"require_uppercase,omitempty"`
+		RequireLowercase                  *bool `json:"require_lowercase,omitempty"`
+		RequireNumbers                    *bool `json:"require_numbers,omitempty"`
+		RequireSpecialChars               *bool `json:"require_special_chars,omitempty"`
+		PasswordExpiryDays                *int  `json:"password_expiry_days,omitempty"`
+		MFARequired                       *bool `json:"mfa_required,omitempty"`
+		RateLimitRequests                 *int  `json:"rate_limit_requests,omitempty"`
+		RateLimitWindowSeconds            *int  `json:"rate_limit_window_seconds,omitempty"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
+			"Request validation failed", middleware.FormatValidationErrors(err))
+		return
+	}
+
+	// Get existing settings or create new
+	settings, err := h.tenantSettingsRepo.GetByTenantID(c.Request.Context(), tenantID)
+	if err != nil {
+		// Settings don't exist, create new with defaults
+		settings = &interfaces.TenantSettings{
+			TenantID:                          tenantID,
+			AccessTokenTTLMinutes:            15,  // Default: 15 minutes
+			RefreshTokenTTLDays:              30,  // Default: 30 days
+			IDTokenTTLMinutes:               60,  // Default: 60 minutes
+			RememberMeEnabled:                true,
+			RememberMeRefreshTokenTTLDays:    90,  // Default: 90 days
+			RememberMeAccessTokenTTLMinutes:  60,  // Default: 60 minutes
+			TokenRotationEnabled:             true,
+			RequireMFAForExtendedSessions:    false,
+			// Security settings defaults
+			MinPasswordLength:               12,
+			RequireUppercase:                 true,
+			RequireLowercase:                 true,
+			RequireNumbers:                   true,
+			RequireSpecialChars:              true,
+			PasswordExpiryDays:               nil, // Never expires by default
+			MFARequired:                     false,
+			RateLimitRequests:                100,
+			RateLimitWindowSeconds:           60,
+		}
+	}
+
+	// Update fields if provided
+	if req.AccessTokenTTLMinutes != nil {
+		settings.AccessTokenTTLMinutes = *req.AccessTokenTTLMinutes
+	}
+	if req.RefreshTokenTTLDays != nil {
+		settings.RefreshTokenTTLDays = *req.RefreshTokenTTLDays
+	}
+	if req.IDTokenTTLMinutes != nil {
+		settings.IDTokenTTLMinutes = *req.IDTokenTTLMinutes
+	}
+	if req.RememberMeEnabled != nil {
+		settings.RememberMeEnabled = *req.RememberMeEnabled
+	}
+	if req.RememberMeRefreshTokenTTLDays != nil {
+		settings.RememberMeRefreshTokenTTLDays = *req.RememberMeRefreshTokenTTLDays
+	}
+	if req.RememberMeAccessTokenTTLMinutes != nil {
+		settings.RememberMeAccessTokenTTLMinutes = *req.RememberMeAccessTokenTTLMinutes
+	}
+	if req.TokenRotationEnabled != nil {
+		settings.TokenRotationEnabled = *req.TokenRotationEnabled
+	}
+	if req.RequireMFAForExtendedSessions != nil {
+		settings.RequireMFAForExtendedSessions = *req.RequireMFAForExtendedSessions
+	}
+	// Update security settings if provided
+	if req.MinPasswordLength != nil {
+		settings.MinPasswordLength = *req.MinPasswordLength
+	}
+	if req.RequireUppercase != nil {
+		settings.RequireUppercase = *req.RequireUppercase
+	}
+	if req.RequireLowercase != nil {
+		settings.RequireLowercase = *req.RequireLowercase
+	}
+	if req.RequireNumbers != nil {
+		settings.RequireNumbers = *req.RequireNumbers
+	}
+	if req.RequireSpecialChars != nil {
+		settings.RequireSpecialChars = *req.RequireSpecialChars
+	}
+	if req.PasswordExpiryDays != nil {
+		settings.PasswordExpiryDays = req.PasswordExpiryDays
+	}
+	if req.MFARequired != nil {
+		settings.MFARequired = *req.MFARequired
+	}
+	if req.RateLimitRequests != nil {
+		settings.RateLimitRequests = *req.RateLimitRequests
+	}
+	if req.RateLimitWindowSeconds != nil {
+		settings.RateLimitWindowSeconds = *req.RateLimitWindowSeconds
+	}
 
 	// Save settings
 	if settings.ID == uuid.Nil {
@@ -375,4 +589,5 @@ func (h *SystemHandler) UpdateTenantSettings(c *gin.Context) {
 
 	c.JSON(http.StatusOK, settings)
 }
+
 
