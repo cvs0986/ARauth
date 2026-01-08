@@ -30,21 +30,32 @@ func TenantMiddleware(tenantRepo interfaces.TenantRepository) gin.HandlerFunc {
 		var tenantID uuid.UUID
 		var err error
 
-		// First, try to get tenant ID from JWT token claims (set by JWTAuthMiddleware)
-		// This is especially important for TENANT users who always have a tenant_id in their token
-		if tenantIDStr, exists := c.Get("tenant_id"); exists {
-			if tenantIDStrStr, ok := tenantIDStr.(string); ok && tenantIDStrStr != "" {
-				tenantID, err = uuid.Parse(tenantIDStrStr)
-				if err == nil && tenantID != uuid.Nil {
-					// Tenant ID found in JWT claims, use it
-					// But allow header to override if provided (for SYSTEM users selecting tenant context)
+		// Check user principal type to determine tenant ID source priority
+		principalType, _ := c.Get("principal_type")
+		isSystemUser := principalType == "SYSTEM"
+
+		// For TENANT users: tenant ID must come from JWT token (security - they can't switch tenants)
+		// For SYSTEM users: tenant ID can come from header (they can select tenant context)
+		if !isSystemUser {
+			// TENANT users: get tenant ID from JWT token claims
+			if tenantIDStr, exists := c.Get("tenant_id"); exists {
+				if tenantIDStrStr, ok := tenantIDStr.(string); ok && tenantIDStrStr != "" {
+					tenantID, err = uuid.Parse(tenantIDStrStr)
+					if err != nil {
+						c.JSON(http.StatusBadRequest, gin.H{
+							"error":   "invalid_tenant_id",
+							"message": "Invalid tenant ID format in JWT token",
+						})
+						c.Abort()
+						return
+					}
 				}
 			}
 		}
 
-		// Try X-Tenant-ID header (can override JWT claims for SYSTEM users)
+		// Try X-Tenant-ID header (for SYSTEM users, or if TENANT user's JWT didn't have tenant_id)
 		if tenantIDStr := c.GetHeader("X-Tenant-ID"); tenantIDStr != "" {
-			tenantID, err = uuid.Parse(tenantIDStr)
+			headerTenantID, err := uuid.Parse(tenantIDStr)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error":   "invalid_tenant_id",
@@ -52,6 +63,25 @@ func TenantMiddleware(tenantRepo interfaces.TenantRepository) gin.HandlerFunc {
 				})
 				c.Abort()
 				return
+			}
+			// For SYSTEM users: header can set/override tenant ID
+			// For TENANT users: header must match JWT tenant_id (security check)
+			if isSystemUser {
+				tenantID = headerTenantID
+			} else {
+				// TENANT user: verify header matches JWT tenant_id
+				if tenantID != uuid.Nil && tenantID != headerTenantID {
+					c.JSON(http.StatusForbidden, gin.H{
+						"error":   "tenant_mismatch",
+						"message": "X-Tenant-ID header does not match tenant ID in JWT token. TENANT users cannot access other tenants.",
+					})
+					c.Abort()
+					return
+				}
+				// If JWT didn't have tenant_id, use header (fallback)
+				if tenantID == uuid.Nil {
+					tenantID = headerTenantID
+				}
 			}
 		} else if domain := c.GetHeader("X-Tenant-Domain"); domain != "" {
 			// Try X-Tenant-Domain header
