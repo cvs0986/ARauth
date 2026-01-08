@@ -155,12 +155,13 @@ func (s *Service) ValidateAccessToken(tokenString string) (*claims.Claims, error
 
 	// Build claims object
 	claimsObj := &claims.Claims{
-		Subject:    getStringClaim(claimsMap, "sub"),
-		TenantID:   getStringClaim(claimsMap, "tenant_id"),
-		Email:      getStringClaim(claimsMap, "email"),
-		Username:   getStringClaim(claimsMap, "username"),
-		Issuer:     getStringClaim(claimsMap, "iss"),
-		Audience:   getStringClaim(claimsMap, "aud"),
+		Subject:       getStringClaim(claimsMap, "sub"),
+		PrincipalType: getStringClaim(claimsMap, "principal_type"), // NEW: Extract principal_type
+		TenantID:      getStringClaim(claimsMap, "tenant_id"),
+		Email:         getStringClaim(claimsMap, "email"),
+		Username:      getStringClaim(claimsMap, "username"),
+		Issuer:        getStringClaim(claimsMap, "iss"),
+		Audience:      getStringClaim(claimsMap, "aud"),
 	}
 
 	// Extract roles
@@ -179,6 +180,26 @@ func (s *Service) ValidateAccessToken(tokenString string) (*claims.Claims, error
 		for i, perm := range perms {
 			if p, ok := perm.(string); ok {
 				claimsObj.Permissions[i] = p
+			}
+		}
+	}
+
+	// Extract system_roles
+	if systemRoles, ok := claimsMap["system_roles"].([]interface{}); ok {
+		claimsObj.SystemRoles = make([]string, len(systemRoles))
+		for i, role := range systemRoles {
+			if r, ok := role.(string); ok {
+				claimsObj.SystemRoles[i] = r
+			}
+		}
+	}
+
+	// Extract system_permissions
+	if systemPerms, ok := claimsMap["system_permissions"].([]interface{}); ok {
+		claimsObj.SystemPermissions = make([]string, len(systemPerms))
+		for i, perm := range systemPerms {
+			if p, ok := perm.(string); ok {
+				claimsObj.SystemPermissions[i] = p
 			}
 		}
 	}
