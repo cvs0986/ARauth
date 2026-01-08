@@ -71,8 +71,8 @@ func TestMFAHandler_Enroll(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockMFAService)
-	// Note: Audit logger is not easily mockable, but tests can still verify handler behavior
-	handler := NewMFAHandler(mockService, nil)
+	// Note: Audit logger and other dependencies are not easily mockable, but tests can still verify handler behavior
+	handler := NewMFAHandler(mockService, nil, nil, nil, nil, nil)
 
 	router := gin.New()
 	router.POST("/api/v1/mfa/enroll", handler.Enroll)
@@ -105,7 +105,7 @@ func TestMFAHandler_Challenge(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockMFAService)
-	handler := NewMFAHandler(mockService, nil)
+	handler := NewMFAHandler(mockService, nil, nil, nil, nil, nil)
 
 	router := gin.New()
 	router.POST("/api/v1/mfa/challenge", handler.Challenge)
@@ -138,7 +138,7 @@ func TestMFAHandler_Enroll_InvalidRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockMFAService)
-	handler := NewMFAHandler(mockService, nil)
+	handler := NewMFAHandler(mockService, nil, nil, nil, nil, nil)
 
 	router := gin.New()
 	router.POST("/api/v1/mfa/enroll", handler.Enroll)

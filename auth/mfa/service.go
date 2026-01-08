@@ -95,9 +95,10 @@ func (s *Service) Enroll(ctx context.Context, req *EnrollRequest) (*EnrollRespon
 		return nil, fmt.Errorf("failed to encrypt TOTP secret: %w", err)
 	}
 
-	// Update user with encrypted secret and enable MFA
-	user.MFAEnabled = true
+	// Store encrypted secret but DO NOT enable MFA yet
+	// MFA will be enabled only after successful verification
 	user.MFASecretEncrypted = &encryptedSecret
+	// Keep MFAEnabled as false - it will be set to true after verification
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to update user with MFA secret: %w", err)
 	}
