@@ -93,11 +93,33 @@ export function RoleList() {
     );
   }
 
+  // Show alert for SYSTEM users without selected tenant
+  if (isSystemUser() && !currentTenantId) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Roles</h1>
+        </div>
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Select a Tenant</AlertTitle>
+          <AlertDescription>
+            Please select a tenant from the header dropdown to view and manage roles for that tenant.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Roles</h1>
-        <Button onClick={() => setCreateOpen(true)}>Create Role</Button>
+        {isSystemUser() && !currentTenantId ? (
+          <Button disabled>Create Role</Button>
+        ) : (
+          <Button onClick={() => setCreateOpen(true)}>Create Role</Button>
+        )}
       </div>
 
       <div className="flex items-center gap-4">
