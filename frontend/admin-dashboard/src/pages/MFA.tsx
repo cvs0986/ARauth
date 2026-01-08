@@ -3,8 +3,8 @@
  */
 
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { mfaApi } from '@/services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { mfaApi, userApi } from '@/services/api';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert } from '@/components/ui/alert';
 import { Shield, CheckCircle, AlertCircle } from 'lucide-react';
+import { extractUserInfo } from '@/../../shared/utils/jwt-decoder';
 
 export function MFA() {
-  const { userId, tenantId } = useAuthStore();
+  const { tenantId, selectedTenantId, isSystemUser } = useAuthStore();
   const queryClient = useQueryClient();
   const [enrollStep, setEnrollStep] = useState<'start' | 'qr' | 'verify'>('start');
   const [verifyCode, setVerifyCode] = useState('');
@@ -25,6 +26,33 @@ export function MFA() {
     qr_code: string;
     recovery_codes: string[];
   } | null>(null);
+
+  // Get current user ID from JWT token
+  const getCurrentUserId = (): string | null => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return null;
+    try {
+      const userInfo = extractUserInfo(token);
+      return userInfo.userId || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const currentUserId = getCurrentUserId();
+  const currentTenantId = isSystemUser() ? selectedTenantId : tenantId;
+
+  // Fetch current user to check MFA status
+  const { data: currentUser, isLoading: userLoading, refetch: refetchUser } = useQuery({
+    queryKey: ['user', currentUserId, currentTenantId],
+    queryFn: async () => {
+      if (!currentUserId) return null;
+      return userApi.getById(currentUserId);
+    },
+    enabled: !!currentUserId,
+  });
+
+  const isMFAEnabled = currentUser?.mfa_enabled || false;
 
   const enrollMutation = useMutation({
     mutationFn: () => mfaApi.enroll(),
@@ -47,7 +75,10 @@ export function MFA() {
       setError(null);
       setSuccess('MFA enabled successfully!');
       setTimeout(() => setSuccess(null), 5000);
+      // Refetch user to update MFA status
+      refetchUser();
       queryClient.invalidateQueries({ queryKey: ['mfa'] });
+      queryClient.invalidateQueries({ queryKey: ['user', currentUserId] });
     },
     onError: (err: any) => {
       setError(err.response?.data?.message || err.message || 'Invalid verification code');
@@ -126,7 +157,27 @@ export function MFA() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {enrollStep === 'start' && (
+          {userLoading ? (
+            <div className="text-center py-4">Loading MFA status...</div>
+          ) : isMFAEnabled ? (
+            <div className="space-y-4">
+              <Alert className="bg-green-50 border-green-200 text-green-700">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                <div>
+                  <p className="font-semibold">MFA is Enabled</p>
+                  <p className="text-sm mt-1">
+                    Your account is protected with multi-factor authentication. You'll be required
+                    to enter a verification code from your authenticator app when logging in.
+                  </p>
+                </div>
+              </Alert>
+              <div className="pt-4 border-t">
+                <p className="text-sm text-gray-600 mb-4">
+                  If you need to disable MFA or set up a new authenticator device, please contact your administrator.
+                </p>
+              </div>
+            </div>
+          ) : enrollStep === 'start' ? (
             <div className="space-y-4">
               <p className="text-gray-600">
                 Multi-factor authentication (MFA) adds an extra layer of security by requiring
@@ -136,7 +187,7 @@ export function MFA() {
                 {enrollMutation.isPending ? 'Enrolling...' : 'Enable MFA'}
               </Button>
             </div>
-          )}
+          ) : null}
 
           {enrollStep === 'qr' && enrollData && (
             <div className="space-y-6">

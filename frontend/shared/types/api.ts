@@ -67,6 +67,7 @@ export interface User {
   first_name?: string;
   last_name?: string;
   status: 'active' | 'inactive' | 'locked';
+  mfa_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
