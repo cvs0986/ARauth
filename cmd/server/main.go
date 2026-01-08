@@ -109,6 +109,7 @@ func main() {
 	auditRepo := postgres.NewAuditRepository(db)
 	roleRepo := postgres.NewRoleRepository(db)
 	permissionRepo := postgres.NewPermissionRepository(db)
+	systemRoleRepo := postgres.NewSystemRoleRepository(db) // NEW: System role repository
 
 	// Initialize audit logger
 	auditLogger := audit.NewLogger(auditRepo)
@@ -145,7 +146,7 @@ func main() {
 	}
 
 	// Initialize claims builder
-	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo)
+	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo, systemRoleRepo)
 
 	// Initialize token lifetime resolver
 	lifetimeResolver := token.NewLifetimeResolver(&cfg.Security, tenantSettingsRepo)

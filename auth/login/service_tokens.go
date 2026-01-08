@@ -40,9 +40,10 @@ func (s *Service) issueDirectTokens(ctx context.Context, user *models.User, tena
 	}
 
 	// Store refresh token
+	// For SYSTEM users, tenantID is uuid.Nil (will be stored as NULL in DB)
 	refreshTokenRecord := &interfaces.RefreshToken{
 		UserID:     user.ID,
-		TenantID:   tenantID,
+		TenantID:   tenantID, // uuid.Nil for SYSTEM users
 		TokenHash:  refreshTokenHash,
 		ExpiresAt:  time.Now().Add(lifetimes.RefreshTokenTTL),
 		RememberMe: rememberMe,

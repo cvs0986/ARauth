@@ -72,15 +72,27 @@ type LoginResponse struct {
 
 // Login authenticates a user and returns tokens
 func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse, error) {
-	// Validate tenant ID is provided
-	if req.TenantID == uuid.Nil {
-		return nil, fmt.Errorf("tenant_id is required")
-	}
+	var user *models.User
+	var err error
 
-	// Get user by username (tenant-scoped)
-	user, err := s.userRepo.GetByUsername(ctx, req.Username, req.TenantID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid credentials")
+	// For SYSTEM users, try to get by email (no tenant required)
+	// First, try to get as SYSTEM user by email
+	systemUser, systemErr := s.userRepo.GetByEmailSystem(ctx, req.Username) // Try username as email for system users
+	if systemErr == nil && systemUser != nil && systemUser.PrincipalType == models.PrincipalTypeSystem {
+		user = systemUser
+		// SYSTEM users don't need tenant_id
+		req.TenantID = uuid.Nil
+	} else {
+		// For TENANT users, validate tenant ID is provided
+		if req.TenantID == uuid.Nil {
+			return nil, fmt.Errorf("tenant_id is required for tenant users")
+		}
+
+		// Get user by username (tenant-scoped)
+		user, err = s.userRepo.GetByUsername(ctx, req.Username, req.TenantID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid credentials")
+		}
 	}
 
 	// Check if user is active
@@ -140,7 +152,12 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 	}
 
 	// Direct token issuance (simplified flow)
-	return s.issueDirectTokens(ctx, user, req.TenantID, req.RememberMe)
+	// For SYSTEM users, tenantID is nil
+	var tenantID uuid.UUID
+	if user.TenantID != nil {
+		tenantID = *user.TenantID
+	}
+	return s.issueDirectTokens(ctx, user, tenantID, req.RememberMe)
 }
 
 // handleOAuth2Login handles OAuth2 login flow with Hydra

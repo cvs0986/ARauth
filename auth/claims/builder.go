@@ -2,6 +2,7 @@ package claims
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
@@ -10,15 +11,17 @@ import (
 
 // Builder builds JWT claims from user, roles, and permissions
 type Builder struct {
-	roleRepo       interfaces.RoleRepository
-	permissionRepo interfaces.PermissionRepository
+	roleRepo        interfaces.RoleRepository
+	permissionRepo  interfaces.PermissionRepository
+	systemRoleRepo  interfaces.SystemRoleRepository // NEW: For SYSTEM users
 }
 
 // NewBuilder creates a new claims builder
-func NewBuilder(roleRepo interfaces.RoleRepository, permissionRepo interfaces.PermissionRepository) *Builder {
+func NewBuilder(roleRepo interfaces.RoleRepository, permissionRepo interfaces.PermissionRepository, systemRoleRepo interfaces.SystemRoleRepository) *Builder {
 	return &Builder{
 		roleRepo:       roleRepo,
 		permissionRepo: permissionRepo,
+		systemRoleRepo: systemRoleRepo,
 	}
 }
 
@@ -33,29 +36,85 @@ type Claims struct {
 	NotBefore int64 `json:"nbf,omitempty"`
 
 	// Custom claims
-	TenantID   string   `json:"tenant_id"`
-	Email      string   `json:"email,omitempty"`
-	Username   string   `json:"username,omitempty"`
-	Roles      []string `json:"roles,omitempty"`
-	Permissions []string `json:"permissions,omitempty"`
-	Scope      string   `json:"scope,omitempty"` // Space-separated scopes
+	PrincipalType    string   `json:"principal_type"` // NEW: SYSTEM, TENANT, SERVICE
+	TenantID         string   `json:"tenant_id,omitempty"` // Optional for SYSTEM users
+	Email            string   `json:"email,omitempty"`
+	Username         string   `json:"username,omitempty"`
+	Roles            []string `json:"roles,omitempty"` // Tenant roles
+	Permissions      []string `json:"permissions,omitempty"` // Tenant permissions
+	SystemRoles      []string `json:"system_roles,omitempty"` // NEW: System roles
+	SystemPermissions []string `json:"system_permissions,omitempty"` // NEW: System permissions
+	Scope            string   `json:"scope,omitempty"` // Space-separated scopes
 }
 
 // BuildClaims builds claims for a user
 func (b *Builder) BuildClaims(ctx context.Context, user *models.User) (*Claims, error) {
 	claims := &Claims{
-		Subject:  user.ID.String(),
-		TenantID: user.TenantID.String(),
-		Email:    user.Email,
-		Username: user.Username,
-		Roles:    []string{},
-		Permissions: []string{},
+		Subject:       user.ID.String(),
+		PrincipalType: string(user.PrincipalType),
+		Email:         user.Email,
+		Username:      user.Username,
+		Roles:         []string{},
+		Permissions:   []string{},
+		SystemRoles:  []string{},
+		SystemPermissions: []string{},
 	}
 
+	// Handle tenant_id (nullable for SYSTEM users)
+	if user.TenantID != nil {
+		claims.TenantID = user.TenantID.String()
+	}
+
+	// For SYSTEM users: get system roles and permissions
+	if user.PrincipalType == models.PrincipalTypeSystem {
+		systemRoles, err := b.systemRoleRepo.GetUserSystemRoles(ctx, user.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get system roles: %w", err)
+		}
+
+		systemRoleNames := make([]string, 0, len(systemRoles))
+		systemPermissionMap := make(map[string]bool)
+
+		for _, role := range systemRoles {
+			systemRoleNames = append(systemRoleNames, role.Name)
+
+			// Get permissions for this system role
+			permissions, err := b.systemRoleRepo.GetRolePermissions(ctx, role.ID)
+			if err != nil {
+				continue
+			}
+
+			for _, perm := range permissions {
+				permissionKey := perm.Resource + ":" + perm.Action
+				systemPermissionMap[permissionKey] = true
+			}
+		}
+
+		claims.SystemRoles = systemRoleNames
+
+		// Convert system permission map to slice
+		systemPermissions := make([]string, 0, len(systemPermissionMap))
+		for perm := range systemPermissionMap {
+			systemPermissions = append(systemPermissions, perm)
+		}
+		claims.SystemPermissions = systemPermissions
+
+		// Build scope for SYSTEM users
+		scopeParts := make([]string, 0)
+		scopeParts = append(scopeParts, "system:*")
+		for _, role := range systemRoleNames {
+			scopeParts = append(scopeParts, "system_role:"+role)
+		}
+		claims.Scope = joinStrings(scopeParts, " ")
+
+		return claims, nil
+	}
+
+	// For TENANT users: get tenant roles and permissions
 	// Get user roles
 	roles, err := b.roleRepo.GetUserRoles(ctx, user.ID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get tenant roles: %w", err)
 	}
 
 	// Extract role names
@@ -87,8 +146,11 @@ func (b *Builder) BuildClaims(ctx context.Context, user *models.User) (*Claims, 
 	}
 	claims.Permissions = permissions
 
-	// Build scope string (space-separated)
+	// Build scope string for tenant users
 	scopeParts := make([]string, 0)
+	if user.TenantID != nil {
+		scopeParts = append(scopeParts, "tenant:"+user.TenantID.String())
+	}
 	for _, role := range roleNames {
 		scopeParts = append(scopeParts, "role:"+role)
 	}
