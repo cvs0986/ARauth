@@ -3,7 +3,7 @@
 This document tracks the implementation status of the ARauth Capability Model based on `feature_capibility.md`.
 
 **Last Updated**: 2025-01-27  
-**Overall Progress**: 30% (9/30 issues completed)
+**Overall Progress**: 43% (13/30 issues completed)
 
 ---
 
@@ -13,12 +13,12 @@ This document tracks the implementation status of the ARauth Capability Model ba
 |-------|------|--------|-----------|-------------|-------------|----------|
 | **Phase 1** | Database & Models | 5 | 5 | 0 | 0 | 100% |
 | **Phase 2** | Backend Core Logic | 4 | 4 | 0 | 0 | 100% |
-| **Phase 3** | API Endpoints | 4 | 0 | 0 | 4 | 0% |
+| **Phase 3** | API Endpoints | 4 | 4 | 0 | 0 | 100% |
 | **Phase 4** | Frontend Admin Dashboard | 7 | 0 | 0 | 7 | 0% |
 | **Phase 5** | Enforcement & Validation | 3 | 0 | 0 | 3 | 0% |
 | **Phase 6** | Testing & Documentation | 4 | 0 | 0 | 4 | 0% |
 | **Phase 7** | Migration & Deployment | 3 | 0 | 0 | 3 | 0% |
-| **Total** | | **30** | **9** | **0** | **21** | **30%** |
+| **Total** | | **30** | **13** | **0** | **17** | **43%** |
 
 ---
 
@@ -101,24 +101,47 @@ This document tracks the implementation status of the ARauth Capability Model ba
 
 ## Phase 3: API Endpoints
 
-**Status**: 🔴 Not Started  
-**Target Completion**: [TBD]  
+**Status**: 🟢 Completed  
+**Completed**: 2025-01-27  
 **Dependencies**: Phase 2 completed ✅
 
 ### Issues
 
 | # | Issue | Status | Assignee | Notes |
 |---|-------|--------|----------|-------|
-| 010 | System capability management endpoints | ⚪ Not Started | - | Depends on #006, #007 |
-| 011 | Tenant capability assignment endpoints | ⚪ Not Started | - | Depends on #006, #007 |
-| 012 | Tenant feature enablement endpoints | ⚪ Not Started | - | Depends on #006, #007 |
-| 013 | User capability state endpoints | ⚪ Not Started | - | Depends on #006, #007 |
+| 010 | System capability management endpoints | 🟢 Completed | - | ✅ All endpoints created |
+| 011 | Tenant capability assignment endpoints | 🟢 Completed | - | ✅ All endpoints created |
+| 012 | Tenant feature enablement endpoints | 🟢 Completed | - | ✅ All endpoints created |
+| 013 | User capability state endpoints | 🟢 Completed | - | ✅ All endpoints created |
 
 ### Dependencies
-- Phase 2 (Backend Core Logic)
+- Phase 2 (Backend Core Logic) ✅
 
 ### Blockers
-- Waiting on Phase 2
+- None
+
+### Completed Work
+- ✅ Created capability handler (`api/handlers/capability_handler.go`)
+- ✅ System capability management endpoints:
+  - `GET /system/capabilities` - List all system capabilities
+  - `GET /system/capabilities/:key` - Get specific capability
+  - `PUT /system/capabilities/:key` - Update system capability
+- ✅ Tenant capability assignment endpoints:
+  - `GET /system/tenants/:id/capabilities` - Get tenant capabilities
+  - `PUT /system/tenants/:id/capabilities/:key` - Assign capability
+  - `DELETE /system/tenants/:id/capabilities/:key` - Revoke capability
+  - `GET /system/tenants/:id/capabilities/evaluation` - Evaluate all capabilities
+- ✅ Tenant feature enablement endpoints:
+  - `GET /api/v1/tenant/features` - Get enabled features
+  - `PUT /api/v1/tenant/features/:key` - Enable feature
+  - `DELETE /api/v1/tenant/features/:key` - Disable feature
+- ✅ User capability state endpoints:
+  - `GET /api/v1/users/:id/capabilities` - Get user capabilities
+  - `GET /api/v1/users/:id/capabilities/:key` - Get specific capability state
+  - `POST /api/v1/users/:id/capabilities/:key/enroll` - Enroll user
+  - `DELETE /api/v1/users/:id/capabilities/:key` - Unenroll user
+- ✅ Added routes to `api/routes/routes.go`
+- ✅ Integrated capability handler in `cmd/server/main.go`
 
 ---
 
@@ -126,7 +149,7 @@ This document tracks the implementation status of the ARauth Capability Model ba
 
 **Status**: 🔴 Not Started  
 **Target Completion**: [TBD]  
-**Dependencies**: Phase 3 must be completed
+**Dependencies**: Phase 3 completed ✅
 
 ### Issues
 
@@ -144,7 +167,7 @@ This document tracks the implementation status of the ARauth Capability Model ba
 - Phase 3 (API Endpoints)
 
 ### Blockers
-- Waiting on Phase 3
+- None (Phase 3 completed, ready to start)
 
 ---
 
