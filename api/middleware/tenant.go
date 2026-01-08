@@ -90,8 +90,9 @@ func TenantMiddleware(tenantRepo interfaces.TenantRepository) gin.HandlerFunc {
 			}
 		}
 
-		// If tenant ID is still not found, return error for tenant-scoped endpoints
-		// Some endpoints (like tenant creation) don't require tenant context
+		// If tenant ID is still not found, check if user is SYSTEM user
+		// SYSTEM users can access tenant-scoped endpoints if they provide tenant context
+		// TENANT users always need tenant context
 		if tenantID == uuid.Nil {
 			// Check if this is a tenant management endpoint (allowed without tenant context)
 			path := c.Request.URL.Path
@@ -101,6 +102,20 @@ func TenantMiddleware(tenantRepo interfaces.TenantRepository) gin.HandlerFunc {
 				return
 			}
 
+			// Check if user is SYSTEM user (from JWT claims set by JWTAuthMiddleware)
+			principalType, exists := c.Get("principal_type")
+			if exists && principalType == "SYSTEM" {
+				// SYSTEM users can access tenant-scoped endpoints, but they need to provide tenant context
+				// If no tenant context is provided, return error asking for tenant selection
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error":   "tenant_required",
+					"message": "Tenant ID must be provided via X-Tenant-ID header for tenant-scoped operations. SYSTEM users must select a tenant context to access tenant-scoped resources.",
+				})
+				c.Abort()
+				return
+			}
+
+			// For TENANT users, tenant context is always required
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":   "tenant_required",
 				"message": "Tenant ID or domain must be provided via X-Tenant-ID, X-Tenant-Domain header, query parameter, or subdomain",
