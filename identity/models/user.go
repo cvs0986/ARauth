@@ -6,10 +6,20 @@ import (
 	"github.com/google/uuid"
 )
 
+// PrincipalType represents the type of principal
+type PrincipalType string
+
+const (
+	PrincipalTypeSystem PrincipalType = "SYSTEM"
+	PrincipalTypeTenant PrincipalType = "TENANT"
+	PrincipalTypeService PrincipalType = "SERVICE"
+)
+
 // User represents a user in the system
 type User struct {
 	ID              uuid.UUID       `json:"id" db:"id"`
-	TenantID        uuid.UUID       `json:"tenant_id" db:"tenant_id"`
+	TenantID        *uuid.UUID      `json:"tenant_id,omitempty" db:"tenant_id"` // Nullable for SYSTEM users
+	PrincipalType   PrincipalType   `json:"principal_type" db:"principal_type"` // NEW: SYSTEM, TENANT, SERVICE
 	Username        string           `json:"username" db:"username"`
 	Email           string           `json:"email" db:"email"`
 	FirstName       *string          `json:"first_name,omitempty" db:"first_name"`

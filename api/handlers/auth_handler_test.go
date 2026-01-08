@@ -8,9 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/arauth-identity/iam/auth/login"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/arauth-identity/iam/auth/login"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -119,4 +119,3 @@ func TestAuthHandler_Login_AuthenticationFailed(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	mockService.AssertExpectations(t)
 }
-
