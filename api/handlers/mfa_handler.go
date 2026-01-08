@@ -44,14 +44,29 @@ func NewMFAHandler(
 
 // Enroll handles POST /api/v1/mfa/enroll
 func (h *MFAHandler) Enroll(c *gin.Context) {
-	var req mfa.EnrollRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
-			"Request validation failed", middleware.FormatValidationErrors(err))
+	// Get user ID from JWT token claims (set by JWTAuthMiddleware)
+	claimsObj, exists := c.Get("user_claims")
+	if !exists {
+		middleware.RespondWithError(c, http.StatusUnauthorized, "unauthorized",
+			"User claims not found", nil)
+		c.Abort()
 		return
 	}
 
-	resp, err := h.mfaService.Enroll(c.Request.Context(), &req)
+	userClaims := claimsObj.(*claims.Claims)
+	userID, err := uuid.Parse(userClaims.Subject)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_user_id",
+			"Invalid user ID in token", nil)
+		return
+	}
+
+	// Create enroll request with user ID from token
+	req := &mfa.EnrollRequest{
+		UserID: userID,
+	}
+
+	resp, err := h.mfaService.Enroll(c.Request.Context(), req)
 	if err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "enrollment_failed",
 			err.Error(), nil)
