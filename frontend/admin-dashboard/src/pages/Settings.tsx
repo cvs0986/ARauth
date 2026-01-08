@@ -67,8 +67,12 @@ type TokenSettings = z.infer<typeof tokenSettingsSchema>;
 export function Settings() {
   const { isSystemUser, selectedTenantId, tenantId } = useAuthStore();
   const queryClient = useQueryClient();
-  // Initialize activeTab to 'security' (first available tab) instead of 'tenant'
-  const [activeTab, setActiveTab] = useState('security');
+  // Initialize activeTab based on user type: 'security' for SYSTEM, 'tenant' for TENANT
+  const [activeTab, setActiveTab] = useState(() => {
+    // Check localStorage for principal_type to determine initial tab
+    const storedPrincipalType = localStorage.getItem('principal_type');
+    return storedPrincipalType === 'SYSTEM' ? 'security' : 'tenant';
+  });
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -228,13 +232,18 @@ export function Settings() {
     }
   };
 
-  // Determine initial tab based on user type
+  // Ensure correct tab is selected based on user type
   useEffect(() => {
-    if (!isSystemUser()) {
-      // TENANT users should start on tenant settings
+    if (isSystemUser()) {
+      // SYSTEM users: default to 'security' if current tab doesn't exist
+      if (!['system', 'security', 'oauth', 'tenant'].includes(activeTab)) {
+        setActiveTab('security');
+      }
+    } else {
+      // TENANT users: only 'tenant' tab is available
       setActiveTab('tenant');
     }
-  }, [isSystemUser()]);
+  }, [isSystemUser(), activeTab]);
 
   // Update token form when tenant settings are loaded
   useEffect(() => {
