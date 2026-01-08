@@ -78,14 +78,40 @@ func (h *MFAHandler) Enroll(c *gin.Context) {
 
 // Verify handles POST /api/v1/mfa/verify
 func (h *MFAHandler) Verify(c *gin.Context) {
-	var req mfa.VerifyRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	// Get user ID from JWT token claims (set by JWTAuthMiddleware)
+	claimsObj, exists := c.Get("user_claims")
+	if !exists {
+		middleware.RespondWithError(c, http.StatusUnauthorized, "unauthorized",
+			"User claims not found", nil)
+		c.Abort()
+		return
+	}
+
+	userClaims := claimsObj.(*claims.Claims)
+	userID, err := uuid.Parse(userClaims.Subject)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_user_id",
+			"Invalid user ID in token", nil)
+		return
+	}
+
+	// Parse request body for TOTP code
+	var body struct {
+		Code string `json:"code" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
 		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
 			"Request validation failed", middleware.FormatValidationErrors(err))
 		return
 	}
 
-	valid, err := h.mfaService.Verify(c.Request.Context(), &req)
+	// Create verify request with user ID from token
+	req := &mfa.VerifyRequest{
+		UserID: userID,
+		Code:   body.Code,
+	}
+
+	valid, err := h.mfaService.Verify(c.Request.Context(), req)
 	if err != nil {
 		middleware.RespondWithError(c, http.StatusUnauthorized, "verification_failed",
 			err.Error(), nil)
