@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/authStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { Users, Building2, Shield, Key, TrendingUp, Activity, Globe, Server } from 'lucide-react';
+import { Users, Building2, Shield, Key, TrendingUp, Activity, Globe, Server, Info } from 'lucide-react';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -37,29 +37,85 @@ export function Dashboard() {
   // For TENANT users: show only their tenant's users
   const currentTenantId = isSystemUser() ? selectedTenantId : tenantId;
   
-  // For SYSTEM users: only fetch when a tenant is selected (tenant-scoped APIs require tenant context)
+  // For SYSTEM users: when "All Tenants" is selected (selectedTenantId === null), aggregate data
   // For TENANT users: always fetch (they have tenantId)
   const shouldFetchTenantData = isSystemUser() ? !!selectedTenantId : !!tenantId;
+  const shouldAggregateAllTenants = isSystemUser() && !selectedTenantId;
   
-  const { data: users, isLoading: usersLoading } = useQuery({
+  // Fetch all tenants for aggregation when "All Tenants" is selected
+  const { data: allTenantsForAggregation } = useQuery({
+    queryKey: ['system', 'tenants', 'all'],
+    queryFn: () => systemApi.tenants.list(),
+    enabled: shouldAggregateAllTenants,
+  });
+
+  // Aggregate users from all tenants when "All Tenants" is selected
+  const { data: aggregatedUsers, isLoading: usersLoading } = useQuery({
+    queryKey: ['users', 'all-tenants'],
+    queryFn: async () => {
+      if (!allTenantsForAggregation || allTenantsForAggregation.length === 0) return [];
+      const allUsers = await Promise.all(
+        allTenantsForAggregation.map((tenant) => userApi.list(tenant.id))
+      );
+      return allUsers.flat();
+    },
+    enabled: shouldAggregateAllTenants && !!allTenantsForAggregation,
+  });
+
+  // Aggregate roles from all tenants when "All Tenants" is selected
+  const { data: aggregatedRoles, isLoading: rolesLoading } = useQuery({
+    queryKey: ['roles', 'all-tenants'],
+    queryFn: async () => {
+      if (!allTenantsForAggregation || allTenantsForAggregation.length === 0) return [];
+      const allRoles = await Promise.all(
+        allTenantsForAggregation.map((tenant) => roleApi.list(tenant.id))
+      );
+      return allRoles.flat();
+    },
+    enabled: shouldAggregateAllTenants && !!allTenantsForAggregation,
+  });
+
+  // Aggregate permissions from all tenants when "All Tenants" is selected
+  const { data: aggregatedPermissions, isLoading: permissionsLoading } = useQuery({
+    queryKey: ['permissions', 'all-tenants'],
+    queryFn: async () => {
+      if (!allTenantsForAggregation || allTenantsForAggregation.length === 0) return [];
+      const allPermissions = await Promise.all(
+        allTenantsForAggregation.map((tenant) => permissionApi.list(tenant.id))
+      );
+      return allPermissions.flat();
+    },
+    enabled: shouldAggregateAllTenants && !!allTenantsForAggregation,
+  });
+
+  // Fetch single tenant data when a specific tenant is selected
+  const { data: users, isLoading: usersLoadingSingle } = useQuery({
     queryKey: ['users', currentTenantId],
     queryFn: () => userApi.list(currentTenantId || undefined),
-    enabled: shouldFetchTenantData,
+    enabled: shouldFetchTenantData && !shouldAggregateAllTenants,
   });
 
-  const { data: roles, isLoading: rolesLoading } = useQuery({
+  const { data: roles, isLoading: rolesLoadingSingle } = useQuery({
     queryKey: ['roles', currentTenantId],
     queryFn: () => roleApi.list(currentTenantId || undefined),
-    enabled: shouldFetchTenantData,
+    enabled: shouldFetchTenantData && !shouldAggregateAllTenants,
   });
 
-  const { data: permissions, isLoading: permissionsLoading } = useQuery({
+  const { data: permissions, isLoading: permissionsLoadingSingle } = useQuery({
     queryKey: ['permissions', currentTenantId],
     queryFn: () => permissionApi.list(currentTenantId || undefined),
-    enabled: shouldFetchTenantData,
+    enabled: shouldFetchTenantData && !shouldAggregateAllTenants,
   });
 
-  const isLoading = tenantsLoading || usersLoading || rolesLoading || permissionsLoading;
+  // Use aggregated data when "All Tenants" is selected, otherwise use single tenant data
+  const finalUsers = shouldAggregateAllTenants ? aggregatedUsers : users;
+  const finalRoles = shouldAggregateAllTenants ? aggregatedRoles : roles;
+  const finalPermissions = shouldAggregateAllTenants ? aggregatedPermissions : permissions;
+  const finalUsersLoading = shouldAggregateAllTenants ? usersLoading : usersLoadingSingle;
+  const finalRolesLoading = shouldAggregateAllTenants ? rolesLoading : rolesLoadingSingle;
+  const finalPermissionsLoading = shouldAggregateAllTenants ? permissionsLoading : permissionsLoadingSingle;
+
+  const isLoading = tenantsLoading || finalUsersLoading || finalRolesLoading || finalPermissionsLoading;
 
   // Calculate statistics - ensure data is always an array
   const stats = {
@@ -68,14 +124,14 @@ export function Dashboard() {
       active: Array.isArray(tenants) ? tenants.filter((t) => t.status === 'active').length : 0,
     },
     users: {
-      total: Array.isArray(users) ? users.length : 0,
-      active: Array.isArray(users) ? users.filter((u) => u.status === 'active').length : 0,
+      total: Array.isArray(finalUsers) ? finalUsers.length : 0,
+      active: Array.isArray(finalUsers) ? finalUsers.filter((u) => u.status === 'active').length : 0,
     },
     roles: {
-      total: Array.isArray(roles) ? roles.length : 0,
+      total: Array.isArray(finalRoles) ? finalRoles.length : 0,
     },
     permissions: {
-      total: Array.isArray(permissions) ? permissions.length : 0,
+      total: Array.isArray(finalPermissions) ? finalPermissions.length : 0,
     },
   };
 

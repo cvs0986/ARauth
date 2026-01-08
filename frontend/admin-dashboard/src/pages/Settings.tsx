@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert } from '@/components/ui/alert';
 import { Shield, Key, Building2, Server } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { systemApi } from '@/services/api';
+import { systemApi, tenantApi } from '@/services/api';
 
 // Settings schemas
 const securitySettingsSchema = z.object({
@@ -80,14 +80,23 @@ export function Settings() {
   // Get current tenant ID (selected tenant for SYSTEM users, own tenant for TENANT users)
   const currentTenantId = isSystemUser() ? selectedTenantId : tenantId;
 
-  // Fetch tenant settings if tenant is selected/available
+  // Fetch tenant settings
+  // For SYSTEM users: fetch settings for selected tenant
+  // For TENANT users: fetch their own tenant settings
   const { data: tenantSettings, isLoading: settingsLoading } = useQuery({
-    queryKey: ['tenant-settings', currentTenantId],
-    queryFn: () => {
-      if (!currentTenantId) return null;
-      return systemApi.tenants.getSettings(currentTenantId);
+    queryKey: ['tenant-settings', currentTenantId, isSystemUser()],
+    queryFn: async () => {
+      if (isSystemUser()) {
+        // SYSTEM users: fetch settings for selected tenant
+        if (!currentTenantId) return null;
+        return systemApi.tenants.getSettings(currentTenantId);
+      } else {
+        // TENANT users: fetch their own tenant settings
+        if (!tenantId) return null;
+        return tenantApi.getSettings();
+      }
     },
-    enabled: !!currentTenantId && isSystemUser(), // Only fetch for SYSTEM users with selected tenant
+    enabled: (isSystemUser() ? !!currentTenantId : !!tenantId), // Enable if tenant context is available
   });
 
   // Security Settings Form
@@ -183,9 +192,35 @@ export function Settings() {
     setSuccess(null);
 
     try {
-      // TODO: Implement API call to save security settings
-      console.log('Security settings:', data);
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
+      // Prepare request payload
+      const payload = {
+        min_password_length: data.minPasswordLength,
+        require_uppercase: data.requireUppercase,
+        require_lowercase: data.requireLowercase,
+        require_numbers: data.requireNumbers,
+        require_special_chars: data.requireSpecialChars,
+        password_expiry_days: data.passwordExpiryDays ?? null,
+        mfa_required: data.mfaRequired,
+        rate_limit_requests: data.rateLimitRequests,
+        rate_limit_window_seconds: data.rateLimitWindow,
+      };
+
+      if (isSystemUser()) {
+        // SYSTEM users: update settings for selected tenant
+        if (!currentTenantId) {
+          throw new Error('No tenant selected');
+        }
+        await systemApi.tenants.updateSettings(currentTenantId, payload);
+      } else {
+        // TENANT users: update their own tenant settings
+        if (!tenantId) {
+          throw new Error('No tenant context available');
+        }
+        await tenantApi.updateSettings(payload);
+      }
+
+      // Invalidate query to refetch updated settings
+      queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
       setSuccess('Security settings saved successfully');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
@@ -335,9 +370,8 @@ export function Settings() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Security Settings Tab - Only for SYSTEM users */}
-        {isSystemUser() && (
-          <TabsContent value="security">
+        {/* Security Settings Tab - Available for both SYSTEM and TENANT users */}
+        <TabsContent value="security">
           <Card>
             <CardHeader>
               <CardTitle>Security Settings</CardTitle>
@@ -476,7 +510,6 @@ export function Settings() {
             </CardContent>
           </Card>
         </TabsContent>
-        )}
 
         {/* OAuth2/OIDC Settings Tab - Only for SYSTEM users */}
         {isSystemUser() && (

@@ -84,6 +84,17 @@ export const tenantApi = {
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(API_ENDPOINTS.TENANTS.BY_ID(id));
   },
+  
+  // Tenant Settings API (for TENANT users to access their own settings)
+  getSettings: async (): Promise<any> => {
+    const response = await apiClient.get('/api/v1/tenant/settings');
+    return response.data;
+  },
+  
+  updateSettings: async (data: any): Promise<any> => {
+    const response = await apiClient.put('/api/v1/tenant/settings', data);
+    return response.data;
+  },
 };
 
 // System API (for SYSTEM users only)
