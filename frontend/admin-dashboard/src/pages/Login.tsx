@@ -27,7 +27,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export function Login() {
   const navigate = useNavigate();
-  const { setTokens, setTenantId } = useAuthStore();
+  const { setAuth } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -58,13 +58,19 @@ export function Login() {
         remember_me: data.rememberMe || false,
       });
 
-      // Store tokens
-      setTokens(response.access_token, response.refresh_token);
-      
-      // Store tenant ID if provided
-      if (data.tenantId) {
-        setTenantId(data.tenantId);
-      }
+      // Extract user info from JWT token
+      const { extractUserInfo } = await import('@/../../shared/utils/jwt-decoder');
+      const userInfo = extractUserInfo(response.access_token);
+
+      // Store auth data (including principal_type and permissions)
+      setAuth({
+        accessToken: response.access_token,
+        refreshToken: response.refresh_token,
+        tenantId: userInfo.tenantId || data.tenantId || null,
+        principalType: userInfo.principalType || 'TENANT', // Default to TENANT if not specified
+        systemPermissions: userInfo.systemPermissions,
+        permissions: userInfo.permissions,
+      });
 
       // Redirect to dashboard
       navigate('/');

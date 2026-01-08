@@ -86,6 +86,45 @@ export const tenantApi = {
   },
 };
 
+// System API (for SYSTEM users only)
+export const systemApi = {
+  tenants: {
+    list: async (): Promise<Tenant[]> => {
+      const response = await apiClient.get<{ tenants: Tenant[]; page: number; page_size: number }>('/system/tenants');
+      return response.data.tenants || [];
+    },
+    
+    getById: async (id: string): Promise<Tenant> => {
+      const response = await apiClient.get<Tenant>(`/system/tenants/${id}`);
+      return response.data;
+    },
+    
+    create: async (data: CreateTenantRequest): Promise<Tenant> => {
+      const response = await apiClient.post<Tenant>('/system/tenants', data);
+      return response.data;
+    },
+    
+    update: async (id: string, data: Partial<CreateTenantRequest>): Promise<Tenant> => {
+      const response = await apiClient.put<Tenant>(`/system/tenants/${id}`, data);
+      return response.data;
+    },
+    
+    delete: async (id: string): Promise<void> => {
+      await apiClient.delete(`/system/tenants/${id}`);
+    },
+    
+    suspend: async (id: string): Promise<Tenant> => {
+      const response = await apiClient.post<Tenant>(`/system/tenants/${id}/suspend`, {});
+      return response.data;
+    },
+    
+    resume: async (id: string): Promise<Tenant> => {
+      const response = await apiClient.post<Tenant>(`/system/tenants/${id}/resume`, {});
+      return response.data;
+    },
+  },
+};
+
 // User API
 export const userApi = {
   list: async (): Promise<User[]> => {
