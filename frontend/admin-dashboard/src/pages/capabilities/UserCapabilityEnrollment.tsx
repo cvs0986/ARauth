@@ -57,7 +57,7 @@ export function UserCapabilityEnrollment() {
 
   // Get available capabilities (enabled by tenant but not enrolled by user)
   const availableCapabilities = evaluations?.filter(
-    (eval) => eval.tenant_enabled && !eval.user_enrolled
+    (evaluation) => evaluation.tenant_enabled && !evaluation.user_enrolled
   ) || [];
 
   const filteredUsers = users?.filter((user) =>

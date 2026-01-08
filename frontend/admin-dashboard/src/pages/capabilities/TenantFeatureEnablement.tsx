@@ -49,7 +49,7 @@ export function TenantFeatureEnablement() {
 
   // Get available capabilities (allowed but not enabled)
   const availableCapabilities = evaluations?.filter(
-    (eval) => eval.tenant_allowed && !eval.tenant_enabled
+    (evaluation) => evaluation.tenant_allowed && !evaluation.tenant_enabled
   ) || [];
 
   // Filter enabled features
