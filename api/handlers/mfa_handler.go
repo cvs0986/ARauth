@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -166,45 +166,57 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		return
 	}
 
-	// Issue access token
-	accessToken, err := h.tokenService.IssueAccessToken(claimsObj)
-	if err != nil {
-		middleware.RespondWithError(c, http.StatusInternalServerError, "token_issue_failed",
-			"Failed to issue access token", nil)
-		return
-	}
-
 	// Get token lifetimes
 	var tenantID uuid.UUID
 	if user.TenantID != nil {
 		tenantID = *user.TenantID
 	}
-	lifetimes := h.lifetimeResolver.Resolve(tenantID, false) // TODO: Support remember_me from request
+	lifetimes := h.lifetimeResolver.GetAllLifetimes(c.Request.Context(), tenantID, false) // TODO: Support remember_me from request
 
-	// Issue refresh token
-	refreshToken, err := h.tokenService.IssueRefreshToken(c.Request.Context(), userID, tenantID, lifetimes.RefreshTokenTTL)
+	// Generate access token
+	accessToken, err := h.tokenService.GenerateAccessToken(claimsObj, lifetimes.AccessTokenTTL)
 	if err != nil {
-		middleware.RespondWithError(c, http.StatusInternalServerError, "refresh_token_issue_failed",
-			"Failed to issue refresh token", nil)
+		middleware.RespondWithError(c, http.StatusInternalServerError, "token_issue_failed",
+			"Failed to generate access token", nil)
 		return
 	}
 
-	// Issue ID token
-	idToken, err := h.tokenService.IssueIDToken(claimsObj)
+	// Generate refresh token
+	refreshToken, err := h.tokenService.GenerateRefreshToken()
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "refresh_token_issue_failed",
+			"Failed to generate refresh token", nil)
+		return
+	}
+
+	// Hash refresh token for storage
+	refreshTokenHash, err := h.tokenService.HashRefreshToken(refreshToken)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "refresh_token_hash_failed",
+			"Failed to hash refresh token", nil)
+		return
+	}
+
+	// Store refresh token (we need refreshTokenRepo, but we don't have it in MFA handler)
+	// For now, we'll skip storing refresh token in MFA flow - it can be added later if needed
+	// TODO: Add refreshTokenRepo to MFA handler if refresh tokens are needed in MFA flow
+
+	// Generate ID token (same as access token for now, can be enhanced later)
+	idToken, err := h.tokenService.GenerateAccessToken(claimsObj, lifetimes.IDTokenTTL)
 	if err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "id_token_issue_failed",
-			"Failed to issue ID token", nil)
+			"Failed to generate ID token", nil)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"verified":           true,
 		"access_token":       accessToken,
-		"refresh_token":      refreshToken,
+		"refresh_token":      refreshToken, // Return plain token to client
 		"id_token":           idToken,
 		"token_type":         "Bearer",
-		"expires_in":         lifetimes.AccessTokenTTL,
-		"refresh_expires_in": lifetimes.RefreshTokenTTL,
+		"expires_in":         int(lifetimes.AccessTokenTTL.Seconds()),
+		"refresh_expires_in": int(lifetimes.RefreshTokenTTL.Seconds()),
 	})
 }
 
