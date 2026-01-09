@@ -19,12 +19,14 @@ type ServiceInterface interface {
 	// System → Tenant level
 	IsCapabilityAllowedForTenant(ctx context.Context, tenantID uuid.UUID, capabilityKey string) (bool, error)
 	GetAllowedCapabilitiesForTenant(ctx context.Context, tenantID uuid.UUID) (map[string]bool, error)
+	GetTenantCapabilities(ctx context.Context, tenantID uuid.UUID) ([]*models.TenantCapability, error)
 	SetTenantCapability(ctx context.Context, tenantID uuid.UUID, capabilityKey string, enabled bool, value *json.RawMessage, configuredBy uuid.UUID) error
 	DeleteTenantCapability(ctx context.Context, tenantID uuid.UUID, capabilityKey string) error
 
 	// Tenant level
 	IsFeatureEnabledByTenant(ctx context.Context, tenantID uuid.UUID, featureKey string) (bool, error)
 	GetEnabledFeaturesForTenant(ctx context.Context, tenantID uuid.UUID) (map[string]bool, error)
+	GetTenantFeatureEnablements(ctx context.Context, tenantID uuid.UUID) ([]*models.TenantFeatureEnablement, error)
 	EnableFeatureForTenant(ctx context.Context, tenantID uuid.UUID, featureKey string, config *json.RawMessage, enabledBy uuid.UUID) error
 	DisableFeatureForTenant(ctx context.Context, tenantID uuid.UUID, featureKey string) error
 

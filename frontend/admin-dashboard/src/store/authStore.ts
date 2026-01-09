@@ -14,6 +14,10 @@ interface AuthState {
   principalType: PrincipalType | null;
   systemPermissions: string[];
   permissions: string[];
+  systemRoles: string[]; // System roles from JWT
+  username: string | null; // Username from JWT
+  email: string | null; // Email from JWT
+  userId: string | null; // User ID from JWT
   isAuthenticated: boolean;
   selectedTenantId: string | null; // For SYSTEM users to select tenant context
   
@@ -24,6 +28,10 @@ interface AuthState {
     principalType: PrincipalType;
     systemPermissions?: string[];
     permissions?: string[];
+    systemRoles?: string[];
+    username?: string;
+    email?: string;
+    userId?: string;
   }) => void;
   setTokens: (accessToken: string, refreshToken?: string) => void;
   setTenantId: (tenantId: string) => void;
@@ -50,6 +58,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   principalType: getStoredPrincipalType(),
   systemPermissions: JSON.parse(localStorage.getItem('system_permissions') || '[]'),
   permissions: JSON.parse(localStorage.getItem('permissions') || '[]'),
+  systemRoles: JSON.parse(localStorage.getItem('system_roles') || '[]'),
+  username: localStorage.getItem('username'),
+  email: localStorage.getItem('email'),
+  userId: localStorage.getItem('user_id'),
   isAuthenticated: !!localStorage.getItem('access_token'),
   selectedTenantId: localStorage.getItem('selected_tenant_id'),
   
@@ -61,6 +73,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       principalType: data.principalType,
       systemPermissions: data.systemPermissions || [],
       permissions: data.permissions || [],
+      systemRoles: data.systemRoles || [],
+      username: data.username || null,
+      email: data.email || null,
+      userId: data.userId || null,
       isAuthenticated: !!data.accessToken,
     });
     
@@ -75,6 +91,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.setItem('principal_type', data.principalType);
     localStorage.setItem('system_permissions', JSON.stringify(data.systemPermissions || []));
     localStorage.setItem('permissions', JSON.stringify(data.permissions || []));
+    localStorage.setItem('system_roles', JSON.stringify(data.systemRoles || []));
+    if (data.username) {
+      localStorage.setItem('username', data.username);
+    }
+    if (data.email) {
+      localStorage.setItem('email', data.email);
+    }
+    if (data.userId) {
+      localStorage.setItem('user_id', data.userId);
+    }
   },
   
   setTokens: (accessToken, refreshToken) => {
@@ -111,6 +137,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       principalType: null,
       systemPermissions: [],
       permissions: [],
+      systemRoles: [],
+      username: null,
+      email: null,
+      userId: null,
       isAuthenticated: false,
       selectedTenantId: null,
     });
@@ -120,6 +150,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem('principal_type');
     localStorage.removeItem('system_permissions');
     localStorage.removeItem('permissions');
+    localStorage.removeItem('system_roles');
+    localStorage.removeItem('username');
+    localStorage.removeItem('email');
+    localStorage.removeItem('user_id');
     localStorage.removeItem('selected_tenant_id');
   },
   
@@ -154,4 +188,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return tenantId; // TENANT users are locked to their tenant
   },
 }));
+
+// Listen to custom events from API client for token updates and logout
+if (typeof window !== 'undefined') {
+  // Listen for token refresh events
+  window.addEventListener('auth:tokens-updated', ((event: CustomEvent<{ accessToken: string; refreshToken?: string }>) => {
+    const { accessToken, refreshToken } = event.detail;
+    useAuthStore.getState().setTokens(accessToken, refreshToken);
+  }) as EventListener);
+
+  // Listen for logout events
+  window.addEventListener('auth:logout', () => {
+    useAuthStore.getState().clearAuth();
+  });
+}
 

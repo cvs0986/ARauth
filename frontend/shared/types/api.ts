@@ -58,6 +58,50 @@ export interface CreateTenantRequest {
   status?: 'active' | 'inactive';
 }
 
+// Tenant Settings types
+export interface TenantSettings {
+  id?: string;
+  tenant_id: string;
+  access_token_ttl_minutes: number;
+  refresh_token_ttl_days: number;
+  id_token_ttl_minutes: number;
+  remember_me_enabled: boolean;
+  remember_me_refresh_token_ttl_days: number;
+  remember_me_access_token_ttl_minutes: number;
+  token_rotation_enabled: boolean;
+  require_mfa_for_extended_sessions: boolean;
+  // Security Settings
+  min_password_length: number;
+  require_uppercase: boolean;
+  require_lowercase: boolean;
+  require_numbers: boolean;
+  require_special_chars: boolean;
+  password_expiry_days?: number | null;
+  mfa_required: boolean;
+  rate_limit_requests: number;
+  rate_limit_window_seconds: number;
+}
+
+export interface UpdateTenantSettingsRequest {
+  access_token_ttl_minutes?: number;
+  refresh_token_ttl_days?: number;
+  id_token_ttl_minutes?: number;
+  remember_me_enabled?: boolean;
+  remember_me_refresh_token_ttl_days?: number;
+  remember_me_access_token_ttl_minutes?: number;
+  token_rotation_enabled?: boolean;
+  require_mfa_for_extended_sessions?: boolean;
+  min_password_length?: number;
+  require_uppercase?: boolean;
+  require_lowercase?: boolean;
+  require_numbers?: boolean;
+  require_special_chars?: boolean;
+  password_expiry_days?: number | null;
+  mfa_required?: boolean;
+  rate_limit_requests?: number;
+  rate_limit_window_seconds?: number;
+}
+
 // User types
 export interface User {
   id: string;
@@ -199,6 +243,9 @@ export interface CapabilityEvaluation {
   tenant_allowed: boolean;
   tenant_enabled: boolean;
   user_enrolled: boolean;
+  system_value?: Record<string, unknown>;
+  tenant_value?: Record<string, unknown>;
+  tenant_configuration?: Record<string, unknown>;
 }
 
 export interface UpdateSystemCapabilityRequest {

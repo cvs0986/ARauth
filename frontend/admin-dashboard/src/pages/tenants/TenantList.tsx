@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CreateTenantDialog } from './CreateTenantDialog';
 import { EditTenantDialog } from './EditTenantDialog';
 import { DeleteTenantDialog } from './DeleteTenantDialog';
@@ -23,6 +24,7 @@ import type { Tenant } from '@shared/types/api';
 
 export function TenantList() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTenant, setEditTenant] = useState<Tenant | null>(null);
   const [deleteTenant, setDeleteTenant] = useState<Tenant | null>(null);
@@ -130,8 +132,14 @@ export function TenantList() {
           </TableHeader>
           <TableBody>
             {paginatedTenants.map((tenant) => (
-              <TableRow key={tenant.id}>
-                <TableCell className="font-medium">{tenant.name}</TableCell>
+              <TableRow 
+                key={tenant.id}
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => navigate(`/tenants/${tenant.id}`)}
+              >
+                <TableCell className="font-medium text-primary-600 hover:text-primary-700">
+                  {tenant.name}
+                </TableCell>
                 <TableCell>{tenant.domain}</TableCell>
                 <TableCell>
                   <span
@@ -148,18 +156,24 @@ export function TenantList() {
                   {new Date(tenant.created_at).toLocaleDateString()}
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setEditTenant(tenant)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditTenant(tenant);
+                      }}
                     >
                       Edit
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => setDeleteTenant(tenant)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTenant(tenant);
+                      }}
                     >
                       Delete
                     </Button>
@@ -204,7 +218,11 @@ export function TenantList() {
         <EditTenantDialog
           tenant={editTenant}
           open={!!editTenant}
-          onOpenChange={(open) => !open && setEditTenant(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditTenant(null);
+            }
+          }}
         />
       )}
       {deleteTenant && (

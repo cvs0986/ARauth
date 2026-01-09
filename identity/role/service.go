@@ -46,6 +46,15 @@ func (s *Service) Create(ctx context.Context, req *CreateRoleRequest) (*models.R
 		return nil, fmt.Errorf("tenant_id is required")
 	}
 
+	// CRITICAL SECURITY: Enforce hard separation between system and tenant roles
+	// System roles must have tenant_id = NULL, tenant roles must have tenant_id != NULL
+	// This prevents catastrophic privilege bugs
+	if req.IsSystem {
+		// System roles should not be created via tenant API
+		// Only predefined system roles exist
+		return nil, fmt.Errorf("system roles cannot be created via tenant API. System roles are predefined and immutable")
+	}
+
 	// Normalize name
 	name := strings.TrimSpace(req.Name)
 	if len(name) < 3 {
@@ -64,7 +73,7 @@ func (s *Service) Create(ctx context.Context, req *CreateRoleRequest) (*models.R
 		TenantID:    req.TenantID,
 		Name:        name,
 		Description: req.Description,
-		IsSystem:    req.IsSystem,
+		IsSystem:    false, // Tenant-created roles are never system roles
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
@@ -92,6 +101,11 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, req *UpdateRoleReque
 	role, err := s.roleRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("role not found: %w", err)
+	}
+
+	// Prevent modification of system roles (predefined roles)
+	if role.IsSystem {
+		return nil, fmt.Errorf("cannot modify system role: system roles are immutable")
 	}
 
 	// Update fields
@@ -125,6 +139,17 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, req *UpdateRoleReque
 
 // Delete deletes a role
 func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
+	// Get role to check if it's a system role
+	role, err := s.roleRepo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("role not found: %w", err)
+	}
+
+	// Prevent deletion of system roles (predefined roles)
+	if role.IsSystem {
+		return fmt.Errorf("cannot delete system role: system roles are protected and cannot be deleted")
+	}
+
 	return s.roleRepo.Delete(ctx, id)
 }
 

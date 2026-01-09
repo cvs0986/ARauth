@@ -38,6 +38,12 @@ type UserRepository interface {
 
 	// Count returns the total count of users matching filters
 	Count(ctx context.Context, tenantID uuid.UUID, filters *UserFilters) (int, error)
+
+	// ListSystem retrieves a list of system users (principal_type = 'SYSTEM') with filters
+	ListSystem(ctx context.Context, filters *UserFilters) ([]*models.User, error)
+
+	// CountSystem returns the total count of system users matching filters
+	CountSystem(ctx context.Context, filters *UserFilters) (int, error)
 }
 
 // UserFilters represents filters for user queries

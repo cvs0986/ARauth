@@ -142,6 +142,23 @@ func (s *Service) Enroll(ctx context.Context, req *EnrollRequest) (*EnrollRespon
 	}, nil
 }
 
+// EnrollForLogin enrolls a user in MFA during login using a challenge session for security
+func (s *Service) EnrollForLogin(ctx context.Context, sessionID string) (*EnrollResponse, error) {
+	// Verify session exists and is valid
+	session, err := s.sessionManager.VerifySession(ctx, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid or expired session: %w", err)
+	}
+
+	// Use the user ID from the session
+	req := &EnrollRequest{
+		UserID: session.UserID,
+	}
+
+	// Call the regular Enroll method
+	return s.Enroll(ctx, req)
+}
+
 // Verify verifies a TOTP code or recovery code
 // This method also enables MFA after first successful verification
 func (s *Service) Verify(ctx context.Context, req *VerifyRequest) (bool, error) {

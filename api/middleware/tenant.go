@@ -159,6 +159,32 @@ func TenantMiddleware(tenantRepo interfaces.TenantRepository) gin.HandlerFunc {
 				return
 			}
 
+			// Check if this is a user endpoint - system users can be accessed without tenant context
+			// The handler will determine if it's a system user or tenant user
+			if strings.HasPrefix(path, "/api/v1/users/") {
+				principalType, exists := c.Get("principal_type")
+				if exists && principalType == "SYSTEM" {
+					// SYSTEM users can access user endpoints without tenant context
+					// The handler will check if it's a system user or tenant user
+					c.Next()
+					return
+				}
+			}
+
+			// Check if this is a role assignment endpoint - system role assignment doesn't require tenant
+			// The handler will check if it's a system role and handle accordingly
+			if strings.Contains(path, "/users/") && strings.Contains(path, "/roles/") && c.Request.Method == "POST" {
+				// Allow SYSTEM users to assign roles without tenant context
+				// The handler will determine if it's a system role or tenant role
+				principalType, exists := c.Get("principal_type")
+				if exists && principalType == "SYSTEM" {
+					// SYSTEM users can assign system roles without tenant context
+					// The handler will check if it's a system role
+					c.Next()
+					return
+				}
+			}
+
 			// Check if user is SYSTEM user (from JWT claims set by JWTAuthMiddleware)
 			principalType, exists := c.Get("principal_type")
 			if exists && principalType == "SYSTEM" {

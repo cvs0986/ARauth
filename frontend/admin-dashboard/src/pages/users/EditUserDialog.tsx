@@ -57,7 +57,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && open) {
       reset({
         email: user.email,
         first_name: user.first_name,
@@ -65,12 +65,14 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
         status: user.status,
       });
     }
-  }, [user, reset]);
+  }, [user, open, reset]);
 
   const mutation = useMutation({
     mutationFn: (data: EditUserFormData) => userApi.update(user.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['system', 'users'] });
       setError(null);
       onOpenChange(false);
     },

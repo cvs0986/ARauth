@@ -217,3 +217,5 @@ func (v *ValidationService) ValidateScopeNamespace(ctx context.Context, tenantID
 	return nil
 }
 
+
+

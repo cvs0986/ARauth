@@ -19,6 +19,8 @@ import { Shield, Key, Building2, Server, Settings as SettingsIcon } from 'lucide
 import { useAuthStore } from '@/store/authStore';
 import { systemApi, tenantApi, systemCapabilityApi, tenantCapabilityApi, tenantFeatureApi } from '@/services/api';
 import { Link } from 'react-router-dom';
+import { formatCapabilityName, getCapabilityDescription } from '@/utils/capabilityNames';
+import { Switch } from '@/components/ui/switch';
 
 // Settings schemas
 const securitySettingsSchema = z.object({
@@ -69,6 +71,7 @@ type TokenSettings = z.infer<typeof tokenSettingsSchema>;
 // Capabilities Settings Tab Component
 function CapabilitiesSettingsTab({ isSystemUser, currentTenantId }: { isSystemUser: boolean; currentTenantId: string | null }) {
   const { tenantId } = useAuthStore();
+  const queryClient = useQueryClient();
 
   // For SYSTEM users: show system capabilities
   const { data: systemCapabilities } = useQuery({
@@ -91,6 +94,15 @@ function CapabilitiesSettingsTab({ isSystemUser, currentTenantId }: { isSystemUs
     enabled: !isSystemUser && !!tenantId,
   });
 
+  // Toggle system capability mutation
+  const toggleSystemCapability = useMutation({
+    mutationFn: ({ key, enabled }: { key: string; enabled: boolean }) =>
+      systemCapabilityApi.update(key, { enabled }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['system', 'capabilities'] });
+    },
+  });
+
   if (isSystemUser) {
     return (
       <div className="space-y-4">
@@ -102,17 +114,52 @@ function CapabilitiesSettingsTab({ isSystemUser, currentTenantId }: { isSystemUs
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {systemCapabilities?.map((cap) => (
-                <div key={cap.capability_key} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <div className="font-mono font-medium">{cap.capability_key}</div>
-                    <div className="text-sm text-gray-500">{cap.description || 'No description'}</div>
-                  </div>
-                  <Badge variant={cap.enabled ? 'default' : 'secondary'}>
-                    {cap.enabled ? 'Enabled' : 'Disabled'}
-                  </Badge>
-                </div>
+                <Card key={cap.capability_key} className={`transition-all ${cap.enabled ? 'border-green-200 bg-green-50/50' : ''}`}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-base font-semibold mb-1">
+                          {formatCapabilityName(cap.capability_key)}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-3">
+                          {getCapabilityDescription(cap.capability_key, cap.description)}
+                        </p>
+                        {/* Toggle Section */}
+                        <div className="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-gray-200 shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <Label 
+                              htmlFor={`toggle-${cap.capability_key}`} 
+                              className="text-sm font-semibold cursor-pointer flex items-center gap-2"
+                            >
+                              <span className={cap.enabled ? 'text-green-700 font-bold' : 'text-gray-700'}>
+                                {cap.enabled ? '✓ Enabled' : '○ Disabled'}
+                              </span>
+                            </Label>
+                          </div>
+                          <Switch
+                            id={`toggle-${cap.capability_key}`}
+                            checked={cap.enabled}
+                            disabled={toggleSystemCapability.isPending}
+                            onCheckedChange={(enabled) => {
+                              toggleSystemCapability.mutate({ key: cap.capability_key, enabled });
+                            }}
+                            className="h-7 w-14 data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 shadow-sm [&>span]:h-6 [&>span]:w-6 [&>span]:bg-white [&>span]:shadow-lg [&>span]:border [&>span]:border-gray-200 [&>span]:data-[state=checked]:translate-x-7 [&>span]:data-[state=unchecked]:translate-x-0.5"
+                          />
+                        </div>
+                        {cap.default_value && Object.keys(cap.default_value).length > 0 && (
+                          <div className="mt-3 pt-3 border-t">
+                            <p className="text-xs font-medium text-gray-700 mb-1">System default available:</p>
+                            <pre className="text-xs bg-blue-50 p-2 rounded overflow-x-auto max-h-24 border border-blue-200">
+                              {JSON.stringify(cap.default_value, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
               <div className="pt-2">
                 <Button variant="outline" asChild>
@@ -132,17 +179,36 @@ function CapabilitiesSettingsTab({ isSystemUser, currentTenantId }: { isSystemUs
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {tenantCapabilities && tenantCapabilities.length > 0 ? (
                   tenantCapabilities.map((cap) => (
-                    <div key={cap.capability_key} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <div className="font-mono font-medium">{cap.capability_key}</div>
-                      </div>
-                      <Badge variant={cap.enabled ? 'default' : 'secondary'}>
-                        {cap.enabled ? 'Enabled' : 'Disabled'}
-                      </Badge>
-                    </div>
+                    <Card key={cap.capability_key} className={`transition-all ${cap.enabled ? 'border-green-200 bg-green-50/50' : ''}`}>
+                      <CardContent className="pt-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-base font-semibold mb-1">
+                              {formatCapabilityName(cap.capability_key)}
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-3">
+                              {getCapabilityDescription(cap.capability_key)}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={cap.enabled ? 'default' : 'secondary'}>
+                                {cap.enabled ? 'Enabled' : 'Disabled'}
+                              </Badge>
+                            </div>
+                            {cap.value && Object.keys(cap.value).length > 0 && (
+                              <div className="mt-3 pt-3 border-t">
+                                <p className="text-xs font-medium text-gray-700 mb-1">Custom value configured:</p>
+                                <pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto max-h-24">
+                                  {JSON.stringify(cap.value, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))
                 ) : (
                   <p className="text-sm text-gray-500">No capabilities assigned</p>
@@ -170,20 +236,41 @@ function CapabilitiesSettingsTab({ isSystemUser, currentTenantId }: { isSystemUs
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {tenantFeatures && tenantFeatures.length > 0 ? (
             tenantFeatures.map((feature) => (
-              <div key={feature.capability_key} className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <div className="font-mono font-medium">{feature.capability_key}</div>
-                  <div className="text-sm text-gray-500">
-                    Enabled {feature.enabled_at ? new Date(feature.enabled_at).toLocaleDateString() : ''}
+              <Card key={feature.capability_key} className={`transition-all ${feature.enabled ? 'border-green-200 bg-green-50/50' : ''}`}>
+                <CardContent className="pt-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-base font-semibold mb-1">
+                        {formatCapabilityName(feature.capability_key)}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-3">
+                        {getCapabilityDescription(feature.capability_key)}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={feature.enabled ? 'default' : 'secondary'}>
+                          {feature.enabled ? 'Enabled' : 'Disabled'}
+                        </Badge>
+                        {feature.enabled_at && (
+                          <span className="text-xs text-gray-500">
+                            Enabled {new Date(feature.enabled_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                      {feature.configuration && typeof feature.configuration === 'object' && Object.keys(feature.configuration).length > 0 && (
+                        <div className="mt-3 pt-3 border-t">
+                          <p className="text-xs font-medium text-gray-700 mb-1">Configuration:</p>
+                          <pre className="text-xs bg-gray-100 p-2 rounded overflow-x-auto max-h-24">
+                            {JSON.stringify(feature.configuration, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <Badge variant={feature.enabled ? 'default' : 'secondary'}>
-                  {feature.enabled ? 'Enabled' : 'Disabled'}
-                </Badge>
-              </div>
+                </CardContent>
+              </Card>
             ))
           ) : (
             <p className="text-sm text-gray-500">No features enabled</p>

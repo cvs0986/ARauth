@@ -11,7 +11,7 @@ import (
 // This implements the "Tenant" layer of the capability model
 type TenantFeatureEnablement struct {
 	TenantID     uuid.UUID       `json:"tenant_id" db:"tenant_id"`
-	FeatureKey   string          `json:"feature_key" db:"feature_key"`
+	FeatureKey   string          `json:"capability_key" db:"feature_key"` // JSON uses capability_key for frontend compatibility
 	Enabled      bool            `json:"enabled" db:"enabled"`
 	Configuration json.RawMessage `json:"configuration,omitempty" db:"configuration"`
 	EnabledBy    *uuid.UUID      `json:"enabled_by,omitempty" db:"enabled_by"`

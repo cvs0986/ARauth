@@ -580,3 +580,407 @@ This gives you:
 
 ---
 
+Short answer first, then the **clean, final model**:
+
+> **Yes — some features and capabilities *must* exist at the user level, but only as enforcement and state, never as independent power.**
+
+User-level controls **must not break** system or tenant guarantees.
+
+---
+
+# ✅ Final Principle (Very Important)
+
+ARauth follows **strict downward inheritance**:
+
+```
+SYSTEM (maximum possible)
+  → TENANT (what is enabled)
+      → USER (what is enforced / enrolled)
+```
+
+👉 **Users never enable capabilities**
+👉 **Users only comply with or consume capabilities**
+
+---
+
+# 🧠 Capability Levels — What Each Level Means
+
+| Level               | Meaning                                       |
+| ------------------- | --------------------------------------------- |
+| **System**          | What exists at all (platform guardrails)      |
+| **System → Tenant** | What this tenant is allowed to use            |
+| **Tenant**          | What the tenant enables and enforces          |
+| **User**            | What the user has enrolled in / is subject to |
+
+Users are **never decision-makers** for security posture.
+
+---
+
+# 1️⃣ User-Level Capabilities: What SHOULD Exist
+
+These are **stateful, per-user attributes**, not feature toggles.
+
+## ✅ Authentication State (User Level)
+
+| Capability     | User Level Role  | Why                  |
+| -------------- | ---------------- | -------------------- |
+| Password       | Has / resets     | Identity ownership   |
+| MFA status     | Enrolled / not   | Security enforcement |
+| TOTP           | Enrolled secrets | Per-user secret      |
+| Recovery codes | Generated / used | Account recovery     |
+| MFA bypass     | ❌ Not allowed    | Security             |
+
+Example user state:
+
+```json
+{
+  "user_id": "u-123",
+  "mfa_enrolled": true,
+  "totp_enrolled": true,
+  "recovery_codes_remaining": 5
+}
+```
+
+---
+
+## ✅ Identity Constraints (User Level)
+
+| Constraint       | Controlled By | Applied To User |
+| ---------------- | ------------- | --------------- |
+| Account disabled | Tenant        | Yes             |
+| Account locked   | System        | Yes             |
+| Password expired | Tenant        | Yes             |
+| MFA required     | Tenant/System | Yes             |
+
+User **cannot opt out**.
+
+---
+
+## ✅ Federation Identity (User Level)
+
+| Feature       | User Level Meaning        |
+| ------------- | ------------------------- |
+| SAML login    | Linked external identity  |
+| OIDC IdP      | Linked provider           |
+| Multiple IdPs | Allowed if tenant enables |
+
+Users don’t enable federation — they **link identities**.
+
+---
+
+# 2️⃣ What Users MUST NOT Control (Critical)
+
+Users must **never** control:
+
+| Feature             | Why                     |
+| ------------------- | ----------------------- |
+| Enable/disable MFA  | Weakens security        |
+| Choose auth methods | Policy violation        |
+| Token TTL           | Security risk           |
+| OAuth grant types   | Protocol abuse          |
+| Scopes              | Privilege escalation    |
+| Roles               | Authorization violation |
+
+❌ Even tenant admins cannot bypass this for themselves.
+
+---
+
+# 3️⃣ Feature-by-Feature: System vs Tenant vs User
+
+## 🔐 MFA / TOTP
+
+| Level         | Responsibility       |
+| ------------- | -------------------- |
+| System        | Allow MFA/TOTP       |
+| System→Tenant | Permit tenant to use |
+| Tenant        | Enable + enforce     |
+| User          | Enroll & use         |
+
+If tenant enforces MFA:
+
+* User **must enroll**
+* Login blocked until complete
+
+---
+
+## 🔑 OAuth2 / OIDC
+
+| Level         | Responsibility             |
+| ------------- | -------------------------- |
+| System        | Allowed grants, PKCE rules |
+| System→Tenant | Permit OIDC                |
+| Tenant        | Create clients, scopes     |
+| User          | Authenticate only          |
+
+Users **never manage OAuth clients or scopes**.
+
+---
+
+## 🧬 Scopes & Permissions
+
+| Level  | Responsibility            |
+| ------ | ------------------------- |
+| System | Namespace guardrails      |
+| Tenant | Define scopes & roles     |
+| User   | Receives scopes via roles |
+
+Scopes are **derived**, never chosen.
+
+---
+
+## 🔁 Sessions & Tokens
+
+| Level  | Responsibility    |
+| ------ | ----------------- |
+| System | Max TTL           |
+| Tenant | TTL within limits |
+| User   | Token usage       |
+
+Users cannot extend sessions.
+
+---
+
+## 🏢 Tenant Membership
+
+| Level  | Responsibility |
+| ------ | -------------- |
+| Tenant | Invite users   |
+| User   | Accept invite  |
+| System | No involvement |
+
+---
+
+# 4️⃣ Special Case: Tenant Admin Users
+
+Even tenant admins are still **users**, not system actors.
+
+They:
+
+* Are subject to MFA
+* Cannot disable their own MFA
+* Cannot escalate to system roles
+* Cannot change system limits
+
+This avoids **self-privilege loopholes**.
+
+---
+
+# 5️⃣ User-Level Capability Evaluation (How IAM Enforces)
+
+At login:
+
+1. Resolve **system guardrails**
+2. Resolve **tenant allowed capabilities**
+3. Resolve **tenant enforcement rules**
+4. Evaluate **user enrollment/state**
+5. Enforce missing requirements (e.g., MFA enrollment)
+
+Pseudo-logic:
+
+```text
+if tenant.mfa_required and not user.mfa_enrolled:
+  block_login_and_force_enrollment()
+```
+
+---
+
+# 6️⃣ Why This Model Is Correct (Industry Alignment)
+
+| Platform | User-Level Control         |
+| -------- | -------------------------- |
+| AWS IAM  | Users comply, don’t decide |
+| Azure AD | Users enroll MFA           |
+| Okta     | Users enroll factors       |
+| Auth0    | Users enroll MFA           |
+
+No serious IAM lets users decide security posture.
+
+---
+
+# 🏁 Final Rules (Put This in Docs)
+
+> **In ARauth, users do not enable security capabilities.
+> They enroll in, comply with, and operate under capabilities enabled and enforced by the tenant and system.**
+
+> **All security power flows downward; no capability flows upward.**
+
+---
+
+## ✅ One-line summary
+
+* ✔ System defines limits
+* ✔ Tenant enables & enforces
+* ✔ User enrolls & complies
+* ❌ User never weakens security
+
+---
+
+Below is a **single, clean inheritance diagram** that shows **how features & capabilities flow in ARauth** — **top-down only**, with **no upward overrides**.
+
+This is the **canonical mental model** you should use everywhere (docs, code, reviews).
+
+---
+
+## 🔽 ARauth Capability Inheritance Diagram (Authoritative)
+
+![Image](https://www.kuppingercole.com/pics/IAM_Reference_Architecture.jpg)
+
+![Image](https://docs.aws.amazon.com/images/prescriptive-guidance/latest/patterns/images/pattern-img/4306bc76-22a7-45ca-a107-43df6c6f7ac8/images/700faf4d-c28f-4814-96aa-2d895cdcb518.png)
+
+![Image](https://images.ctfassets.net/00voh0j35590/1Qe7iag3FfvvdyXWI4VzLU/32bc3a49e706b970ba351772102af9b4/IAM_diagram_2.png)
+
+```
+┌──────────────────────────────────────────────┐
+│ SYSTEM (Platform / Control Plane)             │
+│                                              │
+│ • Defines WHAT EXISTS                         │
+│ • Hard security guardrails                    │
+│                                              │
+│ Examples:                                    │
+│ - MFA supported? (yes/no)                    │
+│ - TOTP supported?                            │
+│ - SAML supported?                            │
+│ - OAuth2/OIDC supported?                     │
+│ - Max token TTL                              │
+│ - Allowed grant types                        │
+│                                              │
+│ ❌ Cannot act as tenant                      │
+│ ❌ Cannot bypass tenant RBAC                 │
+└───────────────────────┬──────────────────────┘
+                        │
+                        │ Allowed Capabilities
+                        ▼
+┌──────────────────────────────────────────────┐
+│ SYSTEM → TENANT CAPABILITY ASSIGNMENT         │
+│                                              │
+│ • What THIS tenant is allowed to use          │
+│ • Per-tenant feature flags                    │
+│                                              │
+│ Examples:                                    │
+│ - Tenant A: MFA + OIDC + SAML                 │
+│ - Tenant B: MFA + OIDC (no SAML)              │
+│ - Tenant C: OIDC only                         │
+│                                              │
+│ Controlled ONLY by system admins              │
+└───────────────────────┬──────────────────────┘
+                        │
+                        │ Enabled Features
+                        ▼
+┌──────────────────────────────────────────────┐
+│ TENANT (Organization Plane)                   │
+│                                              │
+│ • Chooses what to ENABLE                      │
+│ • Enforces security policies                  │
+│                                              │
+│ Examples:                                    │
+│ - Enable MFA                                 │
+│ - Require MFA for admins                     │
+│ - Enable TOTP                                │
+│ - Enable OAuth2/OIDC                         │
+│ - Configure SAML IdP                         │
+│ - Create roles, permissions, scopes           │
+│                                              │
+│ ❌ Cannot exceed system limits                │
+│ ❌ Cannot weaken platform security            │
+└───────────────────────┬──────────────────────┘
+                        │
+                        │ Enforcement & State
+                        ▼
+┌──────────────────────────────────────────────┐
+│ USER (Identity Plane)                         │
+│                                              │
+│ • Enrolls & COMPLIES                          │
+│ • Has state, not power                        │
+│                                              │
+│ Examples:                                    │
+│ - Password set                               │
+│ - TOTP enrolled                              │
+│ - MFA completed                              │
+│ - External IdP linked                        │
+│                                              │
+│ ❌ Cannot enable/disable features             │
+│ ❌ Cannot choose scopes or roles              │
+└──────────────────────────────────────────────┘
+```
+
+---
+
+## 🔐 Key Rules (Non-Negotiable)
+
+### 1️⃣ Direction is ONE-WAY
+
+```
+SYSTEM → TENANT → USER
+```
+
+There is **no reverse inheritance**.
+
+---
+
+### 2️⃣ Meaning of Each Level
+
+| Level             | Meaning                     |
+| ----------------- | --------------------------- |
+| **System**        | What is even possible       |
+| **System→Tenant** | What this tenant may use    |
+| **Tenant**        | What is enabled & enforced  |
+| **User**          | What is enrolled & required |
+
+---
+
+### 3️⃣ Capability vs State (Critical Distinction)
+
+| Concept                              | Where it lives |
+| ------------------------------------ | -------------- |
+| Capability (MFA allowed?)            | System         |
+| Permission (MFA allowed for tenant?) | System→Tenant  |
+| Enforcement (MFA required?)          | Tenant         |
+| Enrollment (TOTP secret)             | User           |
+
+---
+
+## 🔑 Example Walkthrough (Concrete)
+
+### MFA Example
+
+1. **System**
+
+   * MFA supported = ✅
+
+2. **System → Tenant**
+
+   * Tenant allowed MFA = ✅
+
+3. **Tenant**
+
+   * MFA enabled
+   * MFA required for admins
+
+4. **User**
+
+   * Must enroll TOTP
+   * Cannot skip MFA
+   * Cannot disable MFA
+
+---
+
+## 🪪 Token Reflection (Result of Inheritance)
+
+Tokens only reflect **what actually happened**, not what is possible.
+
+```json
+{
+  "tenant_id": "tenant-abc",
+  "acr": "mfa",
+  "amr": ["totp"]
+}
+```
+
+---
+
+## 🏁 One-Line Rule (Put This Everywhere)
+
+> **In ARauth, capabilities flow strictly downward: the system defines limits, tenants enforce policies, and users comply through enrollment — with no upward overrides.**
+
+---
+

@@ -78,7 +78,7 @@ func (r *tenantFeatureEnablementRepository) GetByTenantID(ctx context.Context, t
 	}
 	defer rows.Close()
 
-	var enablements []*models.TenantFeatureEnablement
+	enablements := make([]*models.TenantFeatureEnablement, 0) // Initialize as empty slice, not nil
 	for rows.Next() {
 		enablement := &models.TenantFeatureEnablement{}
 		var configuration sql.NullString
@@ -131,7 +131,7 @@ func (r *tenantFeatureEnablementRepository) GetEnabledByTenantID(ctx context.Con
 	}
 	defer rows.Close()
 
-	var enablements []*models.TenantFeatureEnablement
+	enablements := make([]*models.TenantFeatureEnablement, 0) // Initialize as empty slice, not nil
 	for rows.Next() {
 		enablement := &models.TenantFeatureEnablement{}
 		var configuration sql.NullString

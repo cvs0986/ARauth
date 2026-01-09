@@ -20,15 +20,12 @@ type ChallengeResponse struct {
 }
 
 // CreateChallenge creates an MFA challenge session
+// If user hasn't enrolled yet but MFA is required, this will allow enrollment flow
 func (s *Service) CreateChallenge(ctx context.Context, req *ChallengeRequest) (*ChallengeResponse, error) {
-	// Verify user exists and MFA is enabled
+	// Verify user exists
 	user, err := s.userRepo.GetByID(ctx, req.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %w", err)
-	}
-
-	if !user.MFAEnabled {
-		return nil, fmt.Errorf("MFA is not enabled for this user")
 	}
 
 	// Verify tenant matches (skip for SYSTEM users where tenantID is uuid.Nil)
@@ -42,6 +39,10 @@ func (s *Service) CreateChallenge(ctx context.Context, req *ChallengeRequest) (*
 			return nil, fmt.Errorf("tenant mismatch: user has tenant but SYSTEM user expected")
 		}
 	}
+
+	// If user hasn't enrolled in MFA yet, allow challenge creation for enrollment flow
+	// The enrollment will happen via the enroll endpoint, and then verification will enable MFA
+	// This allows the login flow to proceed with enrollment when tenant requires MFA
 
 	// Create MFA session
 	sessionID, err := s.sessionManager.CreateSession(ctx, req.UserID, req.TenantID)

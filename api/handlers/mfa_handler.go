@@ -188,6 +188,30 @@ func (h *MFAHandler) Challenge(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// EnrollForLogin handles POST /api/v1/mfa/enroll/login
+// This endpoint allows enrollment during login using a challenge session for security
+func (h *MFAHandler) EnrollForLogin(c *gin.Context) {
+	// Parse request body
+	var body struct {
+		SessionID string `json:"session_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
+			"Request validation failed", middleware.FormatValidationErrors(err))
+		return
+	}
+
+	// The service will verify the session and extract user info from it
+	resp, err := h.mfaService.EnrollForLogin(c.Request.Context(), body.SessionID)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "enrollment_failed",
+			err.Error(), nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
 // VerifyChallenge handles POST /api/v1/mfa/challenge/verify
 func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 	// Parse request body - support both challenge_id/code and session_id/totp_code formats

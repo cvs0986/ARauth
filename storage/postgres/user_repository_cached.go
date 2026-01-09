@@ -195,6 +195,20 @@ func (r *cachedUserRepository) Count(ctx context.Context, tenantID uuid.UUID, fi
 	return r.repo.Count(ctx, tenantID, filters)
 }
 
+// ListSystem retrieves a list of system users (principal_type = 'SYSTEM') with filters
+func (r *cachedUserRepository) ListSystem(ctx context.Context, filters *interfaces.UserFilters) ([]*models.User, error) {
+	// For system users, we might want to cache differently or not cache at all
+	// For now, delegate to underlying repository
+	return r.repo.ListSystem(ctx, filters)
+}
+
+// CountSystem returns the total count of system users matching filters
+func (r *cachedUserRepository) CountSystem(ctx context.Context, filters *interfaces.UserFilters) (int, error) {
+	// For system users, we might want to cache differently or not cache at all
+	// For now, delegate to underlying repository
+	return r.repo.CountSystem(ctx, filters)
+}
+
 // GetByEmailSystem retrieves a SYSTEM user by email (no tenant ID required)
 func (r *cachedUserRepository) GetByEmailSystem(ctx context.Context, email string) (*models.User, error) {
 	// SYSTEM users are not cached by email (they're rare and should be looked up directly)

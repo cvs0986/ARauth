@@ -218,3 +218,18 @@ func (h *PermissionHandler) List(c *gin.Context) {
 	})
 }
 
+// ListSystem handles GET /system/permissions - List all system permissions
+// Note: This is a simplified implementation. System permissions are predefined.
+// For now, we return an empty list and the frontend can handle this appropriately.
+func (h *PermissionHandler) ListSystem(c *gin.Context) {
+	// System permissions are predefined
+	// Since the current service requires tenantID, we'll return an empty list for now
+	// TODO: Modify repository/service to support listing system permissions without tenant_id
+	c.JSON(http.StatusOK, gin.H{
+		"permissions": []interface{}{},
+		"page":        1,
+		"page_size":   100,
+		"message":     "System permissions are predefined. Please select a tenant to view permissions.",
+	})
+}
+

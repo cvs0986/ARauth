@@ -113,6 +113,11 @@ func (s *Service) GetAllowedCapabilitiesForTenant(ctx context.Context, tenantID 
 	return result, nil
 }
 
+// GetTenantCapabilities retrieves all tenant capability objects for a tenant
+func (s *Service) GetTenantCapabilities(ctx context.Context, tenantID uuid.UUID) ([]*models.TenantCapability, error) {
+	return s.tenantCapabilityRepo.GetByTenantID(ctx, tenantID)
+}
+
 // SetTenantCapability assigns a capability to a tenant
 func (s *Service) SetTenantCapability(ctx context.Context, tenantID uuid.UUID, capabilityKey string, enabled bool, value *json.RawMessage, configuredBy uuid.UUID) error {
 	// First verify system supports it
@@ -193,6 +198,11 @@ func (s *Service) GetEnabledFeaturesForTenant(ctx context.Context, tenantID uuid
 		result[enablement.FeatureKey] = enablement.IsEnabled()
 	}
 	return result, nil
+}
+
+// GetTenantFeatureEnablements retrieves all feature enablements for a tenant
+func (s *Service) GetTenantFeatureEnablements(ctx context.Context, tenantID uuid.UUID) ([]*models.TenantFeatureEnablement, error) {
+	return s.tenantFeatureEnablementRepo.GetByTenantID(ctx, tenantID)
 }
 
 // EnableFeatureForTenant enables a feature for a tenant

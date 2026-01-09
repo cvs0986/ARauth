@@ -13,12 +13,21 @@ import (
 
 // Service provides permission management business logic
 type Service struct {
-	repo interfaces.PermissionRepository
+	repo            interfaces.PermissionRepository
+	tenantInitializer TenantInitializerInterface // Optional: for auto-attaching to tenant_owner
+}
+
+// TenantInitializerInterface defines interface for tenant initialization operations
+type TenantInitializerInterface interface {
+	AttachAllPermissionsToTenantOwner(ctx context.Context, tenantID uuid.UUID) error
 }
 
 // NewService creates a new permission service
-func NewService(repo interfaces.PermissionRepository) *Service {
-	return &Service{repo: repo}
+func NewService(repo interfaces.PermissionRepository, tenantInitializer TenantInitializerInterface) *Service {
+	return &Service{
+		repo:              repo,
+		tenantInitializer: tenantInitializer,
+	}
 }
 
 // CreatePermissionRequest represents a request to create a permission
@@ -58,6 +67,34 @@ func (s *Service) Create(ctx context.Context, req *CreatePermissionRequest) (*mo
 		return nil, fmt.Errorf("resource and action are required")
 	}
 
+	// CRITICAL SECURITY: Validate namespace - tenants can only create permissions in allowed namespaces
+	// Allowed namespaces: tenant.*, app.*, resource.*
+	// Forbidden namespaces: system.*, platform.*
+	allowedNamespaces := []string{"tenant.", "app.", "resource."}
+	forbiddenNamespaces := []string{"system.", "platform."}
+	
+	resourceLower := strings.ToLower(resource)
+	
+	// Check if resource starts with forbidden namespace
+	for _, forbidden := range forbiddenNamespaces {
+		if strings.HasPrefix(resourceLower, forbidden) {
+			return nil, fmt.Errorf("permission resource cannot start with '%s' namespace. Allowed namespaces: tenant.*, app.*, resource.*", forbidden)
+		}
+	}
+	
+	// Check if resource starts with allowed namespace
+	hasAllowedNamespace := false
+	for _, allowed := range allowedNamespaces {
+		if strings.HasPrefix(resourceLower, allowed) {
+			hasAllowedNamespace = true
+			break
+		}
+	}
+	
+	if !hasAllowedNamespace {
+		return nil, fmt.Errorf("permission resource must start with an allowed namespace: tenant.*, app.*, or resource.*")
+	}
+
 	// Check if permission with same name already exists
 	existing, _ := s.repo.GetByName(ctx, req.TenantID, name)
 	if existing != nil {
@@ -78,6 +115,17 @@ func (s *Service) Create(ctx context.Context, req *CreatePermissionRequest) (*mo
 
 	if err := s.repo.Create(ctx, permission); err != nil {
 		return nil, fmt.Errorf("failed to create permission: %w", err)
+	}
+
+	// CRITICAL: Auto-attach new permission to tenant_owner
+	// This maintains the invariant: "tenant_owner always has all tenant permissions"
+	if s.tenantInitializer != nil {
+		if err := s.tenantInitializer.AttachAllPermissionsToTenantOwner(ctx, req.TenantID); err != nil {
+			// Log error but don't fail permission creation
+			// The permission was created successfully, just failed to attach to tenant_owner
+			// This can be fixed manually later if needed
+			_ = err // TODO: Add proper logging
+		}
 	}
 
 	return permission, nil

@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
+	"github.com/arauth-identity/iam/identity/capability"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/tenant"
 	"github.com/arauth-identity/iam/storage/interfaces"
@@ -16,14 +17,16 @@ type SystemHandler struct {
 	tenantService      tenant.ServiceInterface
 	tenantRepo         interfaces.TenantRepository
 	tenantSettingsRepo interfaces.TenantSettingsRepository
+	capabilityService  capability.ServiceInterface
 }
 
 // NewSystemHandler creates a new system handler
-func NewSystemHandler(tenantService tenant.ServiceInterface, tenantRepo interfaces.TenantRepository, tenantSettingsRepo interfaces.TenantSettingsRepository) *SystemHandler {
+func NewSystemHandler(tenantService tenant.ServiceInterface, tenantRepo interfaces.TenantRepository, tenantSettingsRepo interfaces.TenantSettingsRepository, capabilityService capability.ServiceInterface) *SystemHandler {
 	return &SystemHandler{
 		tenantService:      tenantService,
 		tenantRepo:         tenantRepo,
 		tenantSettingsRepo: tenantSettingsRepo,
+		capabilityService:  capabilityService,
 	}
 }
 
@@ -86,9 +89,9 @@ func (h *SystemHandler) GetTenant(c *gin.Context) {
 // CreateTenant handles POST /system/tenants - Create new tenant (system admin only)
 func (h *SystemHandler) CreateTenant(c *gin.Context) {
 	var req struct {
-		Name   string                 `json:"name" binding:"required"`
-		Domain string                 `json:"domain" binding:"required"`
-		Status string                 `json:"status,omitempty"`
+		Name     string                 `json:"name" binding:"required"`
+		Domain   string                 `json:"domain" binding:"required"`
+		Status   string                 `json:"status,omitempty"`
 		Metadata map[string]interface{} `json:"metadata,omitempty"`
 	}
 
@@ -98,24 +101,21 @@ func (h *SystemHandler) CreateTenant(c *gin.Context) {
 		return
 	}
 
-	if req.Status == "" {
-		req.Status = models.TenantStatusActive
-	}
-
-	tenant := &models.Tenant{
+	// Use tenant service to create tenant (this will automatically initialize roles and permissions)
+	createReq := &tenant.CreateTenantRequest{
 		Name:     req.Name,
 		Domain:   req.Domain,
-		Status:   req.Status,
 		Metadata: req.Metadata,
 	}
 
-	if err := h.tenantRepo.Create(c.Request.Context(), tenant); err != nil {
+	createdTenant, err := h.tenantService.Create(c.Request.Context(), createReq)
+	if err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
 			"Failed to create tenant: "+err.Error(), nil)
 		return
 	}
 
-	c.JSON(http.StatusCreated, tenant)
+	c.JSON(http.StatusCreated, createdTenant)
 }
 
 // UpdateTenant handles PUT /system/tenants/:id - Update tenant (system admin only)
@@ -405,6 +405,20 @@ func (h *SystemHandler) UpdateTenantSettingsFromContext(c *gin.Context) {
 		settings.PasswordExpiryDays = req.PasswordExpiryDays
 	}
 	if req.MFARequired != nil {
+		// Validate that MFA feature is enabled before requiring MFA for all users
+		if *req.MFARequired {
+			mfaEnabled, err := h.capabilityService.IsFeatureEnabledByTenant(c.Request.Context(), tenantID, models.FeatureKeyMFA)
+			if err != nil {
+				middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
+					"Failed to check MFA feature enablement: "+err.Error(), nil)
+				return
+			}
+			if !mfaEnabled {
+				middleware.RespondWithError(c, http.StatusBadRequest, "mfa_feature_not_enabled",
+					"Cannot require MFA for all users: MFA feature must be enabled for the tenant first. Please enable the MFA feature in Tenant Capabilities before setting this requirement.", nil)
+				return
+			}
+		}
 		settings.MFARequired = *req.MFARequired
 	}
 	if req.RateLimitRequests != nil {
@@ -561,6 +575,20 @@ func (h *SystemHandler) UpdateTenantSettings(c *gin.Context) {
 		settings.PasswordExpiryDays = req.PasswordExpiryDays
 	}
 	if req.MFARequired != nil {
+		// Validate that MFA feature is enabled before requiring MFA for all users
+		if *req.MFARequired {
+			mfaEnabled, err := h.capabilityService.IsFeatureEnabledByTenant(c.Request.Context(), tenantID, models.FeatureKeyMFA)
+			if err != nil {
+				middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
+					"Failed to check MFA feature enablement: "+err.Error(), nil)
+				return
+			}
+			if !mfaEnabled {
+				middleware.RespondWithError(c, http.StatusBadRequest, "mfa_feature_not_enabled",
+					"Cannot require MFA for all users: MFA feature must be enabled for the tenant first. Please enable the MFA feature in Tenant Capabilities before setting this requirement.", nil)
+				return
+			}
+		}
 		settings.MFARequired = *req.MFARequired
 	}
 	if req.RateLimitRequests != nil {

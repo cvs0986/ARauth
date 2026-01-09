@@ -47,6 +47,9 @@ export function extractUserInfo(token: string): {
   principalType: 'SYSTEM' | 'TENANT' | 'SERVICE' | null;
   systemPermissions: string[];
   permissions: string[];
+  systemRoles: string[];
+  username: string | null;
+  email: string | null;
 } {
   const payload = decodeJWT(token);
   
@@ -57,6 +60,9 @@ export function extractUserInfo(token: string): {
       principalType: null,
       systemPermissions: [],
       permissions: [],
+      systemRoles: [],
+      username: null,
+      email: null,
     };
   }
 
@@ -66,6 +72,9 @@ export function extractUserInfo(token: string): {
     principalType: (payload.principal_type as 'SYSTEM' | 'TENANT' | 'SERVICE') || null,
     systemPermissions: payload.system_permissions || [],
     permissions: payload.permissions || [],
+    systemRoles: payload.system_roles || [],
+    username: (payload.username as string) || null,
+    email: (payload.email as string) || null,
   };
 }
 

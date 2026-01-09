@@ -55,14 +55,14 @@ export function EditTenantDialog({ tenant, open, onOpenChange }: EditTenantDialo
   });
 
   useEffect(() => {
-    if (tenant) {
+    if (tenant && open) {
       reset({
         name: tenant.name,
         domain: tenant.domain,
         status: tenant.status,
       });
     }
-  }, [tenant, reset]);
+  }, [tenant, open, reset]);
 
   const mutation = useMutation({
     mutationFn: (data: Partial<EditTenantFormData>) => tenantApi.update(tenant.id, data),
@@ -70,6 +70,7 @@ export function EditTenantDialog({ tenant, open, onOpenChange }: EditTenantDialo
       // Invalidate both query keys to update tenant list page and header dropdown
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
       queryClient.invalidateQueries({ queryKey: ['system', 'tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant', tenant.id] });
       setError(null);
       onOpenChange(false);
     },

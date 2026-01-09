@@ -15,6 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CreateUserDialog } from './CreateUserDialog';
 import { EditUserDialog } from './EditUserDialog';
 import { DeleteUserDialog } from './DeleteUserDialog';
@@ -22,8 +23,9 @@ import { SearchInput } from '@/components/SearchInput';
 import { Pagination } from '@/components/Pagination';
 import type { User } from '@shared/types/api';
 
-export function UserList() {
+export function UserList({ tenantId: propTenantId }: { tenantId?: string | null } = {}) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { isSystemUser, selectedTenantId, tenantId, getCurrentTenantId } = useAuthStore();
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
@@ -34,12 +36,17 @@ export function UserList() {
   const [pageSize, setPageSize] = useState(10);
 
   // Get current tenant context (selected tenant for SYSTEM, own tenant for TENANT)
-  const currentTenantId = getCurrentTenantId();
+  // Use prop tenantId if provided (for drill-down views), otherwise use context
+  const currentTenantId = propTenantId || getCurrentTenantId();
+  const isSystemView = isSystemUser() && !currentTenantId;
 
+  // For SYSTEM users without tenant selected, show system users
+  // For SYSTEM users with tenant selected, show tenant users
+  // For TENANT users, show their own tenant users
   const { data: users, isLoading, error } = useQuery({
-    queryKey: ['users', currentTenantId],
-    queryFn: () => userApi.list(currentTenantId),
-    enabled: !!currentTenantId || !isSystemUser(), // For SYSTEM users, require tenant selection
+    queryKey: isSystemView ? ['system', 'users'] : ['users', currentTenantId],
+    queryFn: () => isSystemView ? userApi.listSystem() : userApi.list(currentTenantId),
+    enabled: isSystemView || !!currentTenantId || !isSystemUser(),
   });
 
   // Filter users based on search and status
@@ -94,32 +101,28 @@ export function UserList() {
     );
   }
 
-  if (isSystemUser() && !currentTenantId) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Users</h1>
-        </div>
-        <div className="p-8 text-center bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-gray-600 mb-2">Please select a tenant from the header to view and manage users.</p>
-          <p className="text-sm text-gray-500">SYSTEM users can manage users for any tenant by selecting it from the tenant dropdown.</p>
-        </div>
-      </div>
-    );
-  }
+  // Show system users for SYSTEM users when no tenant is selected
+  // The query above will handle fetching system users
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Users</h1>
+          <h1 className="text-3xl font-bold">
+            {isSystemView ? 'System Users' : 'Users'}
+          </h1>
           {isSystemUser() && currentTenantId && (
             <p className="text-sm text-gray-600 mt-1">
               Managing users for selected tenant
             </p>
           )}
+          {isSystemView && (
+            <p className="text-sm text-gray-500 mt-1">
+              System users (principal_type = SYSTEM). Select a tenant from the header to manage tenant users.
+            </p>
+          )}
         </div>
-        <Button onClick={() => setCreateOpen(true)} disabled={!currentTenantId}>
+        <Button onClick={() => setCreateOpen(true)} disabled={isSystemView ? false : !currentTenantId}>
           Create User
         </Button>
       </div>
@@ -160,8 +163,14 @@ export function UserList() {
           </TableHeader>
           <TableBody>
             {paginatedUsers.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.username}</TableCell>
+              <TableRow 
+                key={user.id}
+                className="cursor-pointer hover:bg-gray-50"
+                onClick={() => navigate(`/users/${user.id}`)}
+              >
+                <TableCell className="font-medium text-primary-600 hover:text-primary-700">
+                  {user.username}
+                </TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
                   {user.first_name || user.last_name
@@ -194,18 +203,24 @@ export function UserList() {
                   {new Date(user.created_at).toLocaleDateString()}
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setEditUser(user)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditUser(user);
+                      }}
                     >
                       Edit
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => setDeleteUser(user)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteUser(user);
+                      }}
                     >
                       Delete
                     </Button>
@@ -231,11 +246,20 @@ export function UserList() {
         </Table>
       </div>
 
-      <CreateUserDialog 
-        open={createOpen} 
-        onOpenChange={setCreateOpen}
-        tenantId={currentTenantId || undefined}
-      />
+      {!isSystemView && (
+        <CreateUserDialog 
+          open={createOpen} 
+          onOpenChange={setCreateOpen}
+          tenantId={currentTenantId || undefined}
+        />
+      )}
+      {isSystemView && (
+        <CreateUserDialog 
+          open={createOpen} 
+          onOpenChange={setCreateOpen}
+          // For system users, don't pass tenantId - the backend should handle creating SYSTEM users
+        />
+      )}
       {editUser && (
         <EditUserDialog
           user={editUser}

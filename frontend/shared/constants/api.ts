@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   // Auth
   AUTH: {
     LOGIN: `${API_PREFIX}/auth/login`,
+    REFRESH: `${API_PREFIX}/auth/refresh`,
   },
   
   // Tenants
@@ -64,6 +65,21 @@ export const API_ENDPOINTS = {
     BY_KEY: (key: string) => `/system/capabilities/${key}`,
   },
   
+  // System Users (SYSTEM users only)
+  SYSTEM_USERS: {
+    BASE: '/system/users',
+  },
+  
+  // System Roles (SYSTEM users only)
+  SYSTEM_ROLES: {
+    BASE: '/system/roles',
+  },
+  
+  // System Permissions (SYSTEM users only)
+  SYSTEM_PERMISSIONS: {
+    BASE: '/system/permissions',
+  },
+  
   // Tenant Capabilities (SYSTEM users only)
   TENANT_CAPABILITIES: {
     BASE: (tenantId: string) => `/system/tenants/${tenantId}/capabilities`,
@@ -71,10 +87,26 @@ export const API_ENDPOINTS = {
     EVALUATION: (tenantId: string) => `/system/tenants/${tenantId}/capabilities/evaluation`,
   },
   
+  // Tenant Capabilities (TENANT users - read-only)
+  TENANT_CAPABILITIES_READ: {
+    BASE: `${API_PREFIX}/tenant/capabilities`,
+  },
+  
+  // System Capabilities (TENANT users - read-only)
+  SYSTEM_CAPABILITIES_READ: {
+    BASE: `${API_PREFIX}/tenant/system-capabilities`,
+    BY_KEY: (key: string) => `${API_PREFIX}/tenant/system-capabilities/${key}`,
+  },
+  
   // Tenant Features (TENANT users)
   TENANT_FEATURES: {
     BASE: `${API_PREFIX}/tenant/features`,
     BY_KEY: (key: string) => `${API_PREFIX}/tenant/features/${key}`,
+  },
+  
+  // Tenant Capability Evaluation (TENANT users)
+  TENANT_CAPABILITY_EVALUATION: {
+    BASE: `${API_PREFIX}/tenant/capabilities/evaluation`,
   },
   
   // User Capabilities (TENANT users)

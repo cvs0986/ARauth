@@ -25,7 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 import type { Role } from '@shared/types/api';
 
-export function RoleList() {
+export function RoleList({ tenantId: propTenantId }: { tenantId?: string | null } = {}) {
   const queryClient = useQueryClient();
   const { isSystemUser, selectedTenantId, tenantId, getCurrentTenantId } = useAuthStore();
   const [createOpen, setCreateOpen] = useState(false);
@@ -37,12 +37,17 @@ export function RoleList() {
   const [pageSize, setPageSize] = useState(10);
 
   // Get current tenant context (selected tenant for SYSTEM, own tenant for TENANT)
-  const currentTenantId = getCurrentTenantId();
+  // Use prop tenantId if provided (for drill-down views), otherwise use context
+  const currentTenantId = propTenantId || getCurrentTenantId();
+  const isSystemView = isSystemUser() && !currentTenantId;
 
+  // For SYSTEM users without tenant selected, show system roles
+  // For SYSTEM users with tenant selected, show tenant roles
+  // For TENANT users, show their own tenant roles
   const { data: roles, isLoading, error } = useQuery({
-    queryKey: ['roles', currentTenantId],
-    queryFn: () => roleApi.list(currentTenantId || undefined),
-    enabled: !!currentTenantId || !isSystemUser(), // For SYSTEM users, require tenant selection
+    queryKey: isSystemView ? ['system', 'roles'] : ['roles', currentTenantId],
+    queryFn: () => isSystemView ? roleApi.listSystem() : roleApi.list(currentTenantId || undefined),
+    enabled: isSystemView || !!currentTenantId || !isSystemUser(),
   });
 
   // Filter roles based on search
@@ -93,31 +98,24 @@ export function RoleList() {
     );
   }
 
-  // Show alert for SYSTEM users without selected tenant
-  if (isSystemUser() && !currentTenantId) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Roles</h1>
-        </div>
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>Select a Tenant</AlertTitle>
-          <AlertDescription>
-            Please select a tenant from the header dropdown to view and manage roles for that tenant.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
+  // Show system roles for SYSTEM users when no tenant is selected
+  // The query above will handle fetching system roles
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Roles</h1>
-        {isSystemUser() && !currentTenantId ? (
-          <Button disabled>Create Role</Button>
-        ) : (
+        <div>
+          <h1 className="text-3xl font-bold">
+            {isSystemView ? 'System Roles' : 'Roles'}
+          </h1>
+          {isSystemView && (
+            <p className="text-sm text-gray-500 mt-1">
+              Predefined system roles (is_system = true). Select a tenant from the header to view tenant roles.
+            </p>
+          )}
+        </div>
+        {/* System roles are predefined, so no create button for system view */}
+        {!isSystemView && (
           <Button onClick={() => setCreateOpen(true)}>Create Role</Button>
         )}
       </div>
