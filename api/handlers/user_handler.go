@@ -82,7 +82,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 	// Log audit event
 	if actor, err := extractActorFromContext(c); err == nil {
 		sourceIP, userAgent := extractSourceInfo(c)
-		target := &audit.AuditTarget{
+		target := &models.AuditTarget{
 			Type:       "user",
 			ID:         u.ID,
 			Identifier: u.Username,
@@ -430,7 +430,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 	// Log audit event
 	if actor, err := extractActorFromContext(c); err == nil {
 		sourceIP, userAgent := extractSourceInfo(c)
-		target := &audit.AuditTarget{
+		target := &models.AuditTarget{
 			Type:       "user",
 			ID:         u.ID,
 			Identifier: u.Username,
@@ -552,6 +552,21 @@ func (h *UserHandler) Delete(c *gin.Context) {
 		middleware.RespondWithError(c, http.StatusBadRequest, "delete_failed",
 			err.Error(), nil)
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "user",
+			ID:         existingUser.ID,
+			Identifier: existingUser.Username,
+		}
+		var tenantID *uuid.UUID
+		if existingUser.TenantID != nil {
+			tenantID = existingUser.TenantID
+		}
+		_ = h.auditService.LogUserDeleted(c.Request.Context(), actor, target, tenantID, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})

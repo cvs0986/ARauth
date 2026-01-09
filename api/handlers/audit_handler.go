@@ -11,6 +11,7 @@ import (
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/identity/audit"
+	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
 )
 

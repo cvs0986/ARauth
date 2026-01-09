@@ -5,19 +5,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/arauth-identity/iam/identity/audit"
+	"github.com/arauth-identity/iam/identity/models"
 )
 
 // AuditEventRepository defines the interface for structured audit event storage
 type AuditEventRepository interface {
 	// Create creates a new audit event
-	Create(ctx context.Context, event *audit.AuditEvent) error
+	Create(ctx context.Context, event *models.AuditEvent) error
 
 	// QueryEvents retrieves audit events with filters
-	QueryEvents(ctx context.Context, filters *AuditEventFilters) ([]*audit.AuditEvent, int, error)
+	QueryEvents(ctx context.Context, filters *AuditEventFilters) ([]*models.AuditEvent, int, error)
 
 	// GetEvent retrieves an audit event by ID
-	GetEvent(ctx context.Context, eventID uuid.UUID) (*audit.AuditEvent, error)
+	GetEvent(ctx context.Context, eventID uuid.UUID) (*models.AuditEvent, error)
 }
 
 // AuditEventFilters represents filters for audit event queries

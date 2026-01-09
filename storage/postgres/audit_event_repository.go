@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/arauth-identity/iam/identity/audit"
+	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
@@ -24,7 +24,7 @@ func NewAuditEventRepository(db *sql.DB) interfaces.AuditEventRepository {
 }
 
 // Create creates a new audit event
-func (r *auditEventRepository) Create(ctx context.Context, event *audit.AuditEvent) error {
+func (r *auditEventRepository) Create(ctx context.Context, event *models.AuditEvent) error {
 	// Flatten the event for database storage
 	event.Flatten()
 
@@ -85,7 +85,7 @@ func (r *auditEventRepository) Create(ctx context.Context, event *audit.AuditEve
 }
 
 // QueryEvents retrieves audit events with filters
-func (r *auditEventRepository) QueryEvents(ctx context.Context, filters *interfaces.AuditEventFilters) ([]*audit.AuditEvent, int, error) {
+func (r *auditEventRepository) QueryEvents(ctx context.Context, filters *interfaces.AuditEventFilters) ([]*models.AuditEvent, int, error) {
 	filters.Validate()
 
 	var conditions []string
@@ -175,9 +175,9 @@ func (r *auditEventRepository) QueryEvents(ctx context.Context, filters *interfa
 	}
 	defer rows.Close()
 
-	var events []*audit.AuditEvent
+	var events []*models.AuditEvent
 	for rows.Next() {
-		event := &audit.AuditEvent{}
+		event := &models.AuditEvent{}
 		var metadataJSON []byte
 		var sourceIP sql.NullString
 		var userAgent sql.NullString
@@ -237,7 +237,7 @@ func (r *auditEventRepository) QueryEvents(ctx context.Context, filters *interfa
 }
 
 // GetEvent retrieves an audit event by ID
-func (r *auditEventRepository) GetEvent(ctx context.Context, eventID uuid.UUID) (*audit.AuditEvent, error) {
+func (r *auditEventRepository) GetEvent(ctx context.Context, eventID uuid.UUID) (*models.AuditEvent, error) {
 	query := `
 		SELECT 
 			id, event_type, actor_user_id, actor_username, actor_principal_type,
@@ -247,7 +247,7 @@ func (r *auditEventRepository) GetEvent(ctx context.Context, eventID uuid.UUID) 
 		WHERE id = $1
 	`
 
-	event := &audit.AuditEvent{}
+	event := &models.AuditEvent{}
 	var metadataJSON []byte
 	var sourceIP sql.NullString
 	var userAgent sql.NullString
