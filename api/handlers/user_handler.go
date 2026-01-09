@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/auth/claims"
+	"github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/user"
 	"github.com/arauth-identity/iam/storage/interfaces"
@@ -20,14 +21,16 @@ type UserHandler struct {
 	userService    user.ServiceInterface
 	systemRoleRepo interfaces.SystemRoleRepository
 	roleRepo       interfaces.RoleRepository
+	auditService   audit.ServiceInterface
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler(userService user.ServiceInterface, systemRoleRepo interfaces.SystemRoleRepository, roleRepo interfaces.RoleRepository) *UserHandler {
+func NewUserHandler(userService user.ServiceInterface, systemRoleRepo interfaces.SystemRoleRepository, roleRepo interfaces.RoleRepository, auditService audit.ServiceInterface) *UserHandler {
 	return &UserHandler{
 		userService:    userService,
 		systemRoleRepo: systemRoleRepo,
 		roleRepo:       roleRepo,
+		auditService:   auditService,
 	}
 }
 
@@ -74,6 +77,21 @@ func (h *UserHandler) Create(c *gin.Context) {
 				_ = assignErr
 			}
 		}
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &audit.AuditTarget{
+			Type:       "user",
+			ID:         u.ID,
+			Identifier: u.Username,
+		}
+		_ = h.auditService.LogUserCreated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent, map[string]interface{}{
+			"email":      u.Email,
+			"first_name": u.FirstName,
+			"last_name":  u.LastName,
+		})
 	}
 
 	c.JSON(http.StatusCreated, u)
@@ -407,6 +425,25 @@ func (h *UserHandler) Update(c *gin.Context) {
 			"message": err.Error(),
 		})
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &audit.AuditTarget{
+			Type:       "user",
+			ID:         u.ID,
+			Identifier: u.Username,
+		}
+		var tenantID *uuid.UUID
+		if u.TenantID != nil {
+			tenantID = u.TenantID
+		}
+		_ = h.auditService.LogUserUpdated(c.Request.Context(), actor, target, tenantID, sourceIP, userAgent, map[string]interface{}{
+			"email":      u.Email,
+			"first_name": u.FirstName,
+			"last_name":  u.LastName,
+		})
 	}
 
 	c.JSON(http.StatusOK, u)

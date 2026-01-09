@@ -193,7 +193,7 @@ func main() {
 
 	// Initialize handlers
 	tenantHandler := handlers.NewTenantHandler(tenantService)
-	userHandler := handlers.NewUserHandler(userService, systemRoleRepo, roleRepo)
+	userHandler := handlers.NewUserHandler(userService, systemRoleRepo, roleRepo, auditEventService)
 	authHandler := handlers.NewAuthHandler(loginService, refreshService)
 	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger, tokenService, claimsBuilder, userRepo, lifetimeResolver)
 	roleHandler := handlers.NewRoleHandler(roleService, systemRoleRepo, userRepo)
