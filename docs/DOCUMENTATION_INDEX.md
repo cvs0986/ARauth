@@ -37,6 +37,8 @@ Quick reference guide to all documentation in ARauth Identity.
 - **Production Guide**: [`deployment/production-guide.md`](deployment/production-guide.md) - Production deployment
 - **Configuration**: [`deployment/configuration.md`](deployment/configuration.md) - Configuration guide
 - **Monitoring**: [`deployment/monitoring.md`](deployment/monitoring.md) - Monitoring setup
+- **Capability Model Deployment**: [`deployment/CAPABILITY_MODEL_DEPLOYMENT_PLAN.md`](deployment/CAPABILITY_MODEL_DEPLOYMENT_PLAN.md) - Deployment plan for capability model
+- **Capability Model Rollback**: [`deployment/CAPABILITY_MODEL_ROLLBACK_PLAN.md`](deployment/CAPABILITY_MODEL_ROLLBACK_PLAN.md) - Rollback procedures for capability model
 
 ### 🔗 Integration
 - **Integration Guide**: [`guides/integration/integration-guide.md`](guides/integration/integration-guide.md) - Integration examples and patterns
