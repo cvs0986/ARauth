@@ -1,71 +1,211 @@
-# Complete Testing Guide - ARauth Identity IAM (V2 - Master Tenant Architecture)
+# Complete Testing Guide - ARauth Identity IAM (V3 - Capability Model)
+
+## 📋 Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Environment Setup](#environment-setup)
+3. [Database Setup & Migrations](#database-setup--migrations)
+4. [Local Development Testing](#local-development-testing)
+5. [Kubernetes Testing](#kubernetes-testing)
+6. [Cloud Deployment Testing](#cloud-deployment-testing)
+7. [On-Premise Testing](#on-premise-testing)
+8. [Capability Model Testing](#capability-model-testing)
+9. [Complete Feature Testing](#complete-feature-testing)
+10. [API Testing](#api-testing)
+11. [Troubleshooting](#troubleshooting)
+
+---
 
 ## 📋 Prerequisites
 
-- ✅ PostgreSQL running on `127.0.0.1:5433`
-- ✅ Database `iam` created
-- ✅ User: `dcim_user`, Password: `dcim_password`
-- ✅ **All migrations applied (version 16/16)** ✅
-- ✅ Go 1.21+ installed
-- ✅ Node.js 18+ and npm installed
-- ✅ Frontend dependencies installed
+### Required Software
 
-### Verify Database Setup
+- ✅ **PostgreSQL** 14+ (or compatible database)
+- ✅ **Go** 1.22+ installed
+- ✅ **Node.js** 18+ and npm installed
+- ✅ **Redis** (optional, for caching and MFA sessions)
+- ✅ **Docker** & **Docker Compose** (for containerized testing)
+- ✅ **kubectl** (for Kubernetes testing)
+- ✅ **migrate** tool (for database migrations)
+
+### Verify Prerequisites
 
 ```bash
-# Check PostgreSQL connection
-PGPASSWORD=dcim_password psql -h 127.0.0.1 -p 5433 -U dcim_user -d iam -c "SELECT version();"
+# Check Go version
+go version  # Should be 1.22+
 
-# Verify migrations are applied (should show version 16)
-cd /home/eshwar/Documents/Veer/nuage-indentity
-export DATABASE_URL="postgres://dcim_user:dcim_password@127.0.0.1:5433/iam?sslmode=disable"
+# Check Node.js version
+node --version  # Should be 18+
+
+# Check PostgreSQL
+psql --version  # Should be 14+
+
+# Check Docker
+docker --version
+
+# Check kubectl (if testing Kubernetes)
+kubectl version --client
+
+# Install migrate tool if not installed
+go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+```
+
+---
+
+## 🏗️ Architecture Overview
+
+ARauth Identity supports:
+
+1. **Two-Plane Architecture**:
+   - **SYSTEM Users** (Master/Platform Admins)
+   - **TENANT Users** (Tenant Admins)
+
+2. **Three-Layer Capability Model**:
+   - **System Level**: Global capabilities
+   - **System → Tenant**: Capability assignments
+   - **Tenant Level**: Feature enablement
+   - **User Level**: User enrollment
+
+---
+
+## 🔧 Environment Setup
+
+### Option 1: Local Development (Recommended for Testing)
+
+**Database Configuration**:
+```bash
+# PostgreSQL connection details
+export DATABASE_HOST=127.0.0.1
+export DATABASE_PORT=5432
+export DATABASE_USER=iam_user
+export DATABASE_PASSWORD=change-me
+export DATABASE_NAME=iam
+export DATABASE_SSL_MODE=disable
+```
+
+**Application Configuration**:
+```bash
+export JWT_SECRET=test-jwt-secret-key-min-32-characters-long
+export ENCRYPTION_KEY=01234567890123456789012345678901
+export SERVER_PORT=8080
+export LOG_LEVEL=info
+```
+
+**Redis Configuration** (Optional):
+```bash
+export REDIS_URL=redis://localhost:6379
+```
+
+### Option 2: Docker Compose
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Check services
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+```
+
+### Option 3: Kubernetes
+
+See [Kubernetes Testing](#kubernetes-testing) section below.
+
+---
+
+## 🗄️ Database Setup & Migrations
+
+### Step 1: Create Database
+
+```bash
+# Connect to PostgreSQL
+psql -U postgres
+
+# Create database
+CREATE DATABASE iam;
+
+# Create user (if needed)
+CREATE USER iam_user WITH PASSWORD 'change-me';
+GRANT ALL PRIVILEGES ON DATABASE iam TO iam_user;
+
+# Exit psql
+\q
+```
+
+### Step 2: Run Migrations
+
+```bash
+# Set database URL
+export DATABASE_URL="postgres://iam_user:change-me@localhost:5432/iam?sslmode=disable"
+
+# Navigate to project root
+cd /path/to/nuage-indentity
+
+# Check current migration version
+migrate -path migrations -database "$DATABASE_URL" version
+
+# Run all migrations (up to version 22)
+migrate -path migrations -database "$DATABASE_URL" up
+
+# Verify migrations applied
 migrate -path migrations -database "$DATABASE_URL" version
 ```
 
-**Expected**: Should show `16` (all migrations applied)
+**Expected Output**: Should show version `22` (all migrations including capability model)
 
----
-
-## 🏗️ Architecture Overview (V2 - Master Tenant)
-
-ARauth Identity now supports a **two-plane architecture**:
-
-- **SYSTEM Users** (Master/Platform Admins):
-  - `principal_type = 'SYSTEM'`
-  - `tenant_id = NULL`
-  - Can manage all tenants
-  - Can create tenant admins
-  - Access to `/system/*` API endpoints
-  - System-level roles and permissions
-
-- **TENANT Users** (Tenant Admins):
-  - `principal_type = 'TENANT'`
-  - `tenant_id = <tenant-uuid>`
-  - Can only manage their own tenant
-  - Access to `/api/v1/*` API endpoints
-  - Tenant-level roles and permissions
-
----
-
-## 🚀 Step 1: Start Backend Server
-
-### Option A: Using the Start Script (Recommended)
+### Step 3: Verify Database Schema
 
 ```bash
-cd /home/eshwar/Documents/Veer/nuage-indentity
-./scripts/start-backend-local.sh
+# Connect to database
+psql $DATABASE_URL
+
+# Check capability tables exist
+\dt system_capabilities
+\dt tenant_capabilities
+\dt tenant_feature_enablement
+\dt user_capability_state
+
+# Check system capabilities are populated
+SELECT capability_key, enabled FROM system_capabilities;
+
+# Exit
+\q
 ```
 
-### Option B: Manual Start
+**Expected**: Should see 11 default system capabilities (mfa, totp, saml, oidc, oauth2, etc.)
+
+### Step 4: Run Data Migration (If Upgrading)
+
+If you have existing data, run the migration script:
 
 ```bash
-cd /home/eshwar/Documents/Veer/nuage-indentity
+# The migration script (000022) will automatically:
+# - Assign default capabilities to existing tenants
+# - Migrate tenant_settings to capability model
+# - Migrate MFA settings
+# - Migrate user MFA enrollment
+
+# It's already included in "migrate up" command above
+# To run manually if needed:
+migrate -path migrations -database "$DATABASE_URL" up
+```
+
+---
+
+## 🚀 Local Development Testing
+
+### Step 1: Start Backend Server
+
+```bash
+cd /path/to/nuage-indentity
 
 # Set environment variables
 export DATABASE_HOST=127.0.0.1
-export DATABASE_PORT=5433
-export DATABASE_USER=dcim_user
-export DATABASE_PASSWORD=dcim_password
+export DATABASE_PORT=5432
+export DATABASE_USER=iam_user
+export DATABASE_PASSWORD=change-me
 export DATABASE_NAME=iam
 export DATABASE_SSL_MODE=disable
 export JWT_SECRET=test-jwt-secret-key-min-32-characters-long
@@ -75,28 +215,19 @@ export ENCRYPTION_KEY=01234567890123456789012345678901
 go run cmd/server/main.go
 ```
 
-### Verify Backend is Running
-
+**Verify Backend**:
 ```bash
-# Health check
 curl http://localhost:8080/health
 
-# Expected response:
+# Expected:
 # {"status":"healthy","timestamp":"...","version":"0.1.0","checks":{"database":"healthy","redis":"not_configured"}}
 ```
 
-**✅ Backend Status**: Server should be running on `http://localhost:8080`
+### Step 2: Bootstrap Master User (SYSTEM Admin)
 
----
+**Option A: Using Config File**
 
-## 👑 Step 2: Bootstrap Master User (SYSTEM Admin)
-
-The master user is a SYSTEM-level admin who can manage all tenants. You can create it via:
-
-### Option A: Using Config File
-
-1. Create or edit `config/bootstrap.yaml`:
-
+Create `config/bootstrap.yaml`:
 ```yaml
 bootstrap:
   enabled: true
@@ -111,9 +242,7 @@ bootstrap:
     assign_all_permissions: true
 ```
 
-2. Start the server (it will auto-bootstrap on first run)
-
-### Option B: Using Environment Variables
+**Option B: Using Environment Variables**
 
 ```bash
 export BOOTSTRAP_ENABLED=true
@@ -124,772 +253,807 @@ export BOOTSTRAP_MASTER_FIRST_NAME=System
 export BOOTSTRAP_MASTER_LAST_NAME=Administrator
 export BOOTSTRAP_MASTER_ROLE=system_owner
 
-# Start server
+# Start server (will auto-bootstrap)
 go run cmd/server/main.go
 ```
 
-### Option C: Using Bootstrap CLI (if available)
-
+**Verify Master User**:
 ```bash
-go run cmd/bootstrap/main.go
-```
-
-### Verify Master User Created
-
-```bash
-# Check if SYSTEM user exists
-PGPASSWORD=dcim_password psql -h 127.0.0.1 -p 5433 -U dcim_user -d iam -c \
+psql $DATABASE_URL -c \
   "SELECT id, username, email, principal_type, tenant_id FROM users WHERE principal_type = 'SYSTEM';"
 ```
 
-**✅ Expected**: Should show the master user with `principal_type = 'SYSTEM'` and `tenant_id = NULL`
+### Step 3: Start Frontend Applications
 
----
-
-## 🎨 Step 3: Start Frontend Applications
-
-### Terminal 1: Admin Dashboard
-
+**Terminal 1: Admin Dashboard**
 ```bash
-cd /home/eshwar/Documents/Veer/nuage-indentity/frontend/admin-dashboard
+cd frontend/admin-dashboard
+npm install  # First time only
 npm run dev
 ```
 
-**✅ Admin Dashboard**: Should be available at `http://localhost:5173`
-
-### Terminal 2: E2E Testing App
-
+**Terminal 2: E2E Testing App** (Optional)
 ```bash
-cd /home/eshwar/Documents/Veer/nuage-indentity/frontend/e2e-test-app
+cd frontend/e2e-test-app
+npm install  # First time only
 npm run dev
 ```
 
-**✅ E2E Test App**: Should be available at `http://localhost:5174`
+**Access Points**:
+- Admin Dashboard: `http://localhost:5173`
+- E2E Test App: `http://localhost:5174`
 
 ---
 
-## 🧪 Step 4: Complete Testing Workflow
+## ☸️ Kubernetes Testing
 
-### Phase 1: SYSTEM User Testing (Master Admin)
+### Prerequisites
 
-#### 4.1 Login as SYSTEM Admin
+- Kubernetes cluster (local: minikube, kind, or cloud: EKS, GKE, AKS)
+- kubectl configured
+- Helm (optional, for easier deployment)
 
-1. Open browser: `http://localhost:5173`
-2. Enter credentials:
-   - **Username**: `system_admin` (or your bootstrap username)
-   - **Password**: `SystemAdmin@123456` (or your bootstrap password)
-   - **Tenant ID**: (leave empty - SYSTEM users don't need tenant ID)
-3. Click **Login**
-4. **✅ Expected**: 
-   - Redirected to Dashboard
-   - Header shows "System Admin" badge
-   - Tenant selector dropdown visible in header
-   - Sidebar shows: Dashboard, Tenants, Users, Roles, Permissions, Audit Logs, Settings
+### Step 1: Build Docker Images
 
-#### 4.2 SYSTEM User - Dashboard
+```bash
+# Build backend image
+docker build -t arauth-identity/iam-api:latest -f Dockerfile .
+
+# Build frontend image
+cd frontend/admin-dashboard
+docker build -t arauth-identity/admin-dashboard:latest -f Dockerfile .
+```
+
+### Step 2: Deploy to Kubernetes
+
+**Option A: Using kubectl**
+
+```bash
+# Apply database secret
+kubectl create secret generic db-credentials \
+  --from-literal=username=iam_user \
+  --from-literal=password=change-me
+
+# Apply Redis secret (if using)
+kubectl create secret generic redis-credentials \
+  --from-literal=url=redis://redis-service:6379
+
+# Deploy PostgreSQL (or use managed service)
+kubectl apply -f k8s/postgresql.yaml
+
+# Deploy Redis (or use managed service)
+kubectl apply -f k8s/redis.yaml
+
+# Deploy backend
+kubectl apply -f k8s/backend.yaml
+
+# Deploy frontend
+kubectl apply -f k8s/frontend.yaml
+```
+
+**Option B: Using Helm**
+
+```bash
+# Install with Helm
+helm install arauth-identity ./helm/arauth-identity \
+  --set database.host=postgres-service \
+  --set database.name=iam \
+  --set redis.enabled=true
+```
+
+### Step 3: Run Migrations in Kubernetes
+
+```bash
+# Create migration job
+kubectl create job migrate-db --from=cronjob/migrate-db
+
+# Or run manually in a pod
+kubectl run migrate --image=arauth-identity/iam-api:latest --rm -it -- \
+  migrate -path /migrations -database "$DATABASE_URL" up
+```
+
+### Step 4: Access Services
+
+```bash
+# Port forward to access services
+kubectl port-forward svc/iam-api 8080:8080
+kubectl port-forward svc/admin-dashboard 5173:80
+
+# Or use LoadBalancer/Ingress
+kubectl get svc
+```
+
+### Step 5: Verify Deployment
+
+```bash
+# Check pods
+kubectl get pods
+
+# Check services
+kubectl get svc
+
+# Check logs
+kubectl logs -f deployment/iam-api
+
+# Test health endpoint
+curl http://localhost:8080/health
+```
+
+---
+
+## ☁️ Cloud Deployment Testing
+
+### AWS (EKS)
+
+```bash
+# Configure AWS CLI
+aws configure
+
+# Create EKS cluster
+eksctl create cluster --name arauth-cluster --region us-east-1
+
+# Deploy using kubectl (same as Kubernetes section)
+kubectl apply -f k8s/
+
+# Use AWS RDS for PostgreSQL
+# Use AWS ElastiCache for Redis
+```
+
+### Google Cloud (GKE)
+
+```bash
+# Configure gcloud
+gcloud init
+
+# Create GKE cluster
+gcloud container clusters create arauth-cluster --zone us-central1-a
+
+# Deploy
+kubectl apply -f k8s/
+
+# Use Cloud SQL for PostgreSQL
+# Use Cloud Memorystore for Redis
+```
+
+### Azure (AKS)
+
+```bash
+# Configure Azure CLI
+az login
+
+# Create AKS cluster
+az aks create --resource-group arauth-rg --name arauth-cluster
+
+# Deploy
+kubectl apply -f k8s/
+
+# Use Azure Database for PostgreSQL
+# Use Azure Cache for Redis
+```
+
+---
+
+## 🏢 On-Premise Testing
+
+### Step 1: Prepare Infrastructure
+
+- Physical/Virtual servers
+- Network configuration
+- Firewall rules
+- SSL certificates
+
+### Step 2: Install Dependencies
+
+```bash
+# On each server, install:
+# - PostgreSQL
+# - Redis (optional)
+# - Go runtime
+# - Node.js (for frontend)
+```
+
+### Step 3: Deploy Application
+
+```bash
+# Build binaries
+go build -o bin/iam-api ./cmd/server
+
+# Copy to server
+scp bin/iam-api user@server:/opt/arauth-identity/
+
+# Create systemd service
+sudo systemctl enable arauth-identity
+sudo systemctl start arauth-identity
+```
+
+### Step 4: Configure Reverse Proxy
+
+**Nginx Example**:
+```nginx
+server {
+    listen 80;
+    server_name arauth.example.com;
+
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+---
+
+## 🎯 Capability Model Testing
+
+### Phase 1: System Capability Management (SYSTEM Admin Only)
+
+#### 1.1 Login as SYSTEM Admin
+
+1. Open `http://localhost:5173`
+2. Login with:
+   - Username: `system_admin`
+   - Password: `SystemAdmin@123456`
+   - Tenant ID: (leave empty)
+
+#### 1.2 View System Capabilities
+
+**Navigate**: Settings → Capabilities Tab (or `/system/capabilities`)
 
 **Test**:
-- [ ] View statistics cards (Tenants, Users, Roles, Permissions)
-- [ ] Check "Tenants" card shows total tenant count
-- [ ] Check "Users" card shows total user count (all tenants)
-- [ ] Click "View all" links navigate correctly
-- [ ] Quick actions section shows "Manage Tenants" and "System Settings"
-- [ ] System overview shows "System Status: Operational"
+- [ ] View list of all system capabilities
+- [ ] See capability keys: mfa, totp, saml, oidc, oauth2, etc.
+- [ ] See enabled/disabled status
+- [ ] See descriptions
+- [ ] See default values
 
-**✅ Expected**: Dashboard displays with system-wide statistics
+**Expected**: List shows 11 default capabilities
 
-#### 4.3 SYSTEM User - Tenant Management
+#### 1.3 Edit System Capability
 
-**Navigate**: Click "Tenants" in sidebar
+**Test**:
+1. Click "Edit" on a capability (e.g., `mfa`)
+2. Modify description
+3. Toggle enabled status
+4. Update default value (JSON)
+5. Click "Save"
 
-**Test Create Tenant**:
-1. Click **"Create Tenant"** button
-2. Fill form:
-   - Name: `Acme Corp`
-   - Domain: `acme.local`
-   - Status: `Active`
-3. Click **"Create"**
-4. **✅ Expected**: Tenant appears in list
+**Expected**: Changes saved, capability updated
 
-**Test Tenant Operations**:
-- [ ] Search by name: Type "Acme" → Should filter results
-- [ ] Search by domain: Type "acme.local" → Should filter results
-- [ ] Filter by status: Select "Active" → Should show only active tenants
-- [ ] Edit tenant: Change name or status → Changes saved
-- [ ] Suspend tenant: Click "Suspend" → Tenant status changes to "suspended"
-- [ ] Resume tenant: Click "Resume" → Tenant status changes to "active"
-- [ ] Delete tenant: Click "Delete" → Tenant removed
-
-**Test Tenant Selector**:
-- [ ] Click tenant selector in header
-- [ ] Select a tenant from dropdown
-- [ ] Verify tenant context is selected
-- [ ] Select "All Tenants (System View)" → Returns to system view
-
-#### 4.4 SYSTEM User - User Management
-
-**Navigate**: Click "Users" in sidebar
-
-**Test Without Tenant Selected**:
-- [ ] Should show message: "Please select a tenant from the header to view and manage users."
-
-**Test With Tenant Selected**:
-1. Select a tenant from header dropdown
-2. Click "Users" in sidebar
-3. **✅ Expected**: Users list shows users for selected tenant
-
-**Test Create User for Tenant**:
-1. Select a tenant from header
-2. Click **"Create User"** button
-3. Fill form:
-   - Username: `tenant_admin`
-   - Email: `admin@acme.local`
-   - Password: `TenantAdmin@123456`
-   - First Name: `Tenant`
-   - Last Name: `Admin`
-4. Click **"Create"**
-5. **✅ Expected**: User created for selected tenant
-
-**Test User Operations**:
-- [ ] Search by username, email, or name
-- [ ] Filter by status (Active, Inactive, Locked)
-- [ ] Edit user details
-- [ ] Delete user
-- [ ] Pagination works
-- [ ] Table shows "Tenant" column with tenant ID
-
-#### 4.5 SYSTEM User - Settings
-
-**Navigate**: Click "Settings" in sidebar
-
-**Test System Settings Tab**:
-- [ ] View "System Settings" tab
-- [ ] Configure JWT settings (Issuer, Audience)
-- [ ] Modify session timeout
-- [ ] Configure account lockout (max attempts, lockout duration)
-- [ ] Click **"Save System Settings"**
-- [ ] **✅ Expected**: Success message displayed
-
-**Test Security Tab**:
-- [ ] View "Security" tab
-- [ ] Modify password policy (min length, requirements)
-- [ ] Configure MFA requirements
-- [ ] Set rate limiting values
-- [ ] Click **"Save Security Settings"**
-- [ ] **✅ Expected**: Success message displayed
-
-**Test OAuth2/OIDC Tab**:
-- [ ] View "OAuth2/OIDC" tab
-- [ ] Configure Hydra endpoints
-- [ ] Modify token TTLs
-- [ ] Click **"Save OAuth Settings"**
-- [ ] **✅ Expected**: Success message displayed
-
-**Test Tenant Settings Tab**:
-1. Select a tenant from header dropdown
-2. Click "Settings" → "Tenant Settings" tab
-3. **✅ Expected**: Shows message if no tenant selected
-4. With tenant selected:
-   - [ ] View token lifetime settings
-   - [ ] Modify Access Token TTL, Refresh Token TTL, ID Token TTL
-   - [ ] Configure "Remember Me" settings
-   - [ ] Toggle token rotation
-   - [ ] Set MFA requirement for extended sessions
-   - [ ] Click **"Save Tenant Settings"**
-   - [ ] **✅ Expected**: Success message, settings saved for selected tenant
-
----
-
-### Phase 2: TENANT User Testing
-
-#### 5.1 Create Tenant Admin User
-
-**As SYSTEM User**:
-1. Select a tenant from header
-2. Navigate to "Users"
-3. Create a user with admin role (or assign admin role later)
-
-**Or via API**:
+**API Test**:
 ```bash
-# Get tenant ID first
-TENANT_ID="your-tenant-id-here"
+TOKEN="your-system-admin-token"
 
-# Create tenant admin user
-curl -X POST http://localhost:8080/api/v1/users \
+# Get system capabilities
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/system/capabilities
+
+# Update capability
+curl -X PUT http://localhost:8080/system/capabilities/mfa \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -H "X-Tenant-ID: $TENANT_ID" \
   -d '{
-    "username": "tenant_admin",
-    "email": "admin@acme.local",
-    "password": "TenantAdmin@123456",
-    "first_name": "Tenant",
-    "last_name": "Admin"
+    "enabled": true,
+    "description": "Multi-factor authentication support",
+    "default_value": {"max_attempts": 3}
   }'
 ```
 
-#### 5.2 Login as TENANT User
+### Phase 2: Tenant Capability Assignment (SYSTEM Admin Only)
 
-1. Open browser: `http://localhost:5173`
-2. Enter credentials:
-   - **Username**: `tenant_admin`
-   - **Password**: `TenantAdmin@123456`
-   - **Tenant ID**: (the tenant ID - required for TENANT users)
-3. Click **Login**
-4. **✅ Expected**: 
-   - Redirected to Dashboard
-   - Header shows "Tenant Admin" badge
-   - **No tenant selector** in header (locked to their tenant)
-   - Sidebar shows: Dashboard, Users, Roles, Permissions, Audit Logs, Settings
+#### 2.1 Assign Capability to Tenant
 
-#### 5.3 TENANT User - Dashboard
+**Navigate**: Tenants → Select Tenant → Capabilities Tab
 
 **Test**:
-- [ ] View statistics cards (Users, Roles, Permissions)
-- [ ] **No "Tenants" card** (TENANT users can't see other tenants)
-- [ ] Check "Users" card shows only their tenant's users
-- [ ] Quick actions section shows tenant-specific actions only
-- [ ] System overview shows "Tenant Overview: [Tenant Name]"
+1. Select a tenant from header dropdown
+2. Navigate to "Capabilities" tab
+3. Click "Assign Capability"
+4. Select capability (e.g., `mfa`)
+5. Set enabled: `true`
+6. Set value (JSON, optional): `{"max_attempts": 5}`
+7. Click "Assign"
 
-**✅ Expected**: Dashboard displays with tenant-scoped statistics
+**Expected**: Capability assigned to tenant
 
-#### 5.4 TENANT User - User Management
-
-**Navigate**: Click "Users" in sidebar
-
-**Test Create User**:
-1. Click **"Create User"** button
-2. Fill form (same as SYSTEM user)
-3. Click **"Create"**
-4. **✅ Expected**: User created for their tenant (tenant_id automatically set)
-
-**Test User Operations**:
-- [ ] Search by username, email, or name
-- [ ] Filter by status
-- [ ] Edit user details
-- [ ] Delete user
-- [ ] **No "Tenant" column** in table (all users are from same tenant)
-- [ ] Pagination works
-
-#### 5.5 TENANT User - Settings
-
-**Navigate**: Click "Settings" in sidebar
-
-**Test Token Settings Tab**:
-- [ ] Only "Token Settings" tab visible (no System, Security, OAuth tabs)
-- [ ] View token lifetime settings
-- [ ] Modify Access Token TTL, Refresh Token TTL, ID Token TTL
-- [ ] Configure "Remember Me" settings
-- [ ] Toggle token rotation
-- [ ] Set MFA requirement for extended sessions
-- [ ] Click **"Save Token Settings"**
-- [ ] **✅ Expected**: Success message, settings saved for their tenant
-
-**Note**: TENANT users can only configure token settings for their own tenant
-
----
-
-### Phase 3: Role & Permission Testing
-
-#### 6.1 Create Roles and Permissions
-
-**As SYSTEM or TENANT User**:
-
-**Navigate**: Click "Roles" in sidebar
-
-**Test Create Role**:
-1. Click **"Create Role"** button
-2. Fill form:
-   - Name: `Developer`
-   - Description: `Developer role with read/write permissions`
-3. Click **"Create"**
-4. **✅ Expected**: Role appears in list
-
-**Navigate**: Click "Permissions" in sidebar
-
-**Test Create Permissions**:
-1. Click **"Create Permission"** button
-2. Create common permissions:
-   - Resource: `users`, Action: `read`
-   - Resource: `users`, Action: `write`
-   - Resource: `users`, Action: `delete`
-   - Resource: `roles`, Action: `read`
-   - Resource: `roles`, Action: `write`
-3. **✅ Expected**: Permissions appear in list
-
-#### 6.2 Assign Permissions to Roles
-
-**Navigate**: Click "Roles" → Click "Manage Permissions" on a role
-
-**Test**:
-- [ ] View available permissions list
-- [ ] Select permissions to assign
-- [ ] Click **"Save"**
-- [ ] **✅ Expected**: Permissions assigned to role
-
-#### 6.3 Assign Roles to Users
-
-**Navigate**: Click "Users" → Click "Edit" on a user
-
-**Test** (if role assignment UI exists):
-- [ ] View user's current roles
-- [ ] Select roles to assign
-- [ ] Click **"Save"**
-- [ ] **✅ Expected**: Roles assigned to user
-
-**Or via API**:
+**API Test**:
 ```bash
-# Assign role to user (if API endpoint exists)
-curl -X POST http://localhost:8080/api/v1/users/{user_id}/roles \
-  -H "Content-Type: application/json" \
+TENANT_ID="tenant-uuid-here"
+
+# Assign capability
+curl -X PUT http://localhost:8080/system/tenants/$TENANT_ID/capabilities/mfa \
   -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: $TENANT_ID" \
-  -d '{"role_id": "role-uuid-here"}'
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": true,
+    "value": {"max_attempts": 5}
+  }'
+
+# Get tenant capabilities
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/system/tenants/$TENANT_ID/capabilities
 ```
 
----
-
-### Phase 4: E2E Testing App
-
-#### 7.1 User Registration
-
-**Navigate**: `http://localhost:5174`
-
-**Test Registration**:
-1. Click **"Register"** or navigate to `/register`
-2. Fill registration form:
-   - Username: `testuser`
-   - Email: `testuser@acme.local`
-   - Password: `Secure@123456`
-   - Confirm Password: `Secure@123456`
-   - First Name: `Test`
-   - Last Name: `User`
-   - Tenant ID: (use a tenant ID)
-3. Click **"Register"**
-4. **✅ Expected**: Success message and redirect to login
-
-#### 7.2 Login Flow
-
-**Test Login**:
-1. Navigate to `/login`
-2. Enter credentials:
-   - Username: `testuser` (or `tenant_admin`)
-   - Password: `Secure@123456` (or `TenantAdmin@123456`)
-   - Tenant ID: (your tenant ID)
-   - Remember Me: (optional checkbox)
-3. Click **"Login"**
-4. **✅ Expected**: 
-   - Redirected to Dashboard
-   - Access token and refresh token stored
-   - User info displayed
-
-**Test Invalid Credentials**:
-- [ ] Enter wrong password → Should show error
-- [ ] Enter wrong username → Should show error
-- [ ] Enter wrong tenant ID → Should show error
-
-#### 7.3 Token Refresh
+#### 2.2 Revoke Capability from Tenant
 
 **Test**:
-- [ ] Wait for access token to expire (or manually expire it)
-- [ ] Make API request with expired token
-- [ ] **✅ Expected**: Token automatically refreshed using refresh token
+1. Navigate to tenant capabilities
+2. Click "Revoke" on a capability
+3. Confirm deletion
 
-#### 7.4 MFA Flow
+**Expected**: Capability removed from tenant
 
-**Navigate**: Click "Manage MFA" on Dashboard
-
-**Test MFA Enrollment**:
-1. Click **"Enroll in MFA"**
-2. **✅ Expected**: QR code displayed
-3. Scan QR code with authenticator app (Google Authenticator, Authy, etc.)
-4. Enter the 6-digit code from app
-5. Click **"Verify and Enable"**
-6. **✅ Expected**: MFA enabled, recovery codes displayed
-
-**Test MFA Verification**:
-1. Logout and login again
-2. After entering credentials, you should be prompted for MFA code
-3. Enter code from authenticator app
-4. Click **"Verify"**
-5. **✅ Expected**: Successfully logged in
-
-**Test MFA Disable**:
-1. Go to MFA page
-2. Click **"Disable MFA"**
-3. Confirm
-4. **✅ Expected**: MFA disabled
-
-#### 7.5 Profile Management
-
-**Navigate**: Click "Go to Profile" on Dashboard
-
-**Test View Profile**:
-- [ ] View user information (username, email, name)
-- [ ] View status and tenant ID
-
-**Test Edit Profile**:
-1. Click **"Edit Profile"**
-2. Modify first name or last name
-3. Click **"Save"**
-4. **✅ Expected**: Changes saved and displayed
-
-**Test Change Password**:
-1. Click **"Change Password"**
-2. Enter:
-   - Current Password: `Secure@123456`
-   - New Password: `NewSecure@123456`
-   - Confirm Password: `NewSecure@123456`
-3. Click **"Change Password"**
-4. **✅ Expected**: Password changed successfully
-
-#### 7.6 Roles and Permissions View
-
-**Navigate**: Click "View Roles & Permissions" on Dashboard
-
-**Test View Roles**:
-- [ ] View user information card
-- [ ] View assigned roles section
-- [ ] See role details (name, description, permissions)
-- [ ] View all permissions from roles
-
-**Test Permissions Display**:
-- [ ] View permissions grid
-- [ ] See resource:action format
-- [ ] View permission descriptions
-
----
-
-### Phase 5: Integration Testing
-
-#### 8.1 Cross-App Testing
-
-**Test Flow**:
-1. **Admin Dashboard (SYSTEM)**: Create tenant
-2. **Admin Dashboard (SYSTEM)**: Create user for tenant
-3. **Admin Dashboard (SYSTEM/TENANT)**: Assign role to user
-4. **E2E Test App**: Login with that user
-5. **E2E Test App**: View roles and permissions
-6. **✅ Expected**: User sees assigned roles and permissions
-
-#### 8.2 Tenant Isolation Testing
+#### 2.3 View Capability Evaluation
 
 **Test**:
-1. **SYSTEM User**: Create Tenant A and Tenant B
-2. **SYSTEM User**: Create users in both tenants
-3. **TENANT User (Tenant A)**: Login and view users
-4. **✅ Expected**: Only sees users from Tenant A
-5. **TENANT User (Tenant B)**: Login and view users
-6. **✅ Expected**: Only sees users from Tenant B
+1. Navigate to tenant capabilities
+2. Click "View Evaluation"
+3. See complete capability evaluation:
+   - System supported: ✅
+   - Tenant allowed: ✅
+   - Tenant enabled: ⚠️
+   - User enrolled: ⚠️
 
-#### 8.3 SYSTEM vs TENANT Permission Testing
+**Expected**: Shows full evaluation chain
+
+### Phase 3: Tenant Feature Enablement (TENANT Admin)
+
+#### 3.1 Login as TENANT Admin
+
+1. Create tenant admin user (as SYSTEM admin)
+2. Login with tenant admin credentials
+3. Provide tenant ID
+
+#### 3.2 Enable Feature for Tenant
+
+**Navigate**: Settings → Capabilities Tab → Features
 
 **Test**:
-1. **SYSTEM User**: Try to access `/system/tenants` endpoint
-2. **✅ Expected**: Success (has system permissions)
-3. **TENANT User**: Try to access `/system/tenants` endpoint
-4. **✅ Expected**: 403 Forbidden (no system permissions)
+1. View available features (capabilities allowed by system)
+2. Click "Enable Feature" on `mfa`
+3. Set configuration (JSON, optional): `{"required_for_admins": true}`
+4. Click "Enable"
 
----
+**Expected**: Feature enabled for tenant
 
-## 🔍 Step 5: API Testing
-
-### Test SYSTEM API Endpoints
-
+**API Test**:
 ```bash
-# Login as SYSTEM user
-LOGIN_RESPONSE=$(curl -X POST http://localhost:8080/api/v1/auth/login \
+# Login as tenant admin
+TENANT_ID="tenant-uuid"
+TENANT_TOKEN="tenant-admin-token"
+
+# Enable feature
+curl -X PUT http://localhost:8080/api/v1/tenant/features/mfa \
+  -H "Authorization: Bearer $TENANT_TOKEN" \
+  -H "X-Tenant-ID: $TENANT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": true,
+    "configuration": {"required_for_admins": true}
+  }'
+
+# Get enabled features
+curl -H "Authorization: Bearer $TENANT_TOKEN" \
+  -H "X-Tenant-ID: $TENANT_ID" \
+  http://localhost:8080/api/v1/tenant/features
+```
+
+#### 3.3 Disable Feature
+
+**Test**:
+1. Navigate to features
+2. Click "Disable" on enabled feature
+3. Confirm
+
+**Expected**: Feature disabled
+
+### Phase 4: User Capability Enrollment (TENANT Admin)
+
+#### 4.1 Enroll User in Capability
+
+**Navigate**: Users → Select User → Capabilities Tab
+
+**Test**:
+1. Select a user
+2. Navigate to "Capabilities" tab
+3. View available capabilities (enabled by tenant)
+4. Click "Enroll" on `mfa`
+5. Fill enrollment form (if required)
+6. Click "Enroll"
+
+**Expected**: User enrolled in capability
+
+**API Test**:
+```bash
+USER_ID="user-uuid"
+
+# Enroll user
+curl -X POST http://localhost:8080/api/v1/users/$USER_ID/capabilities/mfa/enroll \
+  -H "Authorization: Bearer $TENANT_TOKEN" \
+  -H "X-Tenant-ID: $TENANT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "state_data": {}
+  }'
+
+# Get user capabilities
+curl -H "Authorization: Bearer $TENANT_TOKEN" \
+  -H "X-Tenant-ID: $TENANT_ID" \
+  http://localhost:8080/api/v1/users/$USER_ID/capabilities
+```
+
+#### 4.2 Unenroll User
+
+**Test**:
+1. Navigate to user capabilities
+2. Click "Unenroll" on enrolled capability
+3. Confirm
+
+**Expected**: User unenrolled
+
+### Phase 5: Capability Enforcement Testing
+
+#### 5.1 Test MFA Enforcement
+
+**Scenario**: MFA required but user not enrolled
+
+1. **SYSTEM Admin**: Enable `mfa` capability for tenant
+2. **TENANT Admin**: Enable `mfa` feature with `required: true`
+3. **User**: Try to login
+4. **Expected**: Login blocked, MFA enrollment required
+
+**Test**:
+```bash
+# Try login without MFA enrollment
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: $TENANT_ID" \
+  -d '{
+    "username": "testuser",
+    "password": "password"
+  }'
+
+# Expected: 403 Forbidden or MFA required response
+```
+
+#### 5.2 Test OAuth2 Scope Validation
+
+**Scenario**: OAuth2 scope not allowed for tenant
+
+1. **SYSTEM Admin**: Set `allowed_scope_namespaces` for tenant
+2. **User**: Request OAuth token with unauthorized scope
+3. **Expected**: Token request rejected
+
+#### 5.3 Test Capability Inheritance Visualization
+
+**Navigate**: Settings → Capabilities Tab → Inheritance View
+
+**Test**:
+- [ ] View three-layer visualization
+- [ ] See System → Tenant → User flow
+- [ ] See capability status at each level
+- [ ] See inheritance path
+
+**Expected**: Visual representation of capability inheritance
+
+---
+
+## 🧪 Complete Feature Testing
+
+### Authentication & Authorization
+
+#### Login Testing
+
+**SYSTEM User Login**:
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "system_admin",
     "password": "SystemAdmin@123456"
-  }')
-
-TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.access_token')
-
-# List all tenants (SYSTEM endpoint)
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8080/system/tenants
-
-# Create tenant (SYSTEM endpoint)
-curl -X POST http://localhost:8080/system/tenants \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "New Tenant",
-    "domain": "new.local",
-    "status": "active"
-  }'
-
-# Get tenant settings (SYSTEM endpoint)
-TENANT_ID="tenant-uuid-here"
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:8080/system/tenants/$TENANT_ID/settings
-
-# Update tenant settings (SYSTEM endpoint)
-curl -X PUT http://localhost:8080/system/tenants/$TENANT_ID/settings \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenant_id": "'$TENANT_ID'",
-    "access_token_ttl_minutes": 30,
-    "refresh_token_ttl_days": 60,
-    "id_token_ttl_minutes": 120,
-    "remember_me_enabled": true,
-    "remember_me_refresh_token_ttl_days": 180,
-    "remember_me_access_token_ttl_minutes": 120,
-    "token_rotation_enabled": true,
-    "require_mfa_for_extended_sessions": false
   }'
 ```
 
-### Test TENANT API Endpoints
-
+**TENANT User Login**:
 ```bash
-# Login as TENANT user
-TENANT_ID="tenant-uuid-here"
-LOGIN_RESPONSE=$(curl -X POST http://localhost:8080/api/v1/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -H "X-Tenant-ID: $TENANT_ID" \
   -d '{
     "username": "tenant_admin",
     "password": "TenantAdmin@123456"
-  }')
+  }'
+```
 
-TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.access_token')
+#### Token Refresh
 
-# List users (TENANT endpoint - automatically scoped to tenant)
-curl -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: $TENANT_ID" \
-  http://localhost:8080/api/v1/users
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refresh_token": "$REFRESH_TOKEN"
+  }'
+```
 
-# Create user (TENANT endpoint)
+#### Token Revocation
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/revoke \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "$REFRESH_TOKEN",
+    "token_type_hint": "refresh_token"
+  }'
+```
+
+### MFA Testing
+
+#### Enroll in MFA
+
+```bash
+curl -X POST http://localhost:8080/api/v1/mfa/enroll \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "$USER_ID"
+  }'
+```
+
+#### Verify MFA
+
+```bash
+curl -X POST http://localhost:8080/api/v1/mfa/verify \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "$USER_ID",
+    "totp_code": "123456"
+  }'
+```
+
+### User Management
+
+#### Create User
+
+```bash
 curl -X POST http://localhost:8080/api/v1/users \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -H "X-Tenant-ID: $TENANT_ID" \
   -d '{
     "username": "newuser",
-    "email": "newuser@acme.local",
+    "email": "newuser@example.com",
     "password": "Secure@123456",
     "first_name": "New",
     "last_name": "User"
   }'
-
-# List roles (TENANT endpoint)
-curl -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: $TENANT_ID" \
-  http://localhost:8080/api/v1/roles
-
-# List permissions (TENANT endpoint)
-curl -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-ID: $TENANT_ID" \
-  http://localhost:8080/api/v1/permissions
 ```
 
-### Test Token Operations
+#### List Users
 
 ```bash
-# Refresh token
-curl -X POST http://localhost:8080/api/v1/auth/refresh \
-  -H "Content-Type: application/json" \
-  -d "{\"refresh_token\": \"$REFRESH_TOKEN\"}"
+curl -H "Authorization: Bearer $TOKEN" \
+  -H "X-Tenant-ID: $TENANT_ID" \
+  http://localhost:8080/api/v1/users
+```
 
-# Revoke token (logout)
-curl -X POST http://localhost:8080/api/v1/auth/revoke \
+### Role & Permission Management
+
+#### Create Role
+
+```bash
+curl -X POST http://localhost:8080/api/v1/roles \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{\"token\": \"$REFRESH_TOKEN\", \"token_type_hint\": \"refresh_token\"}"
+  -H "X-Tenant-ID: $TENANT_ID" \
+  -d '{
+    "name": "Developer",
+    "description": "Developer role"
+  }'
+```
+
+#### Assign Permission to Role
+
+```bash
+curl -X POST http://localhost:8080/api/v1/roles/$ROLE_ID/permissions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: $TENANT_ID" \
+  -d '{
+    "permission_id": "$PERMISSION_ID"
+  }'
 ```
 
 ---
 
-## ✅ Testing Checklist Summary
+## 🔍 API Testing
 
-### Backend
-- [x] Server starts successfully
-- [x] Database connection works
-- [x] Health endpoint responds
-- [x] All migrations applied (version 16)
-- [x] Master user bootstrap works
-- [x] API endpoints accessible
+### Complete API Test Suite
 
-### SYSTEM User (Master Admin)
-- [ ] Login as SYSTEM user
-- [ ] Dashboard shows system-wide statistics
-- [ ] Tenant selector works
-- [ ] Create/Read/Update/Delete tenants
-- [ ] Suspend/Resume tenants
-- [ ] Create users for tenants
-- [ ] View users across all tenants
-- [ ] System Settings tab visible and works
-- [ ] Security Settings tab visible and works
-- [ ] OAuth2/OIDC Settings tab visible and works
-- [ ] Tenant Settings tab works (with tenant selected)
-- [ ] Access to `/system/*` endpoints
+See [API Testing Guide](./API_TESTING_GUIDE.md) for comprehensive API testing scenarios.
 
-### TENANT User (Tenant Admin)
-- [ ] Login as TENANT user
-- [ ] Dashboard shows tenant-scoped statistics
-- [ ] No tenant selector (locked to own tenant)
-- [ ] Create/Read/Update/Delete users (own tenant only)
-- [ ] View only own tenant's users
-- [ ] Token Settings tab visible and works
-- [ ] No access to System/Security/OAuth tabs
-- [ ] No access to `/system/*` endpoints
-- [ ] Access to `/api/v1/*` endpoints (tenant-scoped)
+### Quick API Health Check
 
-### Admin Dashboard
-- [ ] Login works (both SYSTEM and TENANT)
-- [ ] Dashboard displays correct statistics
-- [ ] Tenant CRUD operations (SYSTEM only)
-- [ ] User CRUD operations
-- [ ] Role CRUD operations
-- [ ] Permission CRUD operations
-- [ ] Search and filtering
-- [ ] Pagination
-- [ ] Settings page (conditional based on user type)
-- [ ] Audit logs viewer
+```bash
+#!/bin/bash
 
-### E2E Testing App
-- [ ] User registration
-- [ ] Login/logout
-- [ ] Token refresh
-- [ ] MFA enrollment
-- [ ] MFA verification
-- [ ] Profile management
-- [ ] Password change
-- [ ] Roles and permissions view
+BASE_URL="http://localhost:8080"
 
-### Integration
-- [ ] Cross-app workflows
-- [ ] Role assignment flow
-- [ ] Permission inheritance
-- [ ] Tenant isolation
-- [ ] SYSTEM vs TENANT permission checks
-- [ ] Complete user journey
+# Health check
+echo "Testing Health Endpoint..."
+curl -s $BASE_URL/health | jq .
+
+# Login
+echo "Testing Login..."
+LOGIN_RESPONSE=$(curl -s -X POST $BASE_URL/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "system_admin", "password": "SystemAdmin@123456"}')
+
+TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.access_token')
+echo "Token: $TOKEN"
+
+# Test protected endpoint
+echo "Testing Protected Endpoint..."
+curl -s -H "Authorization: Bearer $TOKEN" \
+  $BASE_URL/system/capabilities | jq .
+```
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Backend Issues
+### Database Issues
 
-**Server won't start**:
+**Connection Failed**:
 ```bash
-# Check server logs
-tail -f server.log
+# Check PostgreSQL is running
+pg_isready -h localhost -p 5432
 
-# Verify database connection
-PGPASSWORD=dcim_password psql -h 127.0.0.1 -p 5433 -U dcim_user -d iam -c "SELECT 1;"
+# Check credentials
+psql -h localhost -U iam_user -d iam -c "SELECT 1;"
 ```
 
-**Port already in use**:
-```bash
-# Kill existing process
-pkill -f "go run cmd/server/main.go"
-
-# Or change port
-export SERVER_PORT=8081
-```
-
-**Migrations not applied**:
+**Migrations Failed**:
 ```bash
 # Check current version
-export DATABASE_URL="postgres://dcim_user:dcim_password@127.0.0.1:5433/iam?sslmode=disable"
 migrate -path migrations -database "$DATABASE_URL" version
 
-# Apply migrations
+# Force version (if needed)
+migrate -path migrations -database "$DATABASE_URL" force 22
+
+# Run migrations again
 migrate -path migrations -database "$DATABASE_URL" up
+```
+
+### Backend Issues
+
+**Server Won't Start**:
+```bash
+# Check logs
+tail -f server.log
+
+# Check port availability
+lsof -i :8080
+
+# Check environment variables
+env | grep DATABASE
+env | grep JWT
+```
+
+**Capability Service Errors**:
+```bash
+# Check capability tables exist
+psql $DATABASE_URL -c "\dt *capability*"
+
+# Check system capabilities populated
+psql $DATABASE_URL -c "SELECT COUNT(*) FROM system_capabilities;"
 ```
 
 ### Frontend Issues
 
-**Apps won't start**:
+**CORS Errors**:
+- Verify backend CORS middleware enabled
+- Check `VITE_API_BASE_URL` in `.env`
+
+**Capability Pages Not Loading**:
+- Check user has correct `principal_type` (SYSTEM or TENANT)
+- Verify JWT token contains capability claims
+- Check browser console for errors
+
+### Kubernetes Issues
+
+**Pods Not Starting**:
 ```bash
-# Clear Vite cache
-rm -rf node_modules/.vite
+# Check pod status
+kubectl get pods
 
-# Reinstall dependencies
-npm install
+# Check pod logs
+kubectl logs <pod-name>
 
-# Try again
-npm run dev
+# Check events
+kubectl describe pod <pod-name>
 ```
 
-**CORS errors**:
-- Verify backend CORS middleware is enabled
-- Check API base URL in frontend config
+**Services Not Accessible**:
+```bash
+# Check services
+kubectl get svc
 
-**API connection errors**:
-- Verify backend is running on port 8080
-- Check `VITE_API_BASE_URL` in frontend `.env` files
+# Check ingress
+kubectl get ingress
 
-**Settings page shows only Token Settings**:
-- Check `localStorage.getItem('principal_type')` in browser console
-- Should be `"SYSTEM"` for system admin, `"TENANT"` for tenant admin
-- If incorrect, logout and login again
-
-### Authentication Issues
-
-**SYSTEM user can't login**:
-- Verify user has `principal_type = 'SYSTEM'` in database
-- Verify `tenant_id = NULL` for SYSTEM users
-- Check JWT token contains `principal_type: "SYSTEM"`
-
-**TENANT user can't login**:
-- Verify user has `principal_type = 'TENANT'` in database
-- Verify `tenant_id` is set and valid
-- Provide tenant ID in login form
-
-**403 Forbidden on SYSTEM endpoints**:
-- Verify user has system permissions
-- Check JWT token contains `system_permissions` array
-- Verify user has required system role assigned
+# Port forward for testing
+kubectl port-forward svc/iam-api 8080:8080
+```
 
 ---
 
-## 📝 Notes
+## ✅ Complete Testing Checklist
 
-- **Redis**: Optional - server works without it (caching disabled)
-- **Hydra**: Optional - OAuth2 features may not work without it
-- **Tenant Context**: 
-  - TENANT users: Must provide `X-Tenant-ID` header
-  - SYSTEM users: Can access `/system/*` without tenant context, or select tenant for tenant-scoped operations
-- **Authentication**: 
-  - Login endpoint returns JWT access token and refresh token
-  - Token contains `principal_type`, `system_permissions`, and `permissions`
-- **Token Refresh**: Use `/api/v1/auth/refresh` to get new tokens when access token expires
-- **Token Revocation**: Use `/api/v1/auth/revoke` to logout and invalidate refresh tokens
-- **Remember Me**: Extends token lifetimes for longer sessions
-- **Master Tenant Architecture**: 
-  - SYSTEM users can manage all tenants
-  - TENANT users are isolated to their tenant
-  - System roles and permissions are separate from tenant roles and permissions
+### Setup
+- [ ] Database created and accessible
+- [ ] All migrations applied (version 22)
+- [ ] System capabilities populated
+- [ ] Backend server running
+- [ ] Frontend applications running
+- [ ] Master user (SYSTEM admin) created
 
----
+### Capability Model
+- [ ] System capabilities visible (SYSTEM admin)
+- [ ] System capability editing works
+- [ ] Tenant capability assignment works
+- [ ] Tenant feature enablement works
+- [ ] User capability enrollment works
+- [ ] Capability enforcement works
+- [ ] Inheritance visualization works
 
-## 🎯 Next Steps After Testing
+### Authentication
+- [ ] SYSTEM user login works
+- [ ] TENANT user login works
+- [ ] Token refresh works
+- [ ] Token revocation works
+- [ ] MFA enrollment works
+- [ ] MFA verification works
 
-1. **Document Issues**: Note any bugs or issues found
-2. **Create GitHub Issues**: For any problems discovered
-3. **Test Edge Cases**: Invalid inputs, boundary conditions
-4. **Performance Testing**: Load testing, stress testing
-5. **Security Testing**: Test authentication, authorization, input validation
-6. **Test SYSTEM User Scenarios**: Multi-tenant management, tenant settings configuration
-7. **Test TENANT User Scenarios**: Tenant isolation, tenant-scoped operations
+### Authorization
+- [ ] SYSTEM user can access `/system/*` endpoints
+- [ ] TENANT user cannot access `/system/*` endpoints
+- [ ] Tenant isolation works
+- [ ] Role-based access control works
+
+### User Management
+- [ ] Create user works
+- [ ] List users works
+- [ ] Update user works
+- [ ] Delete user works
+- [ ] User search works
+
+### Role & Permission Management
+- [ ] Create role works
+- [ ] Assign permissions works
+- [ ] Assign roles to users works
+- [ ] Permission inheritance works
+
+### Deployment Environments
+- [ ] Local development works
+- [ ] Docker Compose works
+- [ ] Kubernetes deployment works
+- [ ] Cloud deployment works
+- [ ] On-premise deployment works
 
 ---
 
 ## 📚 Related Documentation
 
 - [Architecture Overview](../architecture/overview.md)
+- [Capability Model Architecture](../architecture/CAPABILITY_MODEL.md)
 - [Master Tenant Architecture](../architecture/backend/MASTER_TENANT_ARCHITECTURE.md)
-- [Authentication Flows](../guides/authentication/AUTHENTICATION_FLOWS_GUIDE.md)
-- [Frontend Quick Start](../guides/frontend-quick-start.md)
-- [Database Configuration](../guides/database-configuration.md)
+- [Deployment Plan](../deployment/CAPABILITY_MODEL_DEPLOYMENT_PLAN.md)
+- [API Documentation](../api/capability-endpoints.md)
 
 ---
 
 **Happy Testing!** 🚀
 
-**Last Updated**: 2026-01-08  
-**Version**: 2.0 (Master Tenant Architecture)
+**Last Updated**: 2025-01-27  
+**Version**: 3.0 (Capability Model)
