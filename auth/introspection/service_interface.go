@@ -2,8 +2,6 @@ package introspection
 
 import (
 	"context"
-
-	"github.com/google/uuid"
 )
 
 // ServiceInterface defines the interface for token introspection
