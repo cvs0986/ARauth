@@ -46,7 +46,7 @@ func (h *IntrospectionHandler) IntrospectToken(c *gin.Context) {
 	tokenInfo, err := h.introspectionService.IntrospectToken(c.Request.Context(), req.Token, req.TokenTypeHint)
 	if err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "introspection_error",
-			"Failed to introspect token", err.Error())
+			"Failed to introspect token", nil)
 		return
 	}
 

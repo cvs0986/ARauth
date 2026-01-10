@@ -241,6 +241,10 @@ func main() {
 	webhookHandler := handlers.NewWebhookHandler(webhookService) // NEW: Webhook handler
 	identityLinkingHandler := handlers.NewIdentityLinkingHandler(identityLinkingService) // NEW: Identity linking handler
 
+	// Initialize token introspection service (RFC 7662)
+	introspectionService := introspection.NewService(jwtSecret, publicKey, cfg.Security.JWT.Issuer)
+	introspectionHandler := handlers.NewIntrospectionHandler(introspectionService) // NEW: Token introspection handler
+
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
 		gin.SetMode(gin.DebugMode)
