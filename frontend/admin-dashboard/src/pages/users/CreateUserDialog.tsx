@@ -1,12 +1,27 @@
 /**
  * Create User Dialog
+ * 
+ * AUTHORITY MODEL:
+ * Who: SYSTEM users OR TENANT users
+ * Scope: Platform-wide (SYSTEM) OR Tenant-scoped (TENANT)
+ * Permission: users:create
+ * 
+ * SYSTEM Users:
+ * - Must select tenant (required)
+ * - Can create system users OR tenant users
+ * - Roles filtered by tenant scope
+ * 
+ * TENANT Users:
+ * - No tenant selector
+ * - Roles limited to tenant roles only
+ * - Cannot create system users
  */
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { userApi, roleApi } from '@/services/api';
+import { userApi, roleApi, systemApi } from '@/services/api';
 import { handleApiError } from '@/services/api';
 import {
   Dialog,
@@ -26,8 +41,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import { usePrincipalContext } from '@/contexts/PrincipalContext';
+import { Building2, Shield, Info } from 'lucide-react';
 
 const createUserSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -36,6 +54,7 @@ const createUserSchema = z.object({
   first_name: z.string().optional(),
   last_name: z.string().optional(),
   role_id: z.string().optional(),
+  tenant_id: z.string().optional(), // For SYSTEM users
 });
 
 type CreateUserFormData = z.infer<typeof createUserSchema>;
@@ -43,14 +62,15 @@ type CreateUserFormData = z.infer<typeof createUserSchema>;
 interface CreateUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tenantId?: string; // Optional tenant ID for SYSTEM users creating tenant users
+  tenantId?: string; // Pre-selected tenant ID
 }
 
-export function CreateUserDialog({ open, onOpenChange, tenantId }: CreateUserDialogProps) {
+export function CreateUserDialog({ open, onOpenChange, tenantId: propTenantId }: CreateUserDialogProps) {
   const queryClient = useQueryClient();
-  const { isSystemUser } = useAuthStore();
+  const { principalType, homeTenantId, selectedTenantId } = usePrincipalContext();
   const [error, setError] = useState<string | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string>('');
+  const [selectedTenantId, setSelectedTenantId] = useState<string>(propTenantId || '');
 
   const {
     register,
@@ -62,44 +82,53 @@ export function CreateUserDialog({ open, onOpenChange, tenantId }: CreateUserDia
     resolver: zodResolver(createUserSchema),
   });
 
-  // Fetch roles based on context (system or tenant)
+  // Determine effective tenant ID
+  const effectiveTenantId = propTenantId || selectedTenantId ||
+    (principalType === 'TENANT' ? homeTenantId : null);
+
+  // Fetch tenants for SYSTEM users
+  const { data: tenants } = useQuery({
+    queryKey: ['system', 'tenants'],
+    queryFn: () => systemApi.tenants.list(),
+    enabled: open && principalType === 'SYSTEM',
+  });
+
+  // Fetch roles based on selected tenant
   const { data: roles = [], isLoading: rolesLoading } = useQuery({
-    queryKey: tenantId ? ['roles', tenantId] : ['systemRoles'],
-    queryFn: () => (tenantId ? roleApi.list(tenantId) : roleApi.listSystem()),
-    enabled: open, // Only fetch when dialog is open
+    queryKey: effectiveTenantId ? ['roles', effectiveTenantId] : ['systemRoles'],
+    queryFn: () => (effectiveTenantId ? roleApi.list(effectiveTenantId) : roleApi.listSystem()),
+    enabled: open,
   });
 
   const createUserMutation = useMutation({
     mutationFn: async (data: CreateUserFormData) => {
-      const { role_id, ...userData } = data;
-      
-      // Use createSystem for system users, create for tenant users
-      const user = tenantId
-        ? await userApi.create({ ...userData, tenant_id: tenantId })
+      const { role_id, tenant_id, ...userData } = data;
+
+      // Determine target tenant
+      const targetTenantId = tenant_id || effectiveTenantId;
+
+      // Create user
+      const user = targetTenantId
+        ? await userApi.create({ ...userData, tenant_id: targetTenantId })
         : await userApi.createSystem(userData);
-      
+
       // Assign role if selected
       if (role_id && user.id) {
         try {
-          // For system users, don't pass tenantId (system roles don't need tenant context)
-          // For tenant users, pass tenantId (tenant roles need tenant context)
-          await roleApi.assignRoleToUser(user.id, role_id, tenantId || undefined);
+          await roleApi.assignRoleToUser(user.id, role_id, targetTenantId || undefined);
         } catch (err) {
-          // If role assignment fails, we still created the user
-          // Log error but don't fail the whole operation
           console.error('Failed to assign role:', err);
         }
       }
-      
+
       return user;
     },
     onSuccess: () => {
-      // Invalidate both system and tenant user queries
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['system', 'users'] });
-      queryClient.invalidateQueries({ queryKey: tenantId ? ['roles', tenantId] : ['systemRoles'] });
       reset();
       setSelectedRoleId('');
+      setSelectedTenantId('');
       setError(null);
       onOpenChange(false);
     },
@@ -110,29 +139,88 @@ export function CreateUserDialog({ open, onOpenChange, tenantId }: CreateUserDia
 
   const onSubmit = (data: CreateUserFormData) => {
     setError(null);
-    createUserMutation.mutate(data);
+
+    // Validate tenant selection for SYSTEM users
+    if (principalType === 'SYSTEM' && !effectiveTenantId && !data.tenant_id) {
+      setError('Please select a tenant');
+      return;
+    }
+
+    createUserMutation.mutate({
+      ...data,
+      tenant_id: effectiveTenantId || undefined,
+    });
   };
+
+  const isSystemUser = principalType === 'SYSTEM';
+  const showTenantSelector = isSystemUser && !propTenantId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create User</DialogTitle>
           <DialogDescription>
-            {isSystemUser() && tenantId
-              ? `Create a new user account for the selected tenant. The user will be able to log in with these credentials.`
-              : 'Create a new user account. The user will be able to log in with these credentials.'}
+            {isSystemUser && effectiveTenantId
+              ? `Create a new user for the selected tenant`
+              : isSystemUser
+                ? 'Create a new system user or tenant user'
+                : 'Create a new user account'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Authority Context Badge */}
+          {effectiveTenantId ? (
+            <Badge className="bg-green-100 text-green-800">
+              <Building2 className="h-3 w-3 mr-1" />
+              Creating Tenant User
+            </Badge>
+          ) : (
+            <Badge className="bg-blue-100 text-blue-800">
+              <Shield className="h-3 w-3 mr-1" />
+              Creating System User
+            </Badge>
+          )}
+
+          {/* Tenant Selector (SYSTEM users only) */}
+          {showTenantSelector && (
+            <div className="space-y-2">
+              <Label htmlFor="tenant_id">Tenant *</Label>
+              <Select
+                value={selectedTenantId}
+                onValueChange={(value) => {
+                  setSelectedTenantId(value);
+                  setValue('tenant_id', value);
+                  setSelectedRoleId(''); // Reset role when tenant changes
+                }}
+                disabled={createUserMutation.isPending}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select tenant (or leave empty for system user)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">System User (No Tenant)</SelectItem>
+                  {tenants?.map((tenant) => (
+                    <SelectItem key={tenant.id} value={tenant.id}>
+                      {tenant.name} ({tenant.domain})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Select a tenant to create a tenant user, or leave empty to create a system user
+              </p>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">Username *</Label>
             <Input
               id="username"
               {...register('username')}
@@ -145,7 +233,7 @@ export function CreateUserDialog({ open, onOpenChange, tenantId }: CreateUserDia
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email *</Label>
             <Input
               id="email"
               type="email"
@@ -159,7 +247,7 @@ export function CreateUserDialog({ open, onOpenChange, tenantId }: CreateUserDia
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Password *</Label>
             <Input
               id="password"
               type="password"
@@ -222,9 +310,21 @@ export function CreateUserDialog({ open, onOpenChange, tenantId }: CreateUserDia
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {tenantId ? 'Select a tenant role to assign to this user' : 'Select a system role to assign to this user'}
+              {effectiveTenantId
+                ? 'Roles are filtered by selected tenant'
+                : 'System roles only'}
             </p>
           </div>
+
+          {/* Authority Notice */}
+          <Alert className="bg-blue-50 border-blue-200">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800 text-xs">
+              {effectiveTenantId
+                ? 'This user will be created in the selected tenant scope'
+                : 'This user will be created as a system user with platform-wide access'}
+            </AlertDescription>
+          </Alert>
 
           <DialogFooter>
             <Button
@@ -234,6 +334,7 @@ export function CreateUserDialog({ open, onOpenChange, tenantId }: CreateUserDia
                 onOpenChange(false);
                 reset();
                 setSelectedRoleId('');
+                setSelectedTenantId('');
               }}
               disabled={createUserMutation.isPending}
             >
@@ -248,4 +349,3 @@ export function CreateUserDialog({ open, onOpenChange, tenantId }: CreateUserDia
     </Dialog>
   );
 }
-
