@@ -153,10 +153,20 @@ func (h *ImpersonationHandler) EndImpersonation(c *gin.Context) {
 			ID:         sessionID,
 			Identifier: "impersonation_session",
 		}
-		_ = h.auditService.LogEvent(c.Request.Context(), models.EventTypeUserImpersonationEnded, actor, target, nil, sourceIP, userAgent, map[string]interface{}{
-			"session_id": sessionID,
-			"ended_by":   endedBy,
-		}, models.ResultSuccess, nil)
+		event := &models.AuditEvent{
+			EventType: models.EventTypeUserImpersonationEnded,
+			Actor:     actor,
+			Target:    target,
+			SourceIP:  sourceIP,
+			UserAgent: userAgent,
+			Metadata: map[string]interface{}{
+				"session_id": sessionID,
+				"ended_by":   endedBy,
+			},
+			Result: models.ResultSuccess,
+		}
+		event.Flatten()
+		_ = h.auditService.LogEvent(c.Request.Context(), event)
 	}
 
 	c.JSON(http.StatusOK, gin.H{

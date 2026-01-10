@@ -143,9 +143,9 @@ func (r *ImpersonationRepository) GetByTokenJTI(ctx context.Context, tokenJTI uu
 	session := &models.ImpersonationSession{}
 	var metadataJSON []byte
 	var endedAt sql.NullTime
-	var tokenJTIUUID sql.NullString
+	var tokenJTIStr sql.NullString
 
-	err := r.db.QueryRowContext(ctx, query, tokenJTI).Scan(
+	err := r.db.QueryRowContext(ctx, query, tokenJTI.String()).Scan(
 		&session.ID,
 		&session.ImpersonatorID,
 		&session.TargetUserID,
