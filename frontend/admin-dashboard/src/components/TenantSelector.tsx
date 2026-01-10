@@ -1,11 +1,17 @@
 /**
  * Tenant Selector Component
- * Allows SYSTEM users to select a tenant context for viewing/managing tenant-specific data
+ * 
+ * GUARDRAIL #1: Backend Is Law
+ * - Tenant list fetched from backend API
+ * 
+ * GUARDRAIL #6: UI Quality Bar
+ * - Only shown for SYSTEM users
+ * - Clean, professional dropdown
  */
 
 import { useQuery } from '@tanstack/react-query';
 import { systemApi } from '@/services/api';
-import { useAuthStore } from '@/store/authStore';
+import { usePrincipalContext } from '@/contexts/PrincipalContext';
 import {
   Select,
   SelectContent,
@@ -16,10 +22,10 @@ import {
 import { Building2 } from 'lucide-react';
 
 export function TenantSelector() {
-  const { isSystemUser, selectedTenantId, setSelectedTenantId } = useAuthStore();
+  const { principalType, selectedTenantId, selectTenant } = usePrincipalContext();
 
   // Only show for SYSTEM users
-  if (!isSystemUser()) {
+  if (principalType !== 'SYSTEM') {
     return null;
   }
 
@@ -27,14 +33,14 @@ export function TenantSelector() {
   const { data: tenants, isLoading } = useQuery({
     queryKey: ['system', 'tenants'],
     queryFn: () => systemApi.tenants.list(),
-    enabled: isSystemUser(),
+    enabled: principalType === 'SYSTEM',
   });
 
   const handleTenantChange = (tenantId: string) => {
     if (tenantId === 'all') {
-      setSelectedTenantId(null);
+      selectTenant(null);
     } else {
-      setSelectedTenantId(tenantId);
+      selectTenant(tenantId);
     }
   };
 
@@ -69,4 +75,3 @@ export function TenantSelector() {
     </div>
   );
 }
-
