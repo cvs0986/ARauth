@@ -509,6 +509,25 @@ func (h *RoleHandler) AssignRoleToUser(c *gin.Context) {
 		return
 	}
 
+	// Log audit event for tenant role assignment
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		// Get user info for target
+		user, err := h.userRepo.GetByID(c.Request.Context(), userID)
+		if err == nil {
+			target := &models.AuditTarget{
+				Type:       "user",
+				ID:         userID,
+				Identifier: user.Username,
+			}
+			_ = h.auditService.LogRoleAssigned(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent, map[string]interface{}{
+				"role_id":   roleID.String(),
+				"role_name": existingRole.Name,
+				"is_system": false,
+			})
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Role assigned successfully"})
 }
 
@@ -585,6 +604,21 @@ func (h *RoleHandler) RemoveRoleFromUser(c *gin.Context) {
 		middleware.RespondWithError(c, http.StatusBadRequest, "removal_failed",
 			err.Error(), nil)
 		return
+	}
+
+	// Log audit event for role removal
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		// Get user info for target
+		user, err := h.userRepo.GetByID(c.Request.Context(), userID)
+		if err == nil {
+			target := &models.AuditTarget{
+				Type:       "user",
+				ID:         userID,
+				Identifier: user.Username,
+			}
+			_ = h.auditService.LogRoleRemoved(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Role removed successfully"})
