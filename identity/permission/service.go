@@ -6,14 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/internal/logger"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 // Service provides permission management business logic
 type Service struct {
-	repo            interfaces.PermissionRepository
+	repo              interfaces.PermissionRepository
 	tenantInitializer TenantInitializerInterface // Optional: for auto-attaching to tenant_owner
 }
 
@@ -72,16 +74,16 @@ func (s *Service) Create(ctx context.Context, req *CreatePermissionRequest) (*mo
 	// Forbidden namespaces: system.*, platform.*
 	allowedNamespaces := []string{"tenant.", "app.", "resource."}
 	forbiddenNamespaces := []string{"system.", "platform."}
-	
+
 	resourceLower := strings.ToLower(resource)
-	
+
 	// Check if resource starts with forbidden namespace
 	for _, forbidden := range forbiddenNamespaces {
 		if strings.HasPrefix(resourceLower, forbidden) {
 			return nil, fmt.Errorf("permission resource cannot start with '%s' namespace. Allowed namespaces: tenant.*, app.*, resource.*", forbidden)
 		}
 	}
-	
+
 	// Check if resource starts with allowed namespace
 	hasAllowedNamespace := false
 	for _, allowed := range allowedNamespaces {
@@ -90,7 +92,7 @@ func (s *Service) Create(ctx context.Context, req *CreatePermissionRequest) (*mo
 			break
 		}
 	}
-	
+
 	if !hasAllowedNamespace {
 		return nil, fmt.Errorf("permission resource must start with an allowed namespace: tenant.*, app.*, or resource.*")
 	}
@@ -114,6 +116,13 @@ func (s *Service) Create(ctx context.Context, req *CreatePermissionRequest) (*mo
 	}
 
 	if err := s.repo.Create(ctx, permission); err != nil {
+		if logger.Logger != nil {
+			logger.Logger.Error("failed to create permission",
+				zap.Error(err),
+				zap.String("tenant_id", req.TenantID.String()),
+				zap.String("permission_name", name),
+			)
+		}
 		return nil, fmt.Errorf("failed to create permission: %w", err)
 	}
 
@@ -124,7 +133,13 @@ func (s *Service) Create(ctx context.Context, req *CreatePermissionRequest) (*mo
 			// Log error but don't fail permission creation
 			// The permission was created successfully, just failed to attach to tenant_owner
 			// This can be fixed manually later if needed
-			_ = err // TODO: Add proper logging
+			if logger.Logger != nil {
+				logger.Logger.Error("failed to attach permissions to tenant owner",
+					zap.Error(err),
+					zap.String("tenant_id", req.TenantID.String()),
+					zap.String("permission_id", permission.ID.String()),
+				)
+			}
 		}
 	}
 
@@ -180,6 +195,13 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, req *UpdatePermissio
 	permission.UpdatedAt = time.Now()
 
 	if err := s.repo.Update(ctx, permission); err != nil {
+		if logger.Logger != nil {
+			logger.Logger.Error("failed to update permission",
+				zap.Error(err),
+				zap.String("tenant_id", permission.TenantID.String()),
+				zap.String("permission_id", id.String()),
+			)
+		}
 		return nil, fmt.Errorf("failed to update permission: %w", err)
 	}
 
@@ -188,7 +210,16 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, req *UpdatePermissio
 
 // Delete deletes a permission
 func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
-	return s.repo.Delete(ctx, id)
+	if err := s.repo.Delete(ctx, id); err != nil {
+		if logger.Logger != nil {
+			logger.Logger.Error("failed to delete permission",
+				zap.Error(err),
+				zap.String("permission_id", id.String()),
+			)
+		}
+		return err
+	}
+	return nil
 }
 
 // List retrieves a list of permissions
@@ -199,9 +230,14 @@ func (s *Service) List(ctx context.Context, tenantID uuid.UUID, filters *interfa
 
 	permissions, err := s.repo.List(ctx, tenantID, filters)
 	if err != nil {
+		if logger.Logger != nil {
+			logger.Logger.Error("failed to list permissions",
+				zap.Error(err),
+				zap.String("tenant_id", tenantID.String()),
+			)
+		}
 		return nil, fmt.Errorf("failed to list permissions: %w", err)
 	}
 
 	return permissions, nil
 }
-
