@@ -14,36 +14,37 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: `${API_PREFIX}/auth/login`,
     REFRESH: `${API_PREFIX}/auth/refresh`,
+    REVOKE: `${API_PREFIX}/auth/revoke`,
   },
-  
+
   // Tenants
   TENANTS: {
     BASE: `${API_PREFIX}/tenants`,
     BY_ID: (id: string) => `${API_PREFIX}/tenants/${id}`,
     BY_DOMAIN: (domain: string) => `${API_PREFIX}/tenants/domain/${domain}`,
   },
-  
+
   // Users
   USERS: {
     BASE: `${API_PREFIX}/users`,
     BY_ID: (id: string) => `${API_PREFIX}/users/${id}`,
   },
-  
+
   // Roles
   ROLES: {
     BASE: `${API_PREFIX}/roles`,
     BY_ID: (id: string) => `${API_PREFIX}/roles/${id}`,
     PERMISSIONS: (roleId: string) => `${API_PREFIX}/roles/${roleId}/permissions`,
-    ASSIGN_PERMISSION: (roleId: string, permissionId: string) => 
+    ASSIGN_PERMISSION: (roleId: string, permissionId: string) =>
       `${API_PREFIX}/roles/${roleId}/permissions/${permissionId}`,
   },
-  
+
   // Permissions
   PERMISSIONS: {
     BASE: `${API_PREFIX}/permissions`,
     BY_ID: (id: string) => `${API_PREFIX}/permissions/${id}`,
   },
-  
+
   // MFA
   MFA: {
     ENROLL: `${API_PREFIX}/mfa/enroll`,
@@ -51,64 +52,64 @@ export const API_ENDPOINTS = {
     CHALLENGE: `${API_PREFIX}/mfa/challenge`,
     VERIFY_CHALLENGE: `${API_PREFIX}/mfa/challenge/verify`,
   },
-  
+
   // Health
   HEALTH: {
     BASE: '/health',
     LIVE: '/health/live',
     READY: '/health/ready',
   },
-  
+
   // System Capabilities (SYSTEM users only)
   SYSTEM_CAPABILITIES: {
     BASE: '/system/capabilities',
     BY_KEY: (key: string) => `/system/capabilities/${key}`,
   },
-  
+
   // System Users (SYSTEM users only)
   SYSTEM_USERS: {
     BASE: '/system/users',
   },
-  
+
   // System Roles (SYSTEM users only)
   SYSTEM_ROLES: {
     BASE: '/system/roles',
   },
-  
+
   // System Permissions (SYSTEM users only)
   SYSTEM_PERMISSIONS: {
     BASE: '/system/permissions',
   },
-  
+
   // Tenant Capabilities (SYSTEM users only)
   TENANT_CAPABILITIES: {
     BASE: (tenantId: string) => `/system/tenants/${tenantId}/capabilities`,
     BY_KEY: (tenantId: string, key: string) => `/system/tenants/${tenantId}/capabilities/${key}`,
     EVALUATION: (tenantId: string) => `/system/tenants/${tenantId}/capabilities/evaluation`,
   },
-  
+
   // Tenant Capabilities (TENANT users - read-only)
   TENANT_CAPABILITIES_READ: {
     BASE: `${API_PREFIX}/tenant/capabilities`,
   },
-  
+
   // System Capabilities (TENANT users - read-only)
   SYSTEM_CAPABILITIES_READ: {
     BASE: `${API_PREFIX}/tenant/system-capabilities`,
     BY_KEY: (key: string) => `${API_PREFIX}/tenant/system-capabilities/${key}`,
   },
-  
+
   // Tenant Features (TENANT users)
   TENANT_FEATURES: {
     BASE: `${API_PREFIX}/tenant/features`,
     BY_KEY: (key: string) => `${API_PREFIX}/tenant/features/${key}`,
   },
-  
+
   // Tenant Capability Evaluation (TENANT users)
   TENANT_CAPABILITY_EVALUATION: {
     BASE: `${API_PREFIX}/tenant/capabilities/evaluation`,
   },
-  
+
   // User Capabilities (TENANT users)
   USER_CAPABILITIES: {
     BASE: (userId: string) => `${API_PREFIX}/users/${userId}/capabilities`,
