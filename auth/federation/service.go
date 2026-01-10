@@ -624,20 +624,21 @@ func (s *Service) HandleSAMLCallback(ctx context.Context, providerID uuid.UUID, 
 		return nil, fmt.Errorf("failed to generate ID token: %w", err)
 	}
 
-	var firstName, lastName string
+	// Extract user names for response (use different variable names to avoid redeclaration)
+	var userFirstName, userLastName string
 	if user.FirstName != nil {
-		firstName = *user.FirstName
+		userFirstName = *user.FirstName
 	}
 	if user.LastName != nil {
-		lastName = *user.LastName
+		userLastName = *user.LastName
 	}
 
 	return &LoginResponse{
 		UserID:      user.ID,
 		Username:    user.Username,
 		Email:       user.Email,
-		FirstName:   firstName,
-		LastName:    lastName,
+		FirstName:   userFirstName,
+		LastName:    userLastName,
 		TenantID:    provider.TenantID,
 		IsNewUser:   isNewUser,
 		AccessToken: accessToken,
