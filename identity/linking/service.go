@@ -41,7 +41,7 @@ func (s *Service) LinkIdentity(ctx context.Context, userID uuid.UUID, providerID
 	}
 
 	// Get provider to check if it exists
-	provider, err := s.idpRepo.GetByID(ctx, providerID)
+	_, err = s.idpRepo.GetByID(ctx, providerID)
 	if err != nil {
 		return fmt.Errorf("identity provider not found: %w", err)
 	}
