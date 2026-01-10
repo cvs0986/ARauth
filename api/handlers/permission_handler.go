@@ -7,6 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
+	"github.com/arauth-identity/iam/identity/audit"
+	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/permission"
 	"github.com/arauth-identity/iam/storage/interfaces"
 )
@@ -14,11 +16,15 @@ import (
 // PermissionHandler handles permission-related HTTP requests
 type PermissionHandler struct {
 	permissionService permission.ServiceInterface
+	auditService      audit.ServiceInterface
 }
 
 // NewPermissionHandler creates a new permission handler
-func NewPermissionHandler(permissionService permission.ServiceInterface) *PermissionHandler {
-	return &PermissionHandler{permissionService: permissionService}
+func NewPermissionHandler(permissionService permission.ServiceInterface, auditService audit.ServiceInterface) *PermissionHandler {
+	return &PermissionHandler{
+		permissionService: permissionService,
+		auditService:      auditService,
+	}
 }
 
 // Create handles POST /api/v1/permissions
@@ -44,6 +50,17 @@ func (h *PermissionHandler) Create(c *gin.Context) {
 		middleware.RespondWithError(c, http.StatusBadRequest, "creation_failed",
 			err.Error(), nil)
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "permission",
+			ID:         createdPermission.ID,
+			Identifier: createdPermission.Resource + ":" + createdPermission.Action,
+		}
+		_ = h.auditService.LogPermissionCreated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusCreated, createdPermission)
@@ -125,6 +142,17 @@ func (h *PermissionHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "permission",
+			ID:         updatedPermission.ID,
+			Identifier: updatedPermission.Resource + ":" + updatedPermission.Action,
+		}
+		_ = h.auditService.LogPermissionUpdated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
+	}
+
 	c.JSON(http.StatusOK, updatedPermission)
 }
 
@@ -161,6 +189,17 @@ func (h *PermissionHandler) Delete(c *gin.Context) {
 		middleware.RespondWithError(c, http.StatusBadRequest, "delete_failed",
 			err.Error(), nil)
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "permission",
+			ID:         existingPermission.ID,
+			Identifier: existingPermission.Resource + ":" + existingPermission.Action,
+		}
+		_ = h.auditService.LogPermissionDeleted(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Permission deleted successfully"})

@@ -11,25 +11,28 @@ import (
 	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/identity/permission"
 	"github.com/arauth-identity/iam/identity/role"
 	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // RoleHandler handles role-related HTTP requests
 type RoleHandler struct {
-	roleService     role.ServiceInterface
-	systemRoleRepo  interfaces.SystemRoleRepository
-	userRepo        interfaces.UserRepository
-	auditService    audit.ServiceInterface
+	roleService       role.ServiceInterface
+	systemRoleRepo    interfaces.SystemRoleRepository
+	userRepo          interfaces.UserRepository
+	auditService      audit.ServiceInterface
+	permissionService permission.ServiceInterface
 }
 
 // NewRoleHandler creates a new role handler
-func NewRoleHandler(roleService role.ServiceInterface, systemRoleRepo interfaces.SystemRoleRepository, userRepo interfaces.UserRepository, auditService audit.ServiceInterface) *RoleHandler {
+func NewRoleHandler(roleService role.ServiceInterface, systemRoleRepo interfaces.SystemRoleRepository, userRepo interfaces.UserRepository, auditService audit.ServiceInterface, permissionService permission.ServiceInterface) *RoleHandler {
 	return &RoleHandler{
-		roleService:    roleService,
-		systemRoleRepo: systemRoleRepo,
-		userRepo:       userRepo,
-		auditService:   auditService,
+		roleService:       roleService,
+		systemRoleRepo:    systemRoleRepo,
+		userRepo:          userRepo,
+		auditService:      auditService,
+		permissionService: permissionService,
 	}
 }
 
@@ -704,6 +707,21 @@ func (h *RoleHandler) AssignPermissionToRole(c *gin.Context) {
 		middleware.RespondWithError(c, http.StatusBadRequest, "assignment_failed",
 			err.Error(), nil)
 		return
+	}
+
+	// Log audit event for permission assignment
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		// Get permission details
+		perm, err := h.permissionService.GetByID(c.Request.Context(), permissionID)
+		if err == nil {
+			target := &models.AuditTarget{
+				Type:       "role",
+				ID:         roleID,
+				Identifier: existingRole.Name,
+			}
+			_ = h.auditService.LogPermissionAssigned(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Permission assigned successfully"})
