@@ -158,17 +158,17 @@ func (h *AuditHandler) GetEvent(c *gin.Context) {
 }
 
 // extractActorFromContext extracts actor information from Gin context
-func extractActorFromContext(c *gin.Context) (audit.AuditActor, error) {
+func extractActorFromContext(c *gin.Context) (models.AuditActor, error) {
 	claimsObj, exists := c.Get("user_claims")
 	if !exists {
-		return audit.AuditActor{}, middleware.NewError("user_claims_not_found", "User claims not found in context")
+		return models.AuditActor{}, fmt.Errorf("user claims not found in context")
 	}
 
 	userClaims := claimsObj.(*claims.Claims)
 
 	userID, err := uuid.Parse(userClaims.Subject)
 	if err != nil {
-		return audit.AuditActor{}, middleware.NewError("invalid_user_id", "Invalid user ID in claims")
+		return models.AuditActor{}, fmt.Errorf("invalid user ID in claims: %w", err)
 	}
 
 	username := userClaims.Username
@@ -181,7 +181,7 @@ func extractActorFromContext(c *gin.Context) (audit.AuditActor, error) {
 		principalType = "TENANT" // Default to TENANT if not specified
 	}
 
-	return audit.AuditActor{
+	return models.AuditActor{
 		UserID:        userID,
 		Username:      username,
 		PrincipalType: principalType,
