@@ -295,7 +295,8 @@ func main() {
 	scimProvisioningService := scim.NewProvisioningService(userService, roleService, userRepo, roleRepo)
 
 	// Initialize SCIM handler
-	// scimHandler already initialized above
+	scimHandler := handlers.NewSCIMHandler(scimProvisioningService, scimTokenService)
+
 
 	// Initialize invitation repository and service
 	invitationRepo := postgres.NewInvitationRepository(db)
@@ -303,7 +304,6 @@ func main() {
 	invitationService := invitation.NewService(invitationRepo, userService, roleService, userRepo, emailService, tenantRepo)
 	invitationHandler := handlers.NewInvitationHandler(invitationService)
 
-	// scimHandler already initialized above
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
