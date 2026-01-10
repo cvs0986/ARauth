@@ -7,11 +7,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
+import { NoAccess } from './pages/NoAccess';
 import { Dashboard } from './pages/Dashboard';
 import { Settings } from './pages/Settings';
 import { AuditLogs } from './pages/AuditLogs';
 import { TenantList } from './pages/tenants/TenantList';
+import { TenantDetail } from './pages/tenants/TenantDetail';
 import { UserList } from './pages/users/UserList';
+import { UserDetail } from './pages/users/UserDetail';
 import { RoleList } from './pages/roles/RoleList';
 import { PermissionList } from './pages/permissions/PermissionList';
 import { MFA } from './pages/MFA';
@@ -36,6 +39,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/no-access" element={<NoAccess />} />
           <Route
             path="/"
             element={
@@ -57,11 +61,31 @@ function App() {
             }
           />
           <Route
+            path="/tenants/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <TenantDetail />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/users"
             element={
               <ProtectedRoute>
                 <Layout>
                   <UserList />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/users/:id"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <UserDetail />
                 </Layout>
               </ProtectedRoute>
             }

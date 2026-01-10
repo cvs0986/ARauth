@@ -4,7 +4,42 @@
  */
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
-import { API_BASE_URL } from '../constants/api';
+import { API_BASE_URL, API_ENDPOINTS } from '../constants/api';
+
+/**
+ * Helper function to update auth tokens
+ */
+function updateAuthTokens(accessToken: string, refreshToken?: string) {
+  localStorage.setItem('access_token', accessToken);
+  if (refreshToken) {
+    localStorage.setItem('refresh_token', refreshToken);
+  }
+  
+  // Dispatch custom event for auth store to listen to
+  window.dispatchEvent(new CustomEvent('auth:tokens-updated', {
+    detail: { accessToken, refreshToken },
+  }));
+}
+
+/**
+ * Helper function to handle logout - clears auth state and redirects to login
+ */
+function handleLogout() {
+  // Clear localStorage
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('tenant_id');
+  localStorage.removeItem('principal_type');
+  localStorage.removeItem('system_permissions');
+  localStorage.removeItem('permissions');
+  localStorage.removeItem('selected_tenant_id');
+
+  // Dispatch custom event for auth store to listen to
+  window.dispatchEvent(new CustomEvent('auth:logout'));
+
+  // Redirect to login
+  window.location.href = '/login';
+}
 
 /**
  * Create configured axios instance
@@ -72,28 +107,34 @@ export function createApiClient(baseURL: string = API_BASE_URL): AxiosInstance {
         const refreshToken = localStorage.getItem('refresh_token');
         if (refreshToken) {
           try {
-            // TODO: Implement token refresh endpoint
-            // const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            //   refresh_token: refreshToken,
-            // });
-            // const { access_token } = response.data;
-            // localStorage.setItem('access_token', access_token);
-            // originalRequest.headers = originalRequest.headers || {};
-            // originalRequest.headers.Authorization = `Bearer ${access_token}`;
-            // return client(originalRequest);
+            // Use axios directly (not apiClient) to avoid interceptor loops
+            const response = await axios.post(
+              `${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`,
+              { refresh_token: refreshToken },
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+
+            const { access_token, refresh_token: newRefreshToken } = response.data;
+
+            // Update tokens in localStorage and notify auth store
+            updateAuthTokens(access_token, newRefreshToken);
+
+            // Retry original request with new token
+            originalRequest.headers = originalRequest.headers || {};
+            originalRequest.headers.Authorization = `Bearer ${access_token}`;
+            return client(originalRequest);
           } catch (refreshError) {
             // Refresh failed - clear tokens and redirect to login
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            localStorage.removeItem('tenant_id');
-            window.location.href = '/login';
+            handleLogout();
             return Promise.reject(refreshError);
           }
         } else {
           // No refresh token - redirect to login
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('tenant_id');
-          window.location.href = '/login';
+          handleLogout();
         }
       }
 

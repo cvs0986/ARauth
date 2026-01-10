@@ -20,6 +20,7 @@ type Service struct {
 	credentialRepo      interfaces.CredentialRepository
 	refreshTokenRepo    interfaces.RefreshTokenRepository
 	tenantSettingsRepo  interfaces.TenantSettingsRepository
+	tenantRepo          interfaces.TenantRepository
 	hydraClient         *hydra.Client
 	passwordHasher      *password.Hasher
 	claimsBuilder       *claims.Builder
@@ -34,6 +35,7 @@ func NewService(
 	credentialRepo interfaces.CredentialRepository,
 	refreshTokenRepo interfaces.RefreshTokenRepository,
 	tenantSettingsRepo interfaces.TenantSettingsRepository,
+	tenantRepo interfaces.TenantRepository,
 	hydraClient *hydra.Client,
 	claimsBuilder *claims.Builder,
 	tokenService token.ServiceInterface,
@@ -45,6 +47,7 @@ func NewService(
 		credentialRepo:     credentialRepo,
 		refreshTokenRepo:   refreshTokenRepo,
 		tenantSettingsRepo: tenantSettingsRepo,
+		tenantRepo:         tenantRepo,
 		hydraClient:        hydraClient,
 		passwordHasher:     password.NewHasher(),
 		claimsBuilder:      claimsBuilder,
@@ -73,6 +76,7 @@ type LoginResponse struct {
 	RefreshExpiresIn int    `json:"refresh_expires_in,omitempty"` // Refresh token expiry in seconds
 	RememberMe       bool   `json:"remember_me,omitempty"`
 	MFARequired      bool   `json:"mfa_required"`
+	MFAEnrollmentRequired bool `json:"mfa_enrollment_required,omitempty"` // True if user needs to enroll in MFA
 	MFASessionID     string `json:"mfa_session_id,omitempty"`
 	UserID           string `json:"user_id,omitempty"`   // Return user ID when MFA is required
 	TenantID         string `json:"tenant_id,omitempty"` // Return tenant ID when MFA is required
@@ -84,30 +88,63 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 	var user *models.User
 	var err error
 
-	// Priority: If tenant ID is provided, try TENANT user first
-	// If no tenant ID, try SYSTEM user
+	// Priority: If tenant ID is provided, try TENANT user first, then SYSTEM user
+	// If no tenant ID, try SYSTEM user only
 	if req.TenantID != uuid.Nil {
+		// CRITICAL SECURITY: Validate tenant exists before proceeding
+		// This prevents SYSTEM users from logging in with invalid/non-existent tenant IDs
+		tenant, tenantErr := s.tenantRepo.GetByID(ctx, req.TenantID)
+		if tenantErr != nil || tenant == nil {
+			// Tenant doesn't exist - return generic error for security
+			return nil, fmt.Errorf("invalid credentials")
+		}
+
 		// Tenant ID provided - try to find TENANT user first
 		user, err = s.userRepo.GetByUsername(ctx, req.Username, req.TenantID)
 		if err != nil || user == nil {
-			// User not found in tenant - return generic error for security
-			// Don't reveal whether username or tenant is wrong
-			return nil, fmt.Errorf("invalid credentials")
-		}
-		
-		// Verify the user is actually a TENANT user
-		if user.PrincipalType != models.PrincipalTypeTenant {
-			// User exists but is not a TENANT user (might be SYSTEM user)
-			// Return generic error for security
-			return nil, fmt.Errorf("invalid credentials")
-		}
-		
-		// Verify tenant ID matches
-		if user.TenantID == nil || *user.TenantID != req.TenantID {
-			return nil, fmt.Errorf("invalid credentials")
+			// User not found in tenant - try as SYSTEM user (SYSTEM users can login with tenant context)
+			// But only if tenant exists (already validated above)
+			systemUser, systemErr := s.userRepo.GetSystemUserByUsername(ctx, req.Username)
+			if systemErr == nil && systemUser != nil && systemUser.PrincipalType == models.PrincipalTypeSystem {
+				user = systemUser
+			} else {
+				// Try by email
+				systemUser, systemErr = s.userRepo.GetByEmailSystem(ctx, req.Username)
+				if systemErr == nil && systemUser != nil && systemUser.PrincipalType == models.PrincipalTypeSystem {
+					user = systemUser
+				}
+			}
+			
+			if user == nil {
+				// User not found - return generic error for security
+				return nil, fmt.Errorf("invalid credentials")
+			}
+		} else {
+			// User found in tenant - verify it's a TENANT user
+			if user.PrincipalType != models.PrincipalTypeTenant {
+				// User exists but is not a TENANT user (might be SYSTEM user)
+				// Try to get as SYSTEM user instead
+				systemUser, systemErr := s.userRepo.GetSystemUserByUsername(ctx, req.Username)
+				if systemErr == nil && systemUser != nil && systemUser.PrincipalType == models.PrincipalTypeSystem {
+					user = systemUser
+				} else {
+					// Try by email
+					systemUser, systemErr = s.userRepo.GetByEmailSystem(ctx, req.Username)
+					if systemErr == nil && systemUser != nil && systemUser.PrincipalType == models.PrincipalTypeSystem {
+						user = systemUser
+					} else {
+						return nil, fmt.Errorf("invalid credentials")
+					}
+				}
+			} else {
+				// Verify tenant ID matches for TENANT users
+				if user.TenantID == nil || *user.TenantID != req.TenantID {
+					return nil, fmt.Errorf("invalid credentials")
+				}
+			}
 		}
 	} else {
-		// No tenant ID provided - try SYSTEM user
+		// No tenant ID provided - try SYSTEM user only
 		// First, try to get as SYSTEM user by username
 		systemUser, systemErr := s.userRepo.GetSystemUserByUsername(ctx, req.Username)
 		if systemErr == nil && systemUser != nil && systemUser.PrincipalType == models.PrincipalTypeSystem {
@@ -204,7 +241,7 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 		}
 	}
 	
-	// Check user-level MFA
+	// Check user-level MFA requirement
 	if user.MFAEnabled {
 		mfaRequired = true
 	} else if user.TenantID != nil {
@@ -215,20 +252,44 @@ func (s *Service) Login(ctx context.Context, req *LoginRequest) (*LoginResponse,
 		}
 	}
 	
-	// If MFA is required but not allowed/enabled, return error
+	// If MFA is required but not allowed/enabled, handle appropriately
 	if mfaRequired && (!mfaAllowed || !mfaEnabled) {
-		return nil, fmt.Errorf("MFA is required but not available for this tenant")
+		// For SYSTEM users, check if MFA is supported at system level
+		if user.PrincipalType == models.PrincipalTypeSystem {
+			systemMfaSupported, err := s.capabilityService.IsCapabilitySupported(ctx, models.CapabilityKeyMFA)
+			if err != nil || !systemMfaSupported {
+				return nil, fmt.Errorf("MFA is required but not supported at system level")
+			}
+			// SYSTEM users can use MFA if it's supported at system level, even if tenant doesn't have it
+			// Reset mfaAllowed and mfaEnabled for SYSTEM users
+			mfaAllowed = true
+			mfaEnabled = true
+		} else {
+			// For TENANT users, if MFA is required but not available, we have two options:
+			// 1. If user has MFA enabled, they must have MFA capability
+			// 2. If tenant requires MFA, we should allow login but warn that MFA should be enabled
+			// For now, we'll return a clear error message
+			var reason string
+			if user.MFAEnabled {
+				reason = "User has MFA enabled, but MFA capability is not available for this tenant. Please contact your system administrator to enable MFA for your tenant."
+			} else {
+				reason = "Tenant requires MFA, but MFA capability is not available. Please contact your system administrator to enable MFA for your tenant."
+			}
+			return nil, fmt.Errorf("MFA is required but not available for this tenant: %s", reason)
+		}
 	}
 	
 	if mfaRequired {
-		// MFA is required - return user info so client can call MFA challenge
-		// The client will need to call /api/v1/mfa/challenge with user_id and tenant_id
+		// MFA is required - check if user has enrolled
+		needsEnrollment := !user.MFAEnabled && user.MFASecretEncrypted == nil
+		
 		var tenantIDStr string
 		if user.TenantID != nil {
 			tenantIDStr = user.TenantID.String()
 		}
 		return &LoginResponse{
 			MFARequired: true,
+			MFAEnrollmentRequired: needsEnrollment,
 			UserID:     user.ID.String(),
 			TenantID:   tenantIDStr,
 		}, nil

@@ -47,9 +47,9 @@ export function MFA() {
     queryKey: ['user', currentUserId, currentTenantId],
     queryFn: async () => {
       if (!currentUserId) return null;
-      return userApi.getById(currentUserId);
+      return userApi.getById(currentUserId, currentTenantId || undefined);
     },
-    enabled: !!currentUserId,
+    enabled: !!currentUserId && !!currentTenantId, // Require tenant context for SYSTEM users
   });
 
   const isMFAEnabled = currentUser?.mfa_enabled || false;

@@ -49,7 +49,17 @@ export function CapabilityInheritanceVisualization({
   // Fetch user capability state (if user is selected)
   const { data: userCapabilityState } = useQuery({
     queryKey: ['user', 'capabilities', userId, capabilityKey],
-    queryFn: () => userCapabilityApi.getByKey(userId!, capabilityKey),
+    queryFn: async () => {
+      try {
+        return await userCapabilityApi.getByKey(userId!, capabilityKey);
+      } catch (error: any) {
+        // If user capability doesn't exist (404/400), return null instead of throwing
+        if (error?.response?.status === 404 || error?.response?.status === 400) {
+          return null;
+        }
+        throw error;
+      }
+    },
     enabled: !!userId,
   });
 
@@ -64,8 +74,12 @@ export function CapabilityInheritanceVisualization({
     enabled: !!effectiveTenantId,
   });
 
-  const tenantCap = tenantCapability?.find((tc) => tc.capability_key === capabilityKey);
-  const feature = tenantFeature?.find((tf) => tf.capability_key === capabilityKey);
+  const tenantCap = Array.isArray(tenantCapability) 
+    ? tenantCapability.find((tc) => tc.capability_key === capabilityKey)
+    : undefined;
+  const feature = Array.isArray(tenantFeature)
+    ? tenantFeature.find((tf) => tf.capability_key === capabilityKey)
+    : undefined;
 
   return (
     <Card>

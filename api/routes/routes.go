@@ -35,7 +35,7 @@ func getRedis(redisClient interface{}) *redis.Client {
 }
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -90,6 +90,25 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			systemCapabilities.PUT("/:key", middleware.RequireSystemPermission("system", "configure"), capabilityHandler.UpdateSystemCapability)
 		}
 
+		// System users management (system admin only)
+		systemUsers := systemAPI.Group("/users")
+		{
+			systemUsers.GET("", userHandler.ListSystem)
+			systemUsers.POST("", userHandler.CreateSystem)
+		}
+
+		// System roles management (system admin only) - show predefined system roles
+		systemRoles := systemAPI.Group("/roles")
+		{
+			systemRoles.GET("", roleHandler.ListSystem)
+		}
+
+		// System permissions management (system admin only) - show predefined system permissions
+		systemPermissions := systemAPI.Group("/permissions")
+		{
+			systemPermissions.GET("", permissionHandler.ListSystem)
+		}
+
 		// System settings management (future)
 		// systemAPI.GET("/settings", systemHandler.GetSystemSettings)
 		// systemAPI.PUT("/settings", systemHandler.UpdateSystemSettings)
@@ -124,6 +143,7 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		{
 			mfaPublic.POST("/challenge", mfaHandler.Challenge)
 			mfaPublic.POST("/challenge/verify", mfaHandler.VerifyChallenge)
+			mfaPublic.POST("/enroll/login", mfaHandler.EnrollForLogin)
 		}
 
 		// Tenant-scoped routes (require tenant context)
@@ -140,11 +160,25 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		tenantScoped.Use(middleware.TenantMiddleware(tenantRepo))
 		{
 			// User routes (tenant-scoped)
+			// Note: More specific routes (with /roles) must come before generic :id routes
 			users := tenantScoped.Group("/users")
 			{
 				users.POST("", userHandler.Create)
 				users.GET("", userHandler.List)
-				users.GET("/:id", userHandler.GetByID)
+			// User roles routes (must come before /:id to avoid route conflict)
+			// Use :id instead of :user_id to avoid wildcard name conflict
+			users.GET("/:id/roles", roleHandler.GetUserRoles)
+			users.POST("/:id/roles/:role_id", roleHandler.AssignRoleToUser)
+			users.DELETE("/:id/roles/:role_id", roleHandler.RemoveRoleFromUser)
+			// User permissions route (must come before /:id)
+			users.GET("/:id/permissions", userHandler.GetUserPermissions)
+			// User capabilities routes (must come before /:id)
+			users.GET("/:id/capabilities", capabilityHandler.GetUserCapabilities)
+			users.GET("/:id/capabilities/:key", capabilityHandler.GetUserCapability)
+			users.POST("/:id/capabilities/:key/enroll", capabilityHandler.EnrollUserCapability)
+			users.DELETE("/:id/capabilities/:key", capabilityHandler.UnenrollUserCapability)
+			// Generic user routes
+			users.GET("/:id", userHandler.GetByID)
 				users.PUT("/:id", userHandler.Update)
 				users.DELETE("/:id", userHandler.Delete)
 			}
@@ -187,11 +221,58 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			tenantScoped.GET("/tenant/settings", systemHandler.GetTenantSettingsFromContext)
 			tenantScoped.PUT("/tenant/settings", systemHandler.UpdateTenantSettingsFromContext)
 
+			// System capabilities viewing (tenant-scoped, read-only for TENANT users)
+			tenantScoped.GET("/tenant/system-capabilities", capabilityHandler.ListSystemCapabilitiesFromContext)
+			tenantScoped.GET("/tenant/system-capabilities/:key", capabilityHandler.GetSystemCapabilityFromContext)
+
+			// Tenant capability viewing (tenant-scoped)
+			tenantScoped.GET("/tenant/capabilities", capabilityHandler.GetTenantCapabilitiesFromContext)
+
 			// Tenant feature enablement (tenant-scoped)
 			tenantScoped.GET("/tenant/features", capabilityHandler.GetTenantFeatures)
 			tenantScoped.PUT("/tenant/features/:key", capabilityHandler.EnableTenantFeature)
 			tenantScoped.DELETE("/tenant/features/:key", capabilityHandler.DisableTenantFeature)
 
+			// Tenant capability evaluation (tenant-scoped)
+			tenantScoped.GET("/tenant/capabilities/evaluation", capabilityHandler.EvaluateTenantCapabilitiesFromContext)
+
+			// Audit events routes (tenant-scoped)
+			audit := tenantScoped.Group("/audit")
+			{
+				audit.GET("/events", auditHandler.QueryEvents)
+				audit.GET("/events/:id", auditHandler.GetEvent)
+			}
+
+			// Federation routes (Identity Providers)
+			identityProviders := tenantScoped.Group("/identity-providers")
+			{
+				identityProviders.POST("", federationHandler.CreateIdentityProvider)
+				identityProviders.GET("", federationHandler.ListIdentityProviders)
+				identityProviders.GET("/:id", federationHandler.GetIdentityProvider)
+				identityProviders.PUT("/:id", federationHandler.UpdateIdentityProvider)
+				identityProviders.DELETE("/:id", federationHandler.DeleteIdentityProvider)
+			}
+		}
+
+		// Federation authentication routes (public, no auth required for initiation)
+		// These routes handle OIDC/SAML login flows
+		federationAuth := v1.Group("/auth")
+		{
+			federationAuth.GET("/oidc/:provider_id/initiate", federationHandler.InitiateOIDCLogin)
+			federationAuth.GET("/oidc/:provider_id/callback", federationHandler.HandleOIDCCallback)
+			federationAuth.GET("/saml/:provider_id/initiate", federationHandler.InitiateSAMLLogin)
+			federationAuth.POST("/saml/:provider_id/callback", federationHandler.HandleSAMLCallback)
+		}
+	}
+
+	// System audit events route (SYSTEM users only - system-wide audit)
+	if ts, ok := tokenService.(token.ServiceInterface); ok {
+		systemAPI := router.Group("/system")
+		systemAPI.Use(middleware.JWTAuthMiddleware(ts))
+		systemAPI.Use(middleware.RequireSystemUser(ts))
+		{
+			systemAPI.GET("/audit/events", auditHandler.QueryEvents)
+			systemAPI.GET("/audit/events/:id", auditHandler.GetEvent)
 		}
 	}
 }

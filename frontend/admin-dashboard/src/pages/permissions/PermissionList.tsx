@@ -24,7 +24,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 import type { Permission } from '@shared/types/api';
 
-export function PermissionList() {
+export function PermissionList({ tenantId: propTenantId }: { tenantId?: string | null } = {}) {
   const queryClient = useQueryClient();
   const { isSystemUser, selectedTenantId, tenantId, getCurrentTenantId } = useAuthStore();
   const [createOpen, setCreateOpen] = useState(false);
@@ -35,12 +35,17 @@ export function PermissionList() {
   const [pageSize, setPageSize] = useState(10);
 
   // Get current tenant context (selected tenant for SYSTEM, own tenant for TENANT)
-  const currentTenantId = getCurrentTenantId();
+  // Use prop tenantId if provided (for drill-down views), otherwise use context
+  const currentTenantId = propTenantId || getCurrentTenantId();
+  const isSystemView = isSystemUser() && !currentTenantId;
 
+  // For SYSTEM users without tenant selected, show system permissions
+  // For SYSTEM users with tenant selected, show tenant permissions
+  // For TENANT users, show their own tenant permissions
   const { data: permissions, isLoading, error } = useQuery({
-    queryKey: ['permissions', currentTenantId],
-    queryFn: () => permissionApi.list(currentTenantId || undefined),
-    enabled: !!currentTenantId || !isSystemUser(), // For SYSTEM users, require tenant selection
+    queryKey: isSystemView ? ['system', 'permissions'] : ['permissions', currentTenantId],
+    queryFn: () => isSystemView ? permissionApi.listSystem() : permissionApi.list(currentTenantId || undefined),
+    enabled: isSystemView || !!currentTenantId || !isSystemUser(),
   });
 
   // Filter permissions based on search
@@ -77,6 +82,7 @@ export function PermissionList() {
     mutationFn: (id: string) => permissionApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['permissions', currentTenantId] });
+      queryClient.invalidateQueries({ queryKey: ['system', 'permissions'] });
       setDeletePermission(null);
     },
   });
@@ -93,29 +99,26 @@ export function PermissionList() {
     );
   }
 
-  // Show alert for SYSTEM users without selected tenant
-  if (isSystemUser() && !currentTenantId) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Permissions</h1>
-        </div>
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>Select a Tenant</AlertTitle>
-          <AlertDescription>
-            Please select a tenant from the header dropdown to view and manage permissions for that tenant.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
+  // Show system permissions for SYSTEM users when no tenant is selected
+  // The query above will handle fetching system permissions
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Permissions</h1>
-        <Button onClick={() => setCreateOpen(true)}>Create Permission</Button>
+        <div>
+          <h1 className="text-3xl font-bold">
+            {isSystemView ? 'System Permissions' : 'Permissions'}
+          </h1>
+          {isSystemView && (
+            <p className="text-sm text-gray-500 mt-1">
+              Predefined system permissions. Select a tenant from the header to view tenant permissions.
+            </p>
+          )}
+        </div>
+        {/* System permissions are predefined, so no create button for system view */}
+        {!isSystemView && (
+          <Button onClick={() => setCreateOpen(true)}>Create Permission</Button>
+        )}
       </div>
 
       <div className="flex items-center gap-4">

@@ -5,7 +5,19 @@
 set -e
 
 MIGRATIONS_PATH="./migrations"
-DATABASE_URL="${DATABASE_URL:-postgres://iam_user:change-me@localhost:5432/iam?sslmode=disable}"
+
+# Default database connection details (can be overridden by DATABASE_URL env var)
+DATABASE_HOST="${DATABASE_HOST:-127.0.0.1}"
+DATABASE_PORT="${DATABASE_PORT:-5433}"
+DATABASE_USER="${DATABASE_USER:-dcim_user}"
+DATABASE_PASSWORD="${DATABASE_PASSWORD:-dcim_password}"
+DATABASE_NAME="${DATABASE_NAME:-iam}"
+DATABASE_SSL_MODE="${DATABASE_SSL_MODE:-disable}"
+
+# Build DATABASE_URL if not provided
+if [ -z "$DATABASE_URL" ]; then
+    DATABASE_URL="postgres://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}?sslmode=${DATABASE_SSL_MODE}"
+fi
 
 # Ensure migrate tool is available
 export PATH=$PATH:/home/eshwar/go-install/go/bin
@@ -64,7 +76,13 @@ case "${1:-help}" in
         echo "  help            Show this help message"
         echo ""
         echo "Environment Variables:"
-        echo "  DATABASE_URL    Database connection string (default: postgres://iam_user:change-me@localhost:5432/iam?sslmode=disable)"
+        echo "  DATABASE_URL         Database connection string (overrides individual settings)"
+        echo "  DATABASE_HOST        Database host (default: 127.0.0.1)"
+        echo "  DATABASE_PORT        Database port (default: 5433)"
+        echo "  DATABASE_USER        Database user (default: dcim_user)"
+        echo "  DATABASE_PASSWORD   Database password (default: dcim_password)"
+        echo "  DATABASE_NAME        Database name (default: iam)"
+        echo "  DATABASE_SSL_MODE    SSL mode (default: disable)"
         ;;
 esac
 

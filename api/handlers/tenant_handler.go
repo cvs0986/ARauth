@@ -7,6 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
+	"github.com/arauth-identity/iam/identity/audit"
+	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/tenant"
 	"github.com/arauth-identity/iam/storage/interfaces"
 )
@@ -14,11 +16,15 @@ import (
 // TenantHandler handles tenant-related HTTP requests
 type TenantHandler struct {
 	tenantService tenant.ServiceInterface
+	auditService  audit.ServiceInterface
 }
 
 // NewTenantHandler creates a new tenant handler
-func NewTenantHandler(tenantService tenant.ServiceInterface) *TenantHandler {
-	return &TenantHandler{tenantService: tenantService}
+func NewTenantHandler(tenantService tenant.ServiceInterface, auditService audit.ServiceInterface) *TenantHandler {
+	return &TenantHandler{
+		tenantService: tenantService,
+		auditService:  auditService,
+	}
 }
 
 // Create handles POST /api/v1/tenants
@@ -35,6 +41,17 @@ func (h *TenantHandler) Create(c *gin.Context) {
 		middleware.RespondWithError(c, http.StatusBadRequest, "creation_failed",
 			err.Error(), nil)
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "tenant",
+			ID:         tenant.ID,
+			Identifier: tenant.Name,
+		}
+		_ = h.auditService.LogTenantCreated(c.Request.Context(), actor, target, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusCreated, tenant)
@@ -103,6 +120,17 @@ func (h *TenantHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "tenant",
+			ID:         updatedTenant.ID,
+			Identifier: updatedTenant.Name,
+		}
+		_ = h.auditService.LogTenantUpdated(c.Request.Context(), actor, target, sourceIP, userAgent)
+	}
+
 	c.JSON(http.StatusOK, updatedTenant)
 }
 
@@ -116,10 +144,24 @@ func (h *TenantHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	// Get tenant before deletion for audit logging
+	tenantToDelete, _ := h.tenantService.GetByID(c.Request.Context(), id)
+
 	if err := h.tenantService.Delete(c.Request.Context(), id); err != nil {
 		middleware.RespondWithError(c, http.StatusBadRequest, "delete_failed",
 			err.Error(), nil)
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil && tenantToDelete != nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "tenant",
+			ID:         tenantToDelete.ID,
+			Identifier: tenantToDelete.Name,
+		}
+		_ = h.auditService.LogTenantDeleted(c.Request.Context(), actor, target, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Tenant deleted successfully"})

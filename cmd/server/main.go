@@ -24,7 +24,9 @@ import (
 	"github.com/arauth-identity/iam/identity/role"
 	"github.com/arauth-identity/iam/identity/tenant"
 	"github.com/arauth-identity/iam/identity/user"
-	"github.com/arauth-identity/iam/internal/audit"
+	"github.com/arauth-identity/iam/auth/federation"
+	auditlogger "github.com/arauth-identity/iam/internal/audit"
+	auditevent "github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/internal/cache"
 	"github.com/arauth-identity/iam/internal/logger"
 	"github.com/arauth-identity/iam/security/encryption"
@@ -108,6 +110,7 @@ func main() {
 	tenantSettingsRepo := postgres.NewTenantSettingsRepository(db)
 	mfaRecoveryCodeRepo := postgres.NewMFARecoveryCodeRepository(db)
 	auditRepo := postgres.NewAuditRepository(db)
+	auditEventRepo := postgres.NewAuditEventRepository(db) // NEW: Structured audit event repository
 	roleRepo := postgres.NewRoleRepository(db)
 	permissionRepo := postgres.NewPermissionRepository(db)
 	systemRoleRepo := postgres.NewSystemRoleRepository(db) // NEW: System role repository
@@ -118,8 +121,15 @@ func main() {
 	tenantFeatureEnablementRepo := postgres.NewTenantFeatureEnablementRepository(db)
 	userCapabilityStateRepo := postgres.NewUserCapabilityStateRepository(db)
 
-	// Initialize audit logger
-	auditLogger := audit.NewLogger(auditRepo)
+	// Initialize federation repositories
+	idpRepo := postgres.NewIdentityProviderRepository(db)
+	fedIdRepo := postgres.NewFederatedIdentityRepository(db)
+
+	// Initialize audit logger (legacy)
+	auditLogger := auditlogger.NewLogger(auditRepo)
+
+	// Initialize audit event service (new structured audit)
+	auditEventService := auditevent.NewService(auditEventRepo)
 
 	// Initialize encryption (for MFA secrets)
 	encryptionKey := []byte(cfg.Security.EncryptionKey)
@@ -173,26 +183,41 @@ func main() {
 	// Initialize claims builder with capability service
 	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo, systemRoleRepo, capabilityService)
 
+	// Initialize tenant initializer
+	tenantInitializer := tenant.NewInitializer(roleRepo, permissionRepo)
+
 	// Initialize services
-	tenantService := tenant.NewService(tenantRepo)
+	tenantService := tenant.NewService(tenantRepo, tenantInitializer)
 	userService := user.NewService(userRepo, credentialRepo) // Pass credentialRepo to create credentials automatically
-	loginService := login.NewService(userRepo, credentialRepo, refreshTokenRepo, tenantSettingsRepo, hydraClient, claimsBuilder, tokenService, lifetimeResolver, capabilityService)
+	loginService := login.NewService(userRepo, credentialRepo, refreshTokenRepo, tenantSettingsRepo, tenantRepo, hydraClient, claimsBuilder, tokenService, lifetimeResolver, capabilityService)
 	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, mfaSessionManager, capabilityService)
 	roleService := role.NewService(roleRepo, permissionRepo)
-	permissionService := permission.NewService(permissionRepo)
+	permissionService := permission.NewService(permissionRepo, tenantInitializer)
 
 	// Initialize refresh service
 	refreshService := token.NewRefreshService(tokenService, refreshTokenRepo, userRepo, claimsBuilder, lifetimeResolver)
 
+	// Initialize federation service
+	federationService := federation.NewService(
+		idpRepo,
+		fedIdRepo,
+		userRepo,
+		credentialRepo,
+		claimsBuilder,
+		tokenService,
+	)
+
 	// Initialize handlers
-	tenantHandler := handlers.NewTenantHandler(tenantService)
-	userHandler := handlers.NewUserHandler(userService)
-	authHandler := handlers.NewAuthHandler(loginService, refreshService)
-	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger, tokenService, claimsBuilder, userRepo, lifetimeResolver)
-	roleHandler := handlers.NewRoleHandler(roleService)
-	permissionHandler := handlers.NewPermissionHandler(permissionService)
-	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo, tenantSettingsRepo) // NEW: System handler with tenant settings
+	tenantHandler := handlers.NewTenantHandler(tenantService, auditEventService)
+	userHandler := handlers.NewUserHandler(userService, systemRoleRepo, roleRepo, auditEventService)
+	authHandler := handlers.NewAuthHandler(loginService, refreshService, tokenService, auditEventService)
+	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger, tokenService, claimsBuilder, userRepo, lifetimeResolver, auditEventService)
+	permissionHandler := handlers.NewPermissionHandler(permissionService, auditEventService)
+	roleHandler := handlers.NewRoleHandler(roleService, systemRoleRepo, userRepo, auditEventService, permissionService)
+	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo, tenantSettingsRepo, capabilityService, auditEventService) // NEW: System handler with tenant settings
 	capabilityHandler := handlers.NewCapabilityHandler(capabilityService) // NEW: Capability handler
+	auditHandler := handlers.NewAuditHandler(auditEventService) // NEW: Audit event handler
+	federationHandler := handlers.NewFederationHandler(federationService) // NEW: Federation handler
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
@@ -205,7 +230,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
 
 	// Create HTTP server
 	srv := &http.Server{

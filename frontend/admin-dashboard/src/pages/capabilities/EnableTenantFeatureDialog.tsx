@@ -73,7 +73,9 @@ export function EnableTenantFeatureDialog({
             </select>
             {availableCapabilities.length === 0 && (
               <p className="text-sm text-gray-500">
-                No available features. All allowed features are already enabled.
+                No available features to enable. This could mean:
+                <br />• No capabilities have been assigned to your tenant (contact system administrator)
+                <br />• All assigned capabilities are already enabled as features
               </p>
             )}
           </div>

@@ -572,3 +572,140 @@ func (r *userRepository) Count(ctx context.Context, tenantID uuid.UUID, filters 
 	return count, nil
 }
 
+// ListSystem retrieves a list of system users (principal_type = 'SYSTEM') with filters
+func (r *userRepository) ListSystem(ctx context.Context, filters *interfaces.UserFilters) ([]*models.User, error) {
+	if filters == nil {
+		filters = &interfaces.UserFilters{
+			Page:     1,
+			PageSize: 20,
+		}
+	}
+
+	if filters.Page < 1 {
+		filters.Page = 1
+	}
+	if filters.PageSize < 1 || filters.PageSize > 100 {
+		filters.PageSize = 20
+	}
+
+	offset := (filters.Page - 1) * filters.PageSize
+
+	query := `
+		SELECT id, tenant_id, principal_type, username, email, first_name, last_name,
+		       status, mfa_enabled, mfa_secret_encrypted, last_login_at,
+		       metadata, created_at, updated_at, deleted_at
+		FROM users
+		WHERE principal_type = 'SYSTEM' AND deleted_at IS NULL
+	`
+	args := []interface{}{}
+	argPos := 1
+
+	if filters.Status != nil {
+		query += fmt.Sprintf(" AND status = $%d", argPos)
+		args = append(args, *filters.Status)
+		argPos++
+	}
+
+	if filters.Search != nil {
+		query += fmt.Sprintf(" AND (username ILIKE $%d OR email ILIKE $%d OR first_name ILIKE $%d OR last_name ILIKE $%d)",
+			argPos, argPos, argPos, argPos)
+		searchPattern := "%" + *filters.Search + "%"
+		args = append(args, searchPattern, searchPattern, searchPattern, searchPattern)
+		argPos += 4
+	}
+
+	query += " ORDER BY created_at DESC LIMIT $" + fmt.Sprintf("%d", argPos) + " OFFSET $" + fmt.Sprintf("%d", argPos+1)
+	args = append(args, filters.PageSize, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list system users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		u := &models.User{}
+		var firstName, lastName, mfaSecret sql.NullString
+		var lastLoginAt, deletedAt sql.NullTime
+		var tenantIDStr sql.NullString
+		var principalType string
+		var metadataJSON []byte
+
+		err := rows.Scan(
+			&u.ID, &tenantIDStr, &principalType, &u.Username, &u.Email,
+			&firstName, &lastName, &u.Status, &u.MFAEnabled,
+			&mfaSecret, &lastLoginAt, &metadataJSON, &u.CreatedAt,
+			&u.UpdatedAt, &deletedAt,
+		)
+
+		if tenantIDStr.Valid {
+			parsedTenantID, err := uuid.Parse(tenantIDStr.String)
+			if err == nil {
+				u.TenantID = &parsedTenantID
+			}
+		}
+		u.PrincipalType = models.PrincipalType(principalType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+
+		if firstName.Valid {
+			u.FirstName = &firstName.String
+		}
+		if lastName.Valid {
+			u.LastName = &lastName.String
+		}
+		if mfaSecret.Valid {
+			u.MFASecretEncrypted = &mfaSecret.String
+		}
+		if lastLoginAt.Valid {
+			u.LastLoginAt = &lastLoginAt.Time
+		}
+		if deletedAt.Valid {
+			u.DeletedAt = &deletedAt.Time
+		}
+		if len(metadataJSON) > 0 {
+			_ = json.Unmarshal(metadataJSON, &u.Metadata) // Ignore unmarshal errors for optional metadata
+		}
+
+		users = append(users, u)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating users: %w", err)
+	}
+
+	return users, nil
+}
+
+// CountSystem returns the total count of system users matching filters
+func (r *userRepository) CountSystem(ctx context.Context, filters *interfaces.UserFilters) (int, error) {
+	query := `SELECT COUNT(*) FROM users WHERE principal_type = 'SYSTEM' AND deleted_at IS NULL`
+	args := []interface{}{}
+	argPos := 1
+
+	if filters != nil {
+		if filters.Status != nil {
+			query += fmt.Sprintf(" AND status = $%d", argPos)
+			args = append(args, *filters.Status)
+			argPos++
+		}
+
+		if filters.Search != nil {
+			query += fmt.Sprintf(" AND (username ILIKE $%d OR email ILIKE $%d OR first_name ILIKE $%d OR last_name ILIKE $%d)",
+				argPos, argPos, argPos, argPos)
+			searchPattern := "%" + *filters.Search + "%"
+			args = append(args, searchPattern, searchPattern, searchPattern, searchPattern)
+		}
+	}
+
+	var count int
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count system users: %w", err)
+	}
+
+	return count, nil
+}
+

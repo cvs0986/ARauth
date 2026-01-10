@@ -9,29 +9,30 @@ import { useAuthStore } from '@/store/authStore';
 
 // System navigation items (for SYSTEM users)
 const systemNavigation = [
-  { name: 'Dashboard', href: '/', icon: '📊', permission: null },
+  { name: 'Dashboard', href: '/', icon: '📊', permission: 'admin:access' },
   { name: 'Tenants', href: '/tenants', icon: '🏢', permission: 'tenant:read' },
-  { name: 'Users', href: '/users', icon: '👤', permission: null }, // Core feature - always visible
-  { name: 'Roles', href: '/roles', icon: '🔑', permission: null }, // Core feature - always visible
-  { name: 'Permissions', href: '/permissions', icon: '🛡️', permission: null }, // Core feature - always visible
+  { name: 'Users', href: '/users', icon: '👤', permission: 'users:read' },
+  { name: 'Roles', href: '/roles', icon: '🔑', permission: 'roles:read' },
+  { name: 'Permissions', href: '/permissions', icon: '🛡️', permission: 'permissions:read' },
   { name: 'System Capabilities', href: '/capabilities/system', icon: '🛠️', permission: 'system:configure' },
   { name: 'Tenant Capabilities', href: '/capabilities/tenant-assignment', icon: '🔧', permission: 'tenant:configure' },
-  { name: 'MFA', href: '/mfa', icon: '🔐', permission: null }, // MFA management
-  { name: 'Audit Logs', href: '/audit', icon: '📋', permission: null }, // Core feature - always visible
-  { name: 'Settings', href: '/settings', icon: '⚙️', permission: null }, // Core feature - always visible
+  { name: 'MFA', href: '/mfa', icon: '🔐', permission: 'admin:access' }, // MFA management - requires admin access
+  { name: 'Audit Logs', href: '/audit', icon: '📋', permission: 'audit:read' },
+  { name: 'Settings', href: '/settings', icon: '⚙️', permission: 'tenant:settings:read' },
 ];
 
 // Tenant navigation items (for TENANT users)
+// Using tenant.* namespace for all tenant permissions
 const tenantNavigation = [
-  { name: 'Dashboard', href: '/', icon: '📊', permission: null },
-  { name: 'Users', href: '/users', icon: '👤', permission: null }, // Core feature - always visible
-  { name: 'Roles', href: '/roles', icon: '🔑', permission: null }, // Core feature - always visible
-  { name: 'Permissions', href: '/permissions', icon: '🛡️', permission: null }, // Core feature - always visible
-  { name: 'Features', href: '/capabilities/features', icon: '✨', permission: null },
-  { name: 'User Capabilities', href: '/capabilities/user-enrollment', icon: '👥', permission: null },
-  { name: 'MFA', href: '/mfa', icon: '🔐', permission: null }, // MFA management
-  { name: 'Audit Logs', href: '/audit', icon: '📋', permission: null }, // Core feature - always visible
-  { name: 'Settings', href: '/settings', icon: '⚙️', permission: null }, // Core feature - always visible
+  { name: 'Dashboard', href: '/', icon: '📊', permission: 'tenant.admin.access' },
+  { name: 'Users', href: '/users', icon: '👤', permission: 'tenant.users.read' },
+  { name: 'Roles', href: '/roles', icon: '🔑', permission: 'tenant.roles.read' },
+  { name: 'Permissions', href: '/permissions', icon: '🛡️', permission: 'tenant.permissions.read' },
+  { name: 'Features', href: '/capabilities/features', icon: '✨', permission: 'tenant.admin.access' },
+  { name: 'User Capabilities', href: '/capabilities/user-enrollment', icon: '👥', permission: 'tenant.admin.access' },
+  { name: 'MFA', href: '/mfa', icon: '🔐', permission: 'tenant.admin.access' }, // MFA management - requires admin access
+  { name: 'Audit Logs', href: '/audit', icon: '📋', permission: 'tenant.audit.read' },
+  { name: 'Settings', href: '/settings', icon: '⚙️', permission: 'tenant.settings.read' },
 ];
 
 export function Sidebar() {
@@ -56,29 +57,25 @@ export function Sidebar() {
   });
 
   return (
-    <aside className="w-64 bg-gray-900 text-white min-h-screen">
+    <aside className="w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white min-h-screen shadow-xl">
       <div className="p-4">
-        <div className="mb-4 px-4 py-2 bg-gray-800 rounded-lg">
-          <div className="text-xs text-gray-400 uppercase tracking-wider">
-            {isSystemUser() ? 'System Admin' : 'Tenant Admin'}
-          </div>
-        </div>
-        <nav className="space-y-2">
+        <nav className="space-y-1">
           {filteredNavigation.map((item) => {
-            const isActive = location.pathname === item.href;
+            const isActive = location.pathname === item.href || 
+              (item.href !== '/' && location.pathname.startsWith(item.href));
             return (
               <Link
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  'flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors',
+                  'flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200',
                   isActive
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                    ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
                 )}
               >
-                <span>{item.icon}</span>
-                <span>{item.name}</span>
+                <span className="text-lg">{item.icon}</span>
+                <span className="font-medium">{item.name}</span>
               </Link>
             );
           })}

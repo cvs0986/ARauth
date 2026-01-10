@@ -10,8 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useNavigate } from 'react-router-dom';
-import { Users, Building2, Shield, Key, TrendingUp, Activity, Globe, Server, Info, Settings } from 'lucide-react';
+import { Users, Building2, Shield, Key, TrendingUp, Activity, Globe, Server, Info, Settings, Zap } from 'lucide-react';
 import { CapabilityInheritanceVisualization } from '@/components/capabilities/CapabilityInheritanceVisualization';
+import { StatCard } from '@/components/dashboard/StatCard';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -220,147 +221,84 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Tenants Card - Only show for SYSTEM users */}
         {isSystemUser() && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tenants</CardTitle>
-              <Globe className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.tenants.total}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.tenants.active} active
-              </p>
-              <Button
-                variant="link"
-                className="p-0 h-auto mt-2"
-                onClick={() => navigate('/tenants')}
-              >
-                View all →
-              </Button>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="Tenants"
+            value={stats.tenants.total}
+            icon={Building2}
+            variant="primary"
+            trend={{
+              value: stats.tenants.active > 0 ? Math.round((stats.tenants.active / stats.tenants.total) * 100) : 0,
+              label: 'active'
+            }}
+            onClick={() => navigate('/tenants')}
+          />
         )}
 
         {/* Current Tenant Info - Only show for TENANT users */}
         {!isSystemUser() && tenants && tenants.length > 0 && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tenant</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg font-bold">{tenants[0]?.name || 'N/A'}</div>
-              <p className="text-xs text-muted-foreground">
-                {tenants[0]?.domain || 'N/A'}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Status: <span className="capitalize">{tenants[0]?.status || 'N/A'}</span>
-              </p>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="Tenant"
+            value={tenants[0]?.name || 'N/A'}
+            icon={Building2}
+            variant="primary"
+          />
         )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.users.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.users.active} active
-            </p>
-            <Button
-              variant="link"
-              className="p-0 h-auto mt-2"
-              onClick={() => navigate('/users')}
-            >
-              View all →
-            </Button>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Users"
+          value={stats.users.total}
+          icon={Users}
+          variant="success"
+          trend={{
+            value: stats.users.active > 0 ? Math.round((stats.users.active / stats.users.total) * 100) : 0,
+            label: 'active'
+          }}
+          onClick={() => navigate('/users')}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Roles</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.roles.total}</div>
-            <p className="text-xs text-muted-foreground">Total roles</p>
-            <Button
-              variant="link"
-              className="p-0 h-auto mt-2"
-              onClick={() => navigate('/roles')}
-            >
-              View all →
-            </Button>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Roles"
+          value={stats.roles.total}
+          icon={Shield}
+          variant="default"
+          onClick={() => navigate('/roles')}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Permissions</CardTitle>
-            <Key className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.permissions.total}</div>
-            <p className="text-xs text-muted-foreground">Total permissions</p>
-            <Button
-              variant="link"
-              className="p-0 h-auto mt-2"
-              onClick={() => navigate('/permissions')}
-            >
-              View all →
-            </Button>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Permissions"
+          value={stats.permissions.total}
+          icon={Key}
+          variant="default"
+          onClick={() => navigate('/permissions')}
+        />
 
         {/* Capability Metrics */}
         {isSystemUser() && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">System Capabilities</CardTitle>
-              <Settings className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.capabilities.systemTotal}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.capabilities.systemEnabled} enabled
-              </p>
-              <Button
-                variant="link"
-                className="p-0 h-auto mt-2"
-                onClick={() => navigate('/capabilities/system')}
-              >
-                View all →
-              </Button>
-            </CardContent>
-          </Card>
+          <StatCard
+            title="System Capabilities"
+            value={stats.capabilities.systemTotal}
+            icon={Settings}
+            variant="warning"
+            trend={{
+              value: stats.capabilities.systemEnabled > 0 ? Math.round((stats.capabilities.systemEnabled / stats.capabilities.systemTotal) * 100) : 0,
+              label: 'enabled'
+            }}
+            onClick={() => navigate('/capabilities/system')}
+          />
         )}
 
         {currentTenantId && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tenant Capabilities</CardTitle>
-              <Settings className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.capabilities.tenantTotal}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.capabilities.tenantEnabled} enabled
-              </p>
-              {isSystemUser() && (
-                <Button
-                  variant="link"
-                  className="p-0 h-auto mt-2"
-                  onClick={() => navigate('/capabilities/tenant-assignment')}
-                >
-                  View all →
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+          <StatCard
+            title="Tenant Capabilities"
+            value={stats.capabilities.tenantTotal}
+            icon={Zap}
+            variant="warning"
+            trend={{
+              value: stats.capabilities.tenantEnabled > 0 ? Math.round((stats.capabilities.tenantEnabled / stats.capabilities.tenantTotal) * 100) : 0,
+              label: 'enabled'
+            }}
+            onClick={isSystemUser() ? () => navigate('/capabilities/tenant-assignment') : undefined}
+          />
         )}
 
         {!isSystemUser() && (

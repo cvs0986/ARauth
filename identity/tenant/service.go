@@ -13,12 +13,16 @@ import (
 
 // Service provides tenant management business logic
 type Service struct {
-	repo interfaces.TenantRepository
+	repo        interfaces.TenantRepository
+	initializer *Initializer
 }
 
 // NewService creates a new tenant service
-func NewService(repo interfaces.TenantRepository) *Service {
-	return &Service{repo: repo}
+func NewService(repo interfaces.TenantRepository, initializer *Initializer) *Service {
+	return &Service{
+		repo:        repo,
+		initializer: initializer,
+	}
 }
 
 // CreateTenantRequest represents a request to create a tenant
@@ -68,6 +72,25 @@ func (s *Service) Create(ctx context.Context, req *CreateTenantRequest) (*models
 
 	if err := s.repo.Create(ctx, tenant); err != nil {
 		return nil, fmt.Errorf("failed to create tenant: %w", err)
+	}
+
+	// Initialize predefined roles and permissions for the new tenant
+	if s.initializer != nil {
+		initResult, err := s.initializer.InitializeTenant(ctx, tenant.ID)
+		if err != nil {
+			// Log error but don't fail tenant creation
+			// In production, you might want to rollback or handle this differently
+			// For now, we'll allow tenant creation to succeed even if initialization fails
+			// The initialization can be retried later if needed
+			return nil, fmt.Errorf("tenant created but failed to initialize roles and permissions: %w", err)
+		}
+		// Store initialization result in tenant metadata for reference
+		if tenant.Metadata == nil {
+			tenant.Metadata = make(map[string]interface{})
+		}
+		tenant.Metadata["initialized_roles"] = true
+		tenant.Metadata["tenant_owner_role_id"] = initResult.TenantOwnerRoleID.String()
+		_ = initResult // Can be used later for assigning roles to first user
 	}
 
 	return tenant, nil

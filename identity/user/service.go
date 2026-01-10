@@ -142,6 +142,85 @@ func (s *Service) Create(ctx context.Context, req *CreateUserRequest) (*models.U
 	return u, nil
 }
 
+// CreateSystem creates a new SYSTEM user (no tenant required)
+func (s *Service) CreateSystem(ctx context.Context, req *CreateUserRequest) (*models.User, error) {
+	// Validate username
+	req.Username = strings.TrimSpace(req.Username)
+	if len(req.Username) < 3 {
+		return nil, fmt.Errorf("username must be at least 3 characters")
+	}
+
+	// Validate email
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	if !isValidEmail(req.Email) {
+		return nil, fmt.Errorf("invalid email format")
+	}
+
+	// Validate password
+	if req.Password == "" {
+		return nil, fmt.Errorf("password is required")
+	}
+	if err := s.passwordValidator.Validate(req.Password, req.Email); err != nil {
+		return nil, fmt.Errorf("password validation failed: %w", err)
+	}
+
+	// Check if system user already exists by username
+	existing, _ := s.repo.GetSystemUserByUsername(ctx, req.Username)
+	if existing != nil {
+		return nil, fmt.Errorf("username already exists")
+	}
+
+	// Check if system user already exists by email
+	existing, _ = s.repo.GetByEmailSystem(ctx, req.Email)
+	if existing != nil {
+		return nil, fmt.Errorf("email already exists")
+	}
+
+	// Set default status
+	status := req.Status
+	if status == "" {
+		status = models.UserStatusActive
+	}
+
+	// Create SYSTEM user (no tenant_id)
+	u := &models.User{
+		ID:            uuid.New(),
+		TenantID:      nil, // SYSTEM users don't have tenant_id
+		PrincipalType: models.PrincipalTypeSystem,
+		Username:      req.Username,
+		Email:         req.Email,
+		FirstName:     req.FirstName,
+		LastName:      req.LastName,
+		Status:        status,
+		Metadata:      req.Metadata,
+	}
+
+	if err := s.repo.Create(ctx, u); err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Create credentials for the user
+	passwordHash, err := s.passwordHasher.Hash(req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	cred := &credential.Credential{
+		ID:                uuid.New(),
+		UserID:            u.ID,
+		PasswordHash:      passwordHash,
+		PasswordChangedAt: time.Now(),
+		CreatedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
+	}
+
+	if err := s.credentialRepo.Create(ctx, cred); err != nil {
+		return nil, fmt.Errorf("failed to create credentials: %w", err)
+	}
+
+	return u, nil
+}
+
 // GetByID retrieves a user by ID
 func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	u, err := s.repo.GetByID(ctx, id)
@@ -240,6 +319,16 @@ func (s *Service) List(ctx context.Context, tenantID uuid.UUID, filters *interfa
 // Count returns the total count of users
 func (s *Service) Count(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) (int, error) {
 	return s.repo.Count(ctx, tenantID, filters)
+}
+
+// ListSystem retrieves a list of system users (principal_type = 'SYSTEM')
+func (s *Service) ListSystem(ctx context.Context, filters *interfaces.UserFilters) ([]*models.User, error) {
+	return s.repo.ListSystem(ctx, filters)
+}
+
+// CountSystem returns the total count of system users
+func (s *Service) CountSystem(ctx context.Context, filters *interfaces.UserFilters) (int, error) {
+	return s.repo.CountSystem(ctx, filters)
 }
 
 // isValidEmail performs basic email validation

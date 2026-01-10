@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/identity/capability"
+	"github.com/arauth-identity/iam/identity/models"
 )
 
 // CapabilityHandler handles capability management operations
@@ -135,7 +136,7 @@ func (h *CapabilityHandler) GetTenantCapabilities(c *gin.Context) {
 		return
 	}
 
-	capabilities, err := h.capabilityService.GetAllowedCapabilitiesForTenant(c.Request.Context(), tenantID)
+	capabilities, err := h.capabilityService.GetTenantCapabilities(c.Request.Context(), tenantID)
 	if err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
 			"Failed to get tenant capabilities", nil)
@@ -305,6 +306,72 @@ func (h *CapabilityHandler) EvaluateTenantCapabilities(c *gin.Context) {
 // Tenant Feature Enablement (TENANT users)
 // ============================================================================
 
+// ListSystemCapabilitiesFromContext handles GET /api/v1/tenant/system-capabilities
+// Lists all system capabilities (read-only, for TENANT users to see what's available)
+func (h *CapabilityHandler) ListSystemCapabilitiesFromContext(c *gin.Context) {
+	_, ok := middleware.RequireTenant(c)
+	if !ok {
+		return
+	}
+
+	capabilities, err := h.capabilityService.GetAllSystemCapabilities(c.Request.Context())
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
+			"Failed to get system capabilities", nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"capabilities": capabilities,
+	})
+}
+
+// GetSystemCapabilityFromContext handles GET /api/v1/tenant/system-capabilities/:key
+// Gets a system capability by key (read-only, for TENANT users)
+func (h *CapabilityHandler) GetSystemCapabilityFromContext(c *gin.Context) {
+	_, ok := middleware.RequireTenant(c)
+	if !ok {
+		return
+	}
+
+	capabilityKey := c.Param("key")
+	if capabilityKey == "" {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_key",
+			"Capability key is required", nil)
+		return
+	}
+
+	capability, err := h.capabilityService.GetSystemCapability(c.Request.Context(), capabilityKey)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusNotFound, "not_found",
+			"System capability not found", nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, capability)
+}
+
+// GetTenantCapabilitiesFromContext handles GET /api/v1/tenant/capabilities
+// Gets all allowed capabilities for the current tenant (tenant-scoped, for TENANT users)
+func (h *CapabilityHandler) GetTenantCapabilitiesFromContext(c *gin.Context) {
+	tenantID, ok := middleware.RequireTenant(c)
+	if !ok {
+		return
+	}
+
+	capabilities, err := h.capabilityService.GetTenantCapabilities(c.Request.Context(), tenantID)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
+			"Failed to get tenant capabilities", nil)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"tenant_id":   tenantID,
+		"capabilities": capabilities,
+	})
+}
+
 // GetTenantFeatures handles GET /api/v1/tenant/features
 // Gets all enabled features for the current tenant
 func (h *CapabilityHandler) GetTenantFeatures(c *gin.Context) {
@@ -313,11 +380,16 @@ func (h *CapabilityHandler) GetTenantFeatures(c *gin.Context) {
 		return
 	}
 
-	features, err := h.capabilityService.GetEnabledFeaturesForTenant(c.Request.Context(), tenantID)
+	features, err := h.capabilityService.GetTenantFeatureEnablements(c.Request.Context(), tenantID)
 	if err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
 			"Failed to get tenant features", nil)
 		return
+	}
+
+	// Ensure features is always an array, not nil
+	if features == nil {
+		features = []*models.TenantFeatureEnablement{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -384,6 +456,50 @@ func (h *CapabilityHandler) EnableTenantFeature(c *gin.Context) {
 	})
 }
 
+// EvaluateTenantCapabilitiesFromContext handles GET /api/v1/tenant/capabilities/evaluation
+// Evaluates all capabilities for the current tenant (tenant-scoped, for TENANT users)
+func (h *CapabilityHandler) EvaluateTenantCapabilitiesFromContext(c *gin.Context) {
+	tenantID, ok := middleware.RequireTenant(c)
+	if !ok {
+		return
+	}
+
+	// Get all system capabilities
+	systemCaps, err := h.capabilityService.GetAllSystemCapabilities(c.Request.Context())
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
+			"Failed to get system capabilities", nil)
+		return
+	}
+
+	// Get user ID from query if provided
+	userIDStr := c.Query("user_id")
+	var userID uuid.UUID
+	if userIDStr != "" {
+		var parseErr error
+		userID, parseErr = uuid.Parse(userIDStr)
+		if parseErr != nil {
+			middleware.RespondWithError(c, http.StatusBadRequest, "invalid_user_id",
+				"Invalid user ID", nil)
+			return
+		}
+	}
+
+	// Evaluate each capability
+	evaluations := make([]*capability.CapabilityEvaluation, 0)
+	for _, sysCap := range systemCaps {
+		eval, err := h.capabilityService.EvaluateCapability(c.Request.Context(), tenantID, userID, sysCap.CapabilityKey)
+		if err == nil {
+			evaluations = append(evaluations, eval)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"tenant_id":   tenantID,
+		"evaluations": evaluations,
+	})
+}
+
 // DisableTenantFeature handles DELETE /api/v1/tenant/features/:key
 // Disables a feature for the current tenant
 func (h *CapabilityHandler) DisableTenantFeature(c *gin.Context) {
@@ -427,19 +543,23 @@ func (h *CapabilityHandler) GetUserCapabilities(c *gin.Context) {
 		return
 	}
 
-	// Authorization: User can view own capabilities, admin can view others
-	var currentUserID uuid.UUID
-	if userIDStr, ok := c.Get("user_id"); ok {
-		if userIDStrVal, ok := userIDStr.(string); ok {
-			currentUserID, _ = uuid.Parse(userIDStrVal)
-		}
-	}
-	tenantID, _ := middleware.RequireTenant(c)
+	// Get user to check if system user
+	// Note: We need access to userRepo, but CapabilityHandler doesn't have it
+	// For now, try to get tenant context, but don't require it
+	tenantID, tenantOK := middleware.RequireTenant(c)
 	
-	// Check if user is viewing own capabilities or is admin
-	if currentUserID != userID {
-		// TODO: Check if current user has admin permission
-		// For now, allow if in same tenant
+	// If tenant context is not available, assume system user
+	// System users don't have tenant-scoped capabilities in the same way
+	// For system users, we might want to return empty or system-level capabilities
+	if !tenantOK {
+		// System user - return empty capabilities for now
+		// TODO: Implement system-level capability states if needed
+		c.JSON(http.StatusOK, gin.H{
+			"user_id":   userID,
+			"tenant_id": nil,
+			"states":    []interface{}{},
+		})
+		return
 	}
 
 	states, err := h.capabilityService.GetUserCapabilityStates(c.Request.Context(), userID)
@@ -450,9 +570,9 @@ func (h *CapabilityHandler) GetUserCapabilities(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"user_id":  userID,
+		"user_id":   userID,
 		"tenant_id": tenantID,
-		"states":   states,
+		"states":    states,
 	})
 }
 
