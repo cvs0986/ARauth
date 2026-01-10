@@ -3,31 +3,32 @@ package user
 import (
 	"context"
 	"testing"
-	"time"
 
+	"github.com/arauth-identity/iam/identity/credential"
+	"github.com/arauth-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/storage/interfaces"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/arauth-identity/iam/identity/models"
 )
 
-// MockRepository is a mock implementation of UserRepository
-type MockRepository struct {
+// FakeUserRepository is a fake implementation of UserRepository
+type FakeUserRepository struct {
 	users map[uuid.UUID]*models.User
 }
 
-func NewMockRepository() *MockRepository {
-	return &MockRepository{
+func NewFakeUserRepository() *FakeUserRepository {
+	return &FakeUserRepository{
 		users: make(map[uuid.UUID]*models.User),
 	}
 }
 
-func (m *MockRepository) Create(ctx context.Context, user *models.User) error {
+func (m *FakeUserRepository) Create(ctx context.Context, user *models.User) error {
 	m.users[user.ID] = user
 	return nil
 }
 
-func (m *MockRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
+func (m *FakeUserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	user, ok := m.users[id]
 	if !ok {
 		return nil, assert.AnError
@@ -35,7 +36,7 @@ func (m *MockRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Use
 	return user, nil
 }
 
-func (m *MockRepository) GetByUsername(ctx context.Context, username string, tenantID uuid.UUID) (*models.User, error) {
+func (m *FakeUserRepository) GetByUsername(ctx context.Context, username string, tenantID uuid.UUID) (*models.User, error) {
 	for _, user := range m.users {
 		if user.Username == username && user.TenantID != nil && *user.TenantID == tenantID {
 			return user, nil
@@ -44,7 +45,7 @@ func (m *MockRepository) GetByUsername(ctx context.Context, username string, ten
 	return nil, assert.AnError
 }
 
-func (m *MockRepository) GetByEmail(ctx context.Context, email string, tenantID uuid.UUID) (*models.User, error) {
+func (m *FakeUserRepository) GetByEmail(ctx context.Context, email string, tenantID uuid.UUID) (*models.User, error) {
 	for _, user := range m.users {
 		if user.Email == email && user.TenantID != nil && *user.TenantID == tenantID {
 			return user, nil
@@ -53,7 +54,7 @@ func (m *MockRepository) GetByEmail(ctx context.Context, email string, tenantID 
 	return nil, assert.AnError
 }
 
-func (m *MockRepository) Update(ctx context.Context, user *models.User) error {
+func (m *FakeUserRepository) Update(ctx context.Context, user *models.User) error {
 	if _, ok := m.users[user.ID]; !ok {
 		return assert.AnError
 	}
@@ -61,12 +62,12 @@ func (m *MockRepository) Update(ctx context.Context, user *models.User) error {
 	return nil
 }
 
-func (m *MockRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (m *FakeUserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	delete(m.users, id)
 	return nil
 }
 
-func (m *MockRepository) List(ctx context.Context, tenantID uuid.UUID, filters interface{}) ([]*models.User, error) {
+func (m *FakeUserRepository) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) ([]*models.User, error) {
 	var users []*models.User
 	for _, user := range m.users {
 		if user.TenantID != nil && *user.TenantID == tenantID {
@@ -76,7 +77,7 @@ func (m *MockRepository) List(ctx context.Context, tenantID uuid.UUID, filters i
 	return users, nil
 }
 
-func (m *MockRepository) Count(ctx context.Context, tenantID uuid.UUID, filters interface{}) (int, error) {
+func (m *FakeUserRepository) Count(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) (int, error) {
 	count := 0
 	for _, user := range m.users {
 		if user.TenantID != nil && *user.TenantID == tenantID {
@@ -86,22 +87,42 @@ func (m *MockRepository) Count(ctx context.Context, tenantID uuid.UUID, filters 
 	return count, nil
 }
 
-// MockCredentialRepository is a mock implementation of CredentialRepository
-type MockCredentialRepository struct{}
+// Implement missing methods for FakeUserRepository (if any required by interface)
+func (m *FakeUserRepository) GetSystemUserByUsername(ctx context.Context, username string) (*models.User, error) {
+	return nil, assert.AnError
+}
+func (m *FakeUserRepository) GetByEmailSystem(ctx context.Context, email string) (*models.User, error) {
+	return nil, assert.AnError
+}
+func (m *FakeUserRepository) ListSystem(ctx context.Context, filters *interfaces.UserFilters) ([]*models.User, error) {
+	return nil, nil
+}
+func (m *FakeUserRepository) CountSystem(ctx context.Context, filters *interfaces.UserFilters) (int, error) {
+	return 0, nil
+}
 
-func (m *MockCredentialRepository) Create(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+// FakeCredentialRepository is a mock implementation of CredentialRepository
+type FakeCredentialRepository struct{}
+
+// Update signature to match interface: Create(ctx, *credential.Credential) error
+func (m *FakeCredentialRepository) Create(ctx context.Context, cred *credential.Credential) error {
 	return nil
 }
 
-func (m *MockCredentialRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (string, error) {
-	return "", nil
+// But wait, the interface likely imports credential package.
+// "github.com/arauth-identity/iam/identity/credential"
+// I need to update the signature to match.
+
+func (m *FakeCredentialRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*credential.Credential, error) {
+	return nil, nil
 }
 
-func (m *MockCredentialRepository) Update(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+// Update also might have changed? Lint only complained about Create.
+func (m *FakeCredentialRepository) Update(ctx context.Context, cred *credential.Credential) error {
 	return nil
 }
 
-func (m *MockCredentialRepository) Delete(ctx context.Context, userID uuid.UUID) error {
+func (m *FakeCredentialRepository) Delete(ctx context.Context, userID uuid.UUID) error {
 	return nil
 }
 
@@ -110,8 +131,8 @@ func TestCreateUser(t *testing.T) {
 	ctx := context.Background()
 	tenantID := uuid.New()
 
-	mockRepo := NewMockRepository()
-	mockCredRepo := &MockCredentialRepository{}
+	mockRepo := NewFakeUserRepository()
+	mockCredRepo := &FakeCredentialRepository{}
 	service := NewService(mockRepo, mockCredRepo)
 
 	tests := []struct {
@@ -184,8 +205,8 @@ func TestGetUserByID(t *testing.T) {
 	ctx := context.Background()
 	tenantID := uuid.New()
 
-	mockRepo := NewMockRepository()
-	mockCredRepo := &MockCredentialRepository{}
+	mockRepo := NewFakeUserRepository()
+	mockCredRepo := &FakeCredentialRepository{}
 	service := NewService(mockRepo, mockCredRepo)
 
 	// Create a test user
@@ -218,8 +239,8 @@ func TestUpdateUser(t *testing.T) {
 	ctx := context.Background()
 	tenantID := uuid.New()
 
-	mockRepo := NewMockRepository()
-	mockCredRepo := &MockCredentialRepository{}
+	mockRepo := NewFakeUserRepository()
+	mockCredRepo := &FakeCredentialRepository{}
 	service := NewService(mockRepo, mockCredRepo)
 
 	// Create a test user
@@ -252,8 +273,8 @@ func TestDeleteUser(t *testing.T) {
 	ctx := context.Background()
 	tenantID := uuid.New()
 
-	mockRepo := NewMockRepository()
-	mockCredRepo := &MockCredentialRepository{}
+	mockRepo := NewFakeUserRepository()
+	mockCredRepo := &FakeCredentialRepository{}
 	service := NewService(mockRepo, mockCredRepo)
 
 	// Create a test user
