@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
 	"go.uber.org/zap"
 )
 
 // DispatcherInterface defines the interface for webhook delivery
 type DispatcherInterface interface {
-	Deliver(ctx context.Context, w *Webhook, eventType string, payload map[string]interface{}, eventID *uuid.UUID) error
+	Deliver(ctx context.Context, w *models.Webhook, eventType string, payload map[string]interface{}, eventID *uuid.UUID) error
 }
 
 // Service provides webhook functionality
@@ -41,7 +42,7 @@ func NewService(
 }
 
 // CreateWebhook creates a new webhook
-func (s *Service) CreateWebhook(ctx context.Context, tenantID uuid.UUID, req *CreateWebhookRequest) (*Webhook, error) {
+func (s *Service) CreateWebhook(ctx context.Context, tenantID uuid.UUID, req *CreateWebhookRequest) (*models.Webhook, error) {
 	// Validate events
 	if len(req.Events) == 0 {
 		return nil, fmt.Errorf("at least one event type is required")
@@ -53,7 +54,7 @@ func (s *Service) CreateWebhook(ctx context.Context, tenantID uuid.UUID, req *Cr
 		secret = generateSecret()
 	}
 
-	w := &Webhook{
+	w := &models.Webhook{
 		ID:       uuid.New(),
 		TenantID: tenantID,
 		Name:     req.Name,
@@ -74,7 +75,7 @@ func (s *Service) CreateWebhook(ctx context.Context, tenantID uuid.UUID, req *Cr
 }
 
 // GetWebhook retrieves a webhook by ID
-func (s *Service) GetWebhook(ctx context.Context, id uuid.UUID) (*Webhook, error) {
+func (s *Service) GetWebhook(ctx context.Context, id uuid.UUID) (*models.Webhook, error) {
 	w, err := s.webhookRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("webhook not found: %w", err)
@@ -87,7 +88,7 @@ func (s *Service) GetWebhook(ctx context.Context, id uuid.UUID) (*Webhook, error
 }
 
 // GetWebhooksByTenant retrieves all webhooks for a tenant
-func (s *Service) GetWebhooksByTenant(ctx context.Context, tenantID uuid.UUID) ([]*Webhook, error) {
+func (s *Service) GetWebhooksByTenant(ctx context.Context, tenantID uuid.UUID) ([]*models.Webhook, error) {
 	webhooks, err := s.webhookRepo.GetByTenantID(ctx, tenantID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get webhooks: %w", err)
@@ -102,7 +103,7 @@ func (s *Service) GetWebhooksByTenant(ctx context.Context, tenantID uuid.UUID) (
 }
 
 // UpdateWebhook updates a webhook
-func (s *Service) UpdateWebhook(ctx context.Context, id uuid.UUID, req *UpdateWebhookRequest) (*Webhook, error) {
+func (s *Service) UpdateWebhook(ctx context.Context, id uuid.UUID, req *UpdateWebhookRequest) (*models.Webhook, error) {
 	w, err := s.webhookRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("webhook not found: %w", err)
@@ -143,7 +144,7 @@ func (s *Service) DeleteWebhook(ctx context.Context, id uuid.UUID) error {
 }
 
 // GetDeliveriesByWebhook retrieves deliveries for a webhook
-func (s *Service) GetDeliveriesByWebhook(ctx context.Context, webhookID uuid.UUID, limit, offset int) ([]*WebhookDelivery, int, error) {
+func (s *Service) GetDeliveriesByWebhook(ctx context.Context, webhookID uuid.UUID, limit, offset int) ([]*models.WebhookDelivery, int, error) {
 	if limit <= 0 {
 		limit = 50
 	}
@@ -155,7 +156,7 @@ func (s *Service) GetDeliveriesByWebhook(ctx context.Context, webhookID uuid.UUI
 }
 
 // GetDeliveryByID retrieves a delivery by ID
-func (s *Service) GetDeliveryByID(ctx context.Context, id uuid.UUID) (*WebhookDelivery, error) {
+func (s *Service) GetDeliveryByID(ctx context.Context, id uuid.UUID) (*models.WebhookDelivery, error) {
 	return s.deliveryRepo.GetByID(ctx, id)
 }
 
@@ -167,9 +168,9 @@ func (s *Service) TriggerWebhook(ctx context.Context, tenantID uuid.UUID, eventT
 		return fmt.Errorf("failed to get webhooks: %w", err)
 	}
 
-	// Deliver to each webhook asynchronously
-	for _, w := range webhooks {
-		go func(webhook *Webhook) {
+		// Deliver to each webhook asynchronously
+		for _, w := range webhooks {
+			go func(webhook *models.Webhook) {
 			// Create a new context for async operation
 			asyncCtx := context.Background()
 			if err := s.dispatcher.Deliver(asyncCtx, webhook, eventType, payload, eventID); err != nil {

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/arauth-identity/iam/identity/webhook"
+	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
 	"go.uber.org/zap"
 )
@@ -44,9 +44,9 @@ func NewDispatcher(
 }
 
 // Deliver sends a webhook payload to the specified URL
-func (d *Dispatcher) Deliver(ctx context.Context, w *webhook.Webhook, eventType string, payload map[string]interface{}, eventID *uuid.UUID) error {
+func (d *Dispatcher) Deliver(ctx context.Context, w *models.Webhook, eventType string, payload map[string]interface{}, eventID *uuid.UUID) error {
 	// Create webhook payload
-	webhookPayload := webhook.WebhookPayload{
+	webhookPayload := models.WebhookPayload{
 		ID:        uuid.New().String(),
 		EventType: eventType,
 		Timestamp: time.Now(),
@@ -84,31 +84,31 @@ func (d *Dispatcher) Deliver(ctx context.Context, w *webhook.Webhook, eventType 
 	responseBody, _ := io.ReadAll(resp.Body)
 
 	// Create delivery record
-	delivery := &webhook.WebhookDelivery{
+	delivery := &models.WebhookDelivery{
 		ID:            uuid.New(),
 		WebhookID:     w.ID,
 		EventID:       eventID,
 		EventType:     eventType,
 		Payload:       payload,
-		Status:        webhook.DeliveryStatusPending,
+		Status:        models.DeliveryStatusPending,
 		HTTPStatusCode: &resp.StatusCode,
 		AttemptNumber:  1,
 	}
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		// Success
-		delivery.Status = webhook.DeliveryStatusSuccess
+		delivery.Status = models.DeliveryStatusSuccess
 		now := time.Now()
 		delivery.DeliveredAt = &now
 	} else {
 		// Failed
-		delivery.Status = webhook.DeliveryStatusFailed
+		delivery.Status = models.DeliveryStatusFailed
 		responseBodyStr := string(responseBody)
 		delivery.ResponseBody = &responseBodyStr
 
 		// Schedule retry if not exceeded max retries
 		if delivery.AttemptNumber < d.maxRetries {
-			delivery.Status = webhook.DeliveryStatusRetrying
+			delivery.Status = models.DeliveryStatusRetrying
 			nextRetry := time.Now().Add(d.calculateBackoff(delivery.AttemptNumber))
 			delivery.NextRetryAt = &nextRetry
 		}
@@ -151,10 +151,10 @@ func (d *Dispatcher) RetryFailedDeliveries(ctx context.Context, webhookRepo inte
 
 		// Retry delivery
 		delivery.AttemptNumber++
-		delivery.Status = webhook.DeliveryStatusRetrying
+		delivery.Status = models.DeliveryStatusRetrying
 
 		// Marshal payload
-		webhookPayload := webhook.WebhookPayload{
+		webhookPayload := models.WebhookPayload{
 			ID:        uuid.New().String(),
 			EventType: delivery.EventType,
 			Timestamp: time.Now(),
@@ -198,7 +198,7 @@ func (d *Dispatcher) RetryFailedDeliveries(ctx context.Context, webhookRepo inte
 				nextRetry := time.Now().Add(d.calculateBackoff(delivery.AttemptNumber))
 				delivery.NextRetryAt = &nextRetry
 			} else {
-				delivery.Status = webhook.DeliveryStatusFailed
+				delivery.Status = models.DeliveryStatusFailed
 				delivery.NextRetryAt = nil
 			}
 			if err := d.deliveryRepo.Update(ctx, delivery); err != nil {
@@ -216,18 +216,18 @@ func (d *Dispatcher) RetryFailedDeliveries(ctx context.Context, webhookRepo inte
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			// Success
-			delivery.Status = webhook.DeliveryStatusSuccess
+			delivery.Status = models.DeliveryStatusSuccess
 			now := time.Now()
 			delivery.DeliveredAt = &now
 			delivery.NextRetryAt = nil
 		} else {
 			// Failed - schedule next retry
 			if delivery.AttemptNumber < d.maxRetries {
-				delivery.Status = webhook.DeliveryStatusRetrying
+				delivery.Status = models.DeliveryStatusRetrying
 				nextRetry := time.Now().Add(d.calculateBackoff(delivery.AttemptNumber))
 				delivery.NextRetryAt = &nextRetry
 			} else {
-				delivery.Status = webhook.DeliveryStatusFailed
+				delivery.Status = models.DeliveryStatusFailed
 				delivery.NextRetryAt = nil
 			}
 		}

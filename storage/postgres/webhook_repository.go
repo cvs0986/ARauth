@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
-	"github.com/arauth-identity/iam/identity/webhook"
+	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
@@ -24,7 +24,7 @@ func NewWebhookRepository(db *sql.DB) interfaces.WebhookRepository {
 }
 
 // Create creates a new webhook
-func (r *webhookRepository) Create(ctx context.Context, w *webhook.Webhook) error {
+func (r *webhookRepository) Create(ctx context.Context, w *models.Webhook) error {
 	query := `
 		INSERT INTO webhooks (
 			id, tenant_id, name, url, secret, enabled, events,
@@ -54,7 +54,7 @@ func (r *webhookRepository) Create(ctx context.Context, w *webhook.Webhook) erro
 }
 
 // GetByID retrieves a webhook by ID
-func (r *webhookRepository) GetByID(ctx context.Context, id uuid.UUID) (*webhook.Webhook, error) {
+func (r *webhookRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Webhook, error) {
 	query := `
 		SELECT id, tenant_id, name, url, secret, enabled, events,
 		       created_at, updated_at, deleted_at
@@ -62,7 +62,7 @@ func (r *webhookRepository) GetByID(ctx context.Context, id uuid.UUID) (*webhook
 		WHERE id = $1 AND deleted_at IS NULL
 	`
 
-	var w webhook.Webhook
+	var w models.Webhook
 	var events pq.StringArray
 	var deletedAt sql.NullTime
 
@@ -110,9 +110,9 @@ func (r *webhookRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUI
 	}
 	defer rows.Close()
 
-	var webhooks []*webhook.Webhook
+	var webhooks []*models.Webhook
 	for rows.Next() {
-		var w webhook.Webhook
+		var w models.Webhook
 		var events pq.StringArray
 		var deletedAt sql.NullTime
 
@@ -159,9 +159,9 @@ func (r *webhookRepository) GetEnabledByTenantID(ctx context.Context, tenantID u
 	}
 	defer rows.Close()
 
-	var webhooks []*webhook.Webhook
+	var webhooks []*models.Webhook
 	for rows.Next() {
-		var w webhook.Webhook
+		var w models.Webhook
 		var events pq.StringArray
 		var deletedAt sql.NullTime
 
@@ -211,9 +211,9 @@ func (r *webhookRepository) GetByEventType(ctx context.Context, tenantID uuid.UU
 	}
 	defer rows.Close()
 
-	var webhooks []*webhook.Webhook
+	var webhooks []*models.Webhook
 	for rows.Next() {
-		var w webhook.Webhook
+		var w models.Webhook
 		var events pq.StringArray
 		var deletedAt sql.NullTime
 
@@ -245,7 +245,7 @@ func (r *webhookRepository) GetByEventType(ctx context.Context, tenantID uuid.UU
 }
 
 // Update updates an existing webhook
-func (r *webhookRepository) Update(ctx context.Context, w *webhook.Webhook) error {
+func (r *webhookRepository) Update(ctx context.Context, w *models.Webhook) error {
 	query := `
 		UPDATE webhooks
 		SET name = $2, url = $3, secret = $4, enabled = $5, events = $6,
@@ -317,7 +317,7 @@ func NewWebhookDeliveryRepository(db *sql.DB) interfaces.WebhookDeliveryReposito
 }
 
 // Create creates a new webhook delivery record
-func (r *webhookDeliveryRepository) Create(ctx context.Context, delivery *webhook.WebhookDelivery) error {
+func (r *webhookDeliveryRepository) Create(ctx context.Context, delivery *models.WebhookDelivery) error {
 	query := `
 		INSERT INTO webhook_deliveries (
 			id, webhook_id, event_id, event_type, payload, status,
@@ -357,7 +357,7 @@ func (r *webhookDeliveryRepository) Create(ctx context.Context, delivery *webhoo
 }
 
 // GetByID retrieves a webhook delivery by ID
-func (r *webhookDeliveryRepository) GetByID(ctx context.Context, id uuid.UUID) (*webhook.WebhookDelivery, error) {
+func (r *webhookDeliveryRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.WebhookDelivery, error) {
 	query := `
 		SELECT id, webhook_id, event_id, event_type, payload, status,
 		       http_status_code, response_body, attempt_number, next_retry_at,
@@ -366,7 +366,7 @@ func (r *webhookDeliveryRepository) GetByID(ctx context.Context, id uuid.UUID) (
 		WHERE id = $1
 	`
 
-	var delivery webhook.WebhookDelivery
+	var delivery models.WebhookDelivery
 	var payloadJSON []byte
 	var eventID sql.NullString
 	var httpStatusCode sql.NullInt64
@@ -455,7 +455,7 @@ func (r *webhookDeliveryRepository) GetByWebhookID(ctx context.Context, webhookI
 	}
 	defer rows.Close()
 
-	var deliveries []*webhook.WebhookDelivery
+	var deliveries []*models.WebhookDelivery
 	for rows.Next() {
 		delivery, err := r.scanDelivery(rows)
 		if err != nil {
@@ -487,7 +487,7 @@ func (r *webhookDeliveryRepository) GetPendingRetries(ctx context.Context, befor
 	}
 	defer rows.Close()
 
-	var deliveries []*webhook.WebhookDelivery
+	var deliveries []*models.WebhookDelivery
 	for rows.Next() {
 		delivery, err := r.scanDelivery(rows)
 		if err != nil {
@@ -500,7 +500,7 @@ func (r *webhookDeliveryRepository) GetPendingRetries(ctx context.Context, befor
 }
 
 // Update updates a webhook delivery record
-func (r *webhookDeliveryRepository) Update(ctx context.Context, delivery *webhook.WebhookDelivery) error {
+func (r *webhookDeliveryRepository) Update(ctx context.Context, delivery *models.WebhookDelivery) error {
 	query := `
 		UPDATE webhook_deliveries
 		SET status = $2, http_status_code = $3, response_body = $4,
@@ -535,7 +535,7 @@ func (r *webhookDeliveryRepository) Update(ctx context.Context, delivery *webhoo
 
 // scanDelivery scans a delivery from a row
 func (r *webhookDeliveryRepository) scanDelivery(rows *sql.Rows) (*webhook.WebhookDelivery, error) {
-	var delivery webhook.WebhookDelivery
+	var delivery models.WebhookDelivery
 	var payloadJSON []byte
 	var eventID sql.NullString
 	var httpStatusCode sql.NullInt64
