@@ -1,0 +1,11 @@
+<svg width="200" height="250" viewBox="0 0 200 250" xmlns="http://www.w3.org/2000/svg">
+  <path d="M100 20 L170 50 V110 C170 160 140 195 100 215 C60 195 30 160 30 110 V50 L100 20Z" fill="#1A365D" />
+  
+  <path d="M75 70 H125 L135 150 H115 L110 110 H90 L85 150 H65 L75 70ZM112 90 H88 L92 105 H108 L112 90Z" fill="#4FD1C5" />
+  
+  <circle cx="100" cy="115" r="8" fill="white" />
+  <path d="M95 115 L105 115 L108 135 L92 135 Z" fill="white" />
+
+  <text x="100" y="240" font-family="Arial, sans-serif" font-weight="bold" font-size="24" text-anchor="middle" fill="#1A365D">ARauth</text>
+  <text x="100" y="255" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#718096" letter-spacing="1">API-FIRST IAM</text>
+</svg>
