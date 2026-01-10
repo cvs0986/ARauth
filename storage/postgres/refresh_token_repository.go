@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/google/uuid"
 )
 
 // refreshTokenRepository implements RefreshTokenRepository for PostgreSQL
@@ -25,8 +25,8 @@ func (r *refreshTokenRepository) Create(ctx context.Context, token *interfaces.R
 	query := `
 		INSERT INTO refresh_tokens (
 			id, user_id, tenant_id, token_hash, expires_at, revoked_at,
-			remember_me, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			remember_me, mfa_verified, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
 	now := time.Now()
@@ -50,7 +50,7 @@ func (r *refreshTokenRepository) Create(ctx context.Context, token *interfaces.R
 
 	_, err := r.db.ExecContext(ctx, query,
 		token.ID, token.UserID, tenantIDValue, token.TokenHash,
-		token.ExpiresAt, token.RevokedAt, token.RememberMe,
+		token.ExpiresAt, token.RevokedAt, token.RememberMe, token.MFAVerified,
 		token.CreatedAt, token.UpdatedAt,
 	)
 
@@ -65,7 +65,7 @@ func (r *refreshTokenRepository) Create(ctx context.Context, token *interfaces.R
 func (r *refreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*interfaces.RefreshToken, error) {
 	query := `
 		SELECT id, user_id, tenant_id, token_hash, expires_at, revoked_at,
-		       remember_me, created_at, updated_at
+		       remember_me, mfa_verified, created_at, updated_at
 		FROM refresh_tokens
 		WHERE token_hash = $1
 	`
@@ -76,10 +76,10 @@ func (r *refreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash s
 
 	err := r.db.QueryRowContext(ctx, query, tokenHash).Scan(
 		&token.ID, &token.UserID, &tenantID, &token.TokenHash,
-		&token.ExpiresAt, &revokedAt, &token.RememberMe,
+		&token.ExpiresAt, &revokedAt, &token.RememberMe, &token.MFAVerified,
 		&token.CreatedAt, &token.UpdatedAt,
 	)
-	
+
 	// Handle nullable tenant_id
 	if tenantID.Valid {
 		parsedTenantID, err := uuid.Parse(tenantID.String)
@@ -106,7 +106,7 @@ func (r *refreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash s
 func (r *refreshTokenRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]*interfaces.RefreshToken, error) {
 	query := `
 		SELECT id, user_id, tenant_id, token_hash, expires_at, revoked_at,
-		       remember_me, created_at, updated_at
+		       remember_me, mfa_verified, created_at, updated_at
 		FROM refresh_tokens
 		WHERE user_id = $1 AND (revoked_at IS NULL OR revoked_at > NOW())
 		ORDER BY created_at DESC
@@ -126,10 +126,10 @@ func (r *refreshTokenRepository) GetByUserID(ctx context.Context, userID uuid.UU
 
 		err := rows.Scan(
 			&token.ID, &token.UserID, &tenantID, &token.TokenHash,
-			&token.ExpiresAt, &revokedAt, &token.RememberMe,
+			&token.ExpiresAt, &revokedAt, &token.RememberMe, &token.MFAVerified,
 			&token.CreatedAt, &token.UpdatedAt,
 		)
-		
+
 		// Handle nullable tenant_id
 		if tenantID.Valid {
 			parsedTenantID, err := uuid.Parse(tenantID.String)
@@ -235,4 +235,3 @@ func (r *refreshTokenRepository) DeleteExpired(ctx context.Context) error {
 
 	return nil
 }
-

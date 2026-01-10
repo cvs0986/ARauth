@@ -8,11 +8,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/permission"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -63,7 +63,7 @@ func TestPermissionHandler_Create(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockPermissionService)
-	handler := NewPermissionHandler(mockService)
+	handler := NewPermissionHandler(mockService, nil)
 
 	tenantID := uuid.New()
 	router := gin.New()
@@ -105,7 +105,7 @@ func TestPermissionHandler_GetByID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockPermissionService)
-	handler := NewPermissionHandler(mockService)
+	handler := NewPermissionHandler(mockService, nil)
 
 	tenantID := uuid.New()
 	permissionID := uuid.New()
@@ -139,7 +139,7 @@ func TestPermissionHandler_List(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockPermissionService)
-	handler := NewPermissionHandler(mockService)
+	handler := NewPermissionHandler(mockService, nil)
 
 	tenantID := uuid.New()
 	router := gin.New()
@@ -164,4 +164,3 @@ func TestPermissionHandler_List(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockService.AssertExpectations(t)
 }
-

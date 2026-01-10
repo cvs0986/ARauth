@@ -1,8 +1,10 @@
 package token
 
 import (
-	"github.com/arauth-identity/iam/auth/claims"
+	"context"
 	"time"
+
+	"github.com/arauth-identity/iam/auth/claims"
 )
 
 // ServiceInterface defines the interface for token service
@@ -24,5 +26,10 @@ type ServiceInterface interface {
 
 	// GetPublicKey returns the public key for JWKS endpoint
 	GetPublicKey() interface{}
-}
 
+	// RevokeAccessToken revokes an access token
+	RevokeAccessToken(ctx context.Context, tokenString string) error
+
+	// IsAccessTokenRevoked checks if a token is revoked
+	IsAccessTokenRevoked(ctx context.Context, jti string) (bool, error)
+}

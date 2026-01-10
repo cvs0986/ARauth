@@ -11,11 +11,11 @@ import (
 
 // RefreshService handles token refresh operations
 type RefreshService struct {
-	tokenService      ServiceInterface
-	refreshTokenRepo  interfaces.RefreshTokenRepository
-	userRepo          interfaces.UserRepository
-	claimsBuilder     *claims.Builder
-	lifetimeResolver  *LifetimeResolver
+	tokenService     ServiceInterface
+	refreshTokenRepo interfaces.RefreshTokenRepository
+	userRepo         interfaces.UserRepository
+	claimsBuilder    *claims.Builder
+	lifetimeResolver *LifetimeResolver
 }
 
 // NewRefreshService creates a new refresh service
@@ -27,7 +27,7 @@ func NewRefreshService(
 	lifetimeResolver *LifetimeResolver,
 ) *RefreshService {
 	return &RefreshService{
-		tokenService:      tokenService,
+		tokenService:     tokenService,
 		refreshTokenRepo: refreshTokenRepo,
 		userRepo:         userRepo,
 		claimsBuilder:    claimsBuilder,
@@ -70,6 +70,13 @@ func (s *RefreshService) RefreshToken(ctx context.Context, refreshToken string) 
 		return nil, fmt.Errorf("user account is not active")
 	}
 
+	// CRITICAL SECURITY CHECK: MFA Enforcement
+	// If the user has MFA enabled, the refresh token MUST have been issued via an MFA-verified session.
+	// We check tokenRecord.MFAVerified which is set only after successful MFA verification.
+	if user.MFAEnabled && !tokenRecord.MFAVerified {
+		return nil, fmt.Errorf("MFA required: refresh token not verified with MFA")
+	}
+
 	// Revoke old refresh token (token rotation)
 	if err := s.refreshTokenRepo.RevokeByTokenHash(ctx, refreshTokenHash); err != nil {
 		// Log error but continue - token rotation is best effort
@@ -83,6 +90,13 @@ func (s *RefreshService) RefreshToken(ctx context.Context, refreshToken string) 
 	claimsObj, err := s.claimsBuilder.BuildClaims(ctx, user)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build claims: %w", err)
+	}
+
+	// Set AMR claim based on verification status
+	if tokenRecord.MFAVerified {
+		claimsObj.AMR = []string{"pwd", "mfa"}
+	} else {
+		claimsObj.AMR = []string{"pwd"}
 	}
 
 	// Generate new access token
@@ -105,11 +119,14 @@ func (s *RefreshService) RefreshToken(ctx context.Context, refreshToken string) 
 
 	// Store new refresh token
 	newTokenRecord := &interfaces.RefreshToken{
-		UserID:     user.ID,
-		TenantID:   tokenRecord.TenantID,
-		TokenHash:  newRefreshTokenHash,
-		ExpiresAt:  time.Now().Add(lifetimes.RefreshTokenTTL),
-		RememberMe: tokenRecord.RememberMe,
+		UserID:      user.ID,
+		TenantID:    tokenRecord.TenantID,
+		TokenHash:   newRefreshTokenHash,
+		ExpiresAt:   time.Now().Add(lifetimes.RefreshTokenTTL),
+		RememberMe:  tokenRecord.RememberMe,
+		MFAVerified: tokenRecord.MFAVerified, // Preserve MFA verification state
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	if err := s.refreshTokenRepo.Create(ctx, newTokenRecord); err != nil {

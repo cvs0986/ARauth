@@ -3,8 +3,8 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/arauth-identity/iam/auth/token"
+	"github.com/gin-gonic/gin"
 )
 
 // JWTAuthMiddleware creates middleware for JWT token validation
@@ -45,8 +45,27 @@ func JWTAuthMiddleware(tokenService token.ServiceInterface) gin.HandlerFunc {
 			return
 		}
 
-		// TODO: Check token blacklist (Redis)
-		// This will be implemented when Redis blacklist is set up
+		// Check token blacklist (Redis)
+		if claims.ID != "" {
+			revoked, err := tokenService.IsAccessTokenRevoked(c.Request.Context(), claims.ID)
+			if err != nil {
+				// FAIL CLOSED: If we can't check revocation status, we reject the request
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"error":   "unauthorized",
+					"message": "Failed to verify token status",
+				})
+				c.Abort()
+				return
+			}
+			if revoked {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"error":   "unauthorized",
+					"message": "Token revoked",
+				})
+				c.Abort()
+				return
+			}
+		}
 
 		// Set user context
 		c.Set("user_id", claims.Subject)
@@ -63,4 +82,3 @@ func JWTAuthMiddleware(tokenService token.ServiceInterface) gin.HandlerFunc {
 		c.Next()
 	}
 }
-

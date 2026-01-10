@@ -14,8 +14,10 @@ ARauth is a Headless Identity & Access Management system.
 | Priority | Issue | Status |
 |----------|-------|--------|
 | CRITICAL | `AuthorizationMiddleware` accepts `X-User-ID` header, enabling impersonation. | FIXED |
+| CRITICAL | MFA Refresh Token Bypass (Gap in `RefreshService`) | FIXED |
 | Medium   | Missing error logging in `permission/service.go` | FIXED |
-| Low      | Redis token blacklist not implemented (TODO in code) | Backlog |
+| Medium   | Redis token blacklist not implemented (TODO in code) | FIXED |
 
 ## Next Steps
-1. Verify MFA enforcement in API flow.
+1. GA Release Preparation.
+2. Final Security Review.

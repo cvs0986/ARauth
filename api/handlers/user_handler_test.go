@@ -8,11 +8,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/user"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -80,11 +80,33 @@ func (m *MockUserService) Count(ctx context.Context, tenantID uuid.UUID, filters
 	return args.Get(0).(int), args.Error(1)
 }
 
+func (m *MockUserService) CreateSystem(ctx context.Context, req *user.CreateUserRequest) (*models.User, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.User), args.Error(1)
+}
+
+func (m *MockUserService) CountSystem(ctx context.Context, filters *interfaces.UserFilters) (int, error) {
+	args := m.Called(ctx, filters)
+	return args.Get(0).(int), args.Error(1)
+}
+
+func (m *MockUserService) ListSystem(ctx context.Context, filters *interfaces.UserFilters) ([]*models.User, error) {
+	args := m.Called(ctx, filters)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.User), args.Error(1)
+}
+
 func TestUserHandler_Create(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockUserService)
-	handler := NewUserHandler(mockService)
+	mockAuditService := new(MockAuditService)
+	handler := NewUserHandler(mockService, nil, nil, mockAuditService)
 
 	tenantID := uuid.New()
 	router := gin.New()
@@ -113,6 +135,12 @@ func TestUserHandler_Create(t *testing.T) {
 	// The handler sets tenant_id from context, so we need to match that
 	mockService.On("Create", mock.Anything, mock.AnythingOfType("*user.CreateUserRequest")).Return(expectedUser, nil)
 
+	// Expect List call (checking for first user) - return 2 users to avoid role assignment logic which needs Repo
+	mockService.On("List", mock.Anything, mock.Anything, mock.Anything).Return([]*models.User{{}, {}}, nil)
+
+	// Expect Audit Log
+	mockAuditService.On("LogUserCreated", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
 	req, _ := http.NewRequest("POST", "/api/v1/users", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -127,7 +155,7 @@ func TestUserHandler_GetByID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockUserService)
-	handler := NewUserHandler(mockService)
+	handler := NewUserHandler(mockService, nil, nil, nil)
 
 	userID := uuid.New()
 	tenantID := uuid.New()
@@ -161,7 +189,7 @@ func TestUserHandler_List(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockUserService)
-	handler := NewUserHandler(mockService)
+	handler := NewUserHandler(mockService, nil, nil, nil)
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
@@ -187,4 +215,3 @@ func TestUserHandler_List(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockService.AssertExpectations(t)
 }
-

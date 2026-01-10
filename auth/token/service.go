@@ -1,6 +1,7 @@
 package token
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -9,27 +10,29 @@ import (
 	"os"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/config"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // Service provides token generation and validation
 type Service struct {
-	privateKey    *rsa.PrivateKey
-	publicKey     *rsa.PublicKey
-	secret        []byte // Fallback for HS256
-	issuer        string
+	privateKey       *rsa.PrivateKey
+	publicKey        *rsa.PublicKey
+	secret           []byte // Fallback for HS256
+	issuer           string
 	lifetimeResolver *LifetimeResolver
+	blacklist        *BlacklistService // NEW: Blacklist service injection
 }
 
 // NewService creates a new token service
-func NewService(cfg *config.SecurityConfig, lifetimeResolver *LifetimeResolver) (*Service, error) {
+func NewService(cfg *config.SecurityConfig, lifetimeResolver *LifetimeResolver, blacklist *BlacklistService) (*Service, error) {
 	service := &Service{
-		issuer:          cfg.JWT.Issuer,
+		issuer:           cfg.JWT.Issuer,
 		lifetimeResolver: lifetimeResolver,
+		blacklist:        blacklist,
 	}
 
 	// Try to load RSA key pair
@@ -60,6 +63,45 @@ func NewService(cfg *config.SecurityConfig, lifetimeResolver *LifetimeResolver) 
 	service.publicKey = &privateKey.PublicKey
 
 	return service, nil
+}
+
+// RevokeAccessToken revokes an access token by adding its JTI to the blacklist
+func (s *Service) RevokeAccessToken(ctx context.Context, tokenString string) error {
+	if s.blacklist == nil {
+		return fmt.Errorf("blacklist service not configured")
+	}
+
+	// Validate token string and extract claims
+	claims, err := s.ValidateAccessToken(tokenString)
+	if err != nil {
+		return fmt.Errorf("invalid token: %w", err)
+	}
+
+	if claims.ID == "" {
+		return fmt.Errorf("token missing jti claim")
+	}
+
+	if claims.ExpiresAt == 0 {
+		return fmt.Errorf("token missing exp claim")
+	}
+
+	expiresAt := time.Unix(claims.ExpiresAt, 0)
+	timeRemaining := time.Until(expiresAt)
+
+	if timeRemaining <= 0 {
+		// Token already expired, effectively revoked
+		return nil
+	}
+
+	return s.blacklist.RevokeToken(ctx, claims.ID, timeRemaining)
+}
+
+// IsAccessTokenRevoked checks if an access token JTI has been revoked
+func (s *Service) IsAccessTokenRevoked(ctx context.Context, jti string) (bool, error) {
+	if s.blacklist == nil {
+		return false, nil
+	}
+	return s.blacklist.IsRevoked(ctx, jti)
 }
 
 // GenerateAccessToken generates a JWT access token
@@ -223,6 +265,9 @@ func (s *Service) ValidateAccessToken(tokenString string) (*claims.Claims, error
 		claimsObj.IssuedAt = int64(iat)
 	}
 
+	// Extract JTI
+	claimsObj.ID = getStringClaim(claimsMap, "jti")
+
 	return claimsObj, nil
 }
 
@@ -275,4 +320,3 @@ func (s *Service) GetPublicKey() interface{} {
 	}
 	return nil
 }
-
