@@ -86,7 +86,7 @@ func (r *InvitationRepository) GetByID(ctx context.Context, id uuid.UUID) (*mode
 	`
 
 	invitation := &models.UserInvitation{}
-	var roleIDsArray pq.Array
+	var roleIDsArray pq.StringArray
 	var acceptedAt, deletedAt sql.NullTime
 	var acceptedBy sql.NullString
 	var metadataJSON []byte
@@ -114,9 +114,14 @@ func (r *InvitationRepository) GetByID(ctx context.Context, id uuid.UUID) (*mode
 		return nil, fmt.Errorf("failed to get invitation: %w", err)
 	}
 
-	// Convert role IDs array
-	if roleIDsArray != nil {
-		invitation.RoleIDs = []uuid.UUID(roleIDsArray.(pq.Array))
+	// Convert role IDs array (UUID strings to UUIDs)
+	if len(roleIDsArray) > 0 {
+		invitation.RoleIDs = make([]uuid.UUID, len(roleIDsArray))
+		for i, idStr := range roleIDsArray {
+			if id, err := uuid.Parse(idStr); err == nil {
+				invitation.RoleIDs[i] = id
+			}
+		}
 	}
 
 	if acceptedAt.Valid {
@@ -146,7 +151,7 @@ func (r *InvitationRepository) GetByTokenHash(ctx context.Context, tokenHash str
 	`
 
 	invitation := &models.UserInvitation{}
-	var roleIDsArray pq.Array
+	var roleIDsArray pq.StringArray
 	var acceptedAt, deletedAt sql.NullTime
 	var acceptedBy sql.NullString
 	var metadataJSON []byte
@@ -174,9 +179,14 @@ func (r *InvitationRepository) GetByTokenHash(ctx context.Context, tokenHash str
 		return nil, fmt.Errorf("failed to get invitation: %w", err)
 	}
 
-	// Convert role IDs array
-	if roleIDsArray != nil {
-		invitation.RoleIDs = []uuid.UUID(roleIDsArray.(pq.Array))
+	// Convert role IDs array (UUID strings to UUIDs)
+	if len(roleIDsArray) > 0 {
+		invitation.RoleIDs = make([]uuid.UUID, len(roleIDsArray))
+		for i, idStr := range roleIDsArray {
+			if id, err := uuid.Parse(idStr); err == nil {
+				invitation.RoleIDs[i] = id
+			}
+		}
 	}
 
 	if acceptedAt.Valid {
@@ -206,7 +216,7 @@ func (r *InvitationRepository) GetByEmail(ctx context.Context, tenantID uuid.UUI
 	`
 
 	invitation := &models.UserInvitation{}
-	var roleIDsArray pq.Array
+	var roleIDsArray pq.StringArray
 	var acceptedAt, deletedAt sql.NullTime
 	var acceptedBy sql.NullString
 	var metadataJSON []byte
@@ -234,9 +244,14 @@ func (r *InvitationRepository) GetByEmail(ctx context.Context, tenantID uuid.UUI
 		return nil, fmt.Errorf("failed to get invitation: %w", err)
 	}
 
-	// Convert role IDs array
-	if roleIDsArray != nil {
-		invitation.RoleIDs = []uuid.UUID(roleIDsArray.(pq.Array))
+	// Convert role IDs array (UUID strings to UUIDs)
+	if len(roleIDsArray) > 0 {
+		invitation.RoleIDs = make([]uuid.UUID, len(roleIDsArray))
+		for i, idStr := range roleIDsArray {
+			if id, err := uuid.Parse(idStr); err == nil {
+				invitation.RoleIDs[i] = id
+			}
+		}
 	}
 
 	if acceptedAt.Valid {
@@ -307,7 +322,7 @@ func (r *InvitationRepository) List(ctx context.Context, tenantID uuid.UUID, fil
 	var invitations []*models.UserInvitation
 	for rows.Next() {
 		invitation := &models.UserInvitation{}
-		var roleIDsArray pq.Array
+		var roleIDsArray pq.StringArray
 		var acceptedAt, deletedAt sql.NullTime
 		var acceptedBy sql.NullString
 		var metadataJSON []byte
@@ -332,9 +347,14 @@ func (r *InvitationRepository) List(ctx context.Context, tenantID uuid.UUID, fil
 			return nil, fmt.Errorf("failed to scan invitation: %w", err)
 		}
 
-		// Convert role IDs array
-		if roleIDsArray != nil {
-			invitation.RoleIDs = []uuid.UUID(roleIDsArray.(pq.Array))
+		// Convert role IDs array (UUID strings to UUIDs)
+		if len(roleIDsArray) > 0 {
+			invitation.RoleIDs = make([]uuid.UUID, len(roleIDsArray))
+			for i, idStr := range roleIDsArray {
+				if id, err := uuid.Parse(idStr); err == nil {
+					invitation.RoleIDs[i] = id
+				}
+			}
 		}
 
 		if acceptedAt.Valid {
