@@ -1,31 +1,66 @@
 /**
  * Protected Route Component
- * Wraps routes that require authentication and admin access
+ * 
+ * GUARDRAIL #1: Backend Is Law
+ * - Route protection based on backend permissions only
+ * 
+ * GUARDRAIL #6: UI Quality Bar
+ * - No disabled routes - hide or show based on permissions
  */
 
 import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
+import { usePrincipalContext } from '../contexts/PrincipalContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredPermission?: string;
+  systemOnly?: boolean;
+  fallback?: React.ReactElement;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, hasPermission, hasSystemPermission, isSystemUser } = useAuthStore();
+export function ProtectedRoute({
+  children,
+  requiredPermission,
+  systemOnly,
+  fallback = <Navigate to="/no-access" replace />,
+}: ProtectedRouteProps) {
+  const {
+    principalType,
+    hasPermission,
+    hasSystemPermission,
+    isAuthenticated,
+  } = usePrincipalContext();
 
+  // Check authentication first
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // Check for admin access permission
-  // SYSTEM users have admin access by default (they can access system admin dashboard)
-  // TENANT users need tenant.admin.access permission
-  const hasAdminAccess = isSystemUser() || hasPermission('tenant.admin.access');
+  // Check if route is system-only
+  if (systemOnly && principalType !== 'SYSTEM') {
+    return fallback;
+  }
 
-  if (!hasAdminAccess) {
-    return <Navigate to="/no-access" replace />;
+  // Check required permission
+  if (requiredPermission) {
+    const hasAccess = principalType === 'SYSTEM'
+      ? hasSystemPermission(requiredPermission)
+      : hasPermission(requiredPermission);
+
+    if (!hasAccess) {
+      return fallback;
+    }
+  }
+
+  // Default: check for admin access
+  // SYSTEM users have admin access by default
+  // TENANT users need tenant.admin.access permission
+  if (!requiredPermission && !systemOnly) {
+    const hasAdminAccess = principalType === 'SYSTEM' || hasPermission('tenant.admin.access');
+    if (!hasAdminAccess) {
+      return fallback;
+    }
   }
 
   return <>{children}</>;
 }
-

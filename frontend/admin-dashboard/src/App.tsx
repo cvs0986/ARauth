@@ -4,6 +4,7 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PrincipalProvider } from './contexts/PrincipalContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
@@ -36,153 +37,155 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/no-access" element={<NoAccess />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/tenants"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <TenantList />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/tenants/:id"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <TenantDetail />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/users"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <UserList />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/users/:id"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <UserDetail />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/roles"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <RoleList />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/permissions"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <PermissionList />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Settings />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/audit"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <AuditLogs />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/mfa"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <MFA />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/capabilities/system"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <SystemCapabilityList />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/capabilities/tenant-assignment"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <TenantCapabilityAssignment />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/capabilities/features"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <TenantFeatureEnablement />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/capabilities/user-enrollment"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <UserCapabilityEnrollment />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <PrincipalProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/no-access" element={<NoAccess />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Dashboard />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tenants"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <TenantList />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tenants/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <TenantDetail />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <UserList />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <UserDetail />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/roles"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <RoleList />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/permissions"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PermissionList />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Settings />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/audit"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AuditLogs />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mfa"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <MFA />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/capabilities/system"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <SystemCapabilityList />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/capabilities/tenant-assignment"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <TenantCapabilityAssignment />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/capabilities/features"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <TenantFeatureEnablement />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/capabilities/user-enrollment"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <UserCapabilityEnrollment />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </PrincipalProvider>
     </QueryClientProvider>
   );
 }
