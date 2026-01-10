@@ -624,8 +624,7 @@ func (s *Service) HandleSAMLCallback(ctx context.Context, providerID uuid.UUID, 
 		return nil, fmt.Errorf("failed to generate ID token: %w", err)
 	}
 
-	firstName := ""
-	lastName := ""
+	var firstName, lastName string
 	if user.FirstName != nil {
 		firstName = *user.FirstName
 	}
