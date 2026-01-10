@@ -89,15 +89,15 @@ func (m *MockRepository) Count(ctx context.Context, tenantID uuid.UUID, filters 
 // MockCredentialRepository is a mock implementation of CredentialRepository
 type MockCredentialRepository struct{}
 
-func (m *MockCredentialRepository) Create(ctx context.Context, credential *models.Credential) error {
+func (m *MockCredentialRepository) Create(ctx context.Context, userID uuid.UUID, passwordHash string) error {
 	return nil
 }
 
-func (m *MockCredentialRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*models.Credential, error) {
-	return nil, nil
+func (m *MockCredentialRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (string, error) {
+	return "", nil
 }
 
-func (m *MockCredentialRepository) Update(ctx context.Context, credential *models.Credential) error {
+func (m *MockCredentialRepository) Update(ctx context.Context, userID uuid.UUID, passwordHash string) error {
 	return nil
 }
 
@@ -276,6 +276,4 @@ func TestDeleteUser(t *testing.T) {
 	assert.Nil(t, user)
 }
 
-func stringPtr(s string) *string {
-	return &s
-}
+// stringPtr is already defined in service_error_test.go, so we don't redeclare it
