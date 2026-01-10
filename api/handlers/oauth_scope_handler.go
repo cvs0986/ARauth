@@ -50,30 +50,29 @@ func (h *OAuthScopeHandler) CreateScope(c *gin.Context) {
 	}
 
 	// Log audit event
-	if actor, err := extractActorFromContext(c); err == nil {
-		sourceIP, userAgent := extractSourceInfo(c)
-		target := &models.AuditTarget{
-			Type:       "oauth_scope",
-			ID:         scope.ID,
-			Identifier: scope.Name,
-		}
-		event := &models.AuditEvent{
-			EventType: models.EventTypeOAuthScopeCreated,
-			Actor:     actor,
-			Target:    target,
-			TenantID:  &tenantID,
-			SourceIP:  sourceIP,
-			UserAgent: userAgent,
-			Metadata: map[string]interface{}{
-				"scope_name": scope.Name,
-				"permissions": scope.Permissions,
-				"is_default": scope.IsDefault,
-			},
-			Result: models.ResultSuccess,
-		}
-		event.Flatten()
-		_ = h.auditService.LogEvent(c.Request.Context(), event)
+	actor, _ := extractActorFromContext(c)
+	sourceIP, userAgent := extractSourceInfo(c)
+	target := &models.AuditTarget{
+		Type:       "oauth_scope",
+		ID:         scope.ID,
+		Identifier: scope.Name,
 	}
+	event := &models.AuditEvent{
+		EventType: models.EventTypeOAuthScopeCreated,
+		Actor:     actor,
+		Target:    target,
+		TenantID:  &tenantID,
+		SourceIP:  sourceIP,
+		UserAgent: userAgent,
+		Metadata: map[string]interface{}{
+			"scope_name": scope.Name,
+			"permissions": scope.Permissions,
+			"is_default": scope.IsDefault,
+		},
+		Result: models.ResultSuccess,
+	}
+	event.Flatten()
+	_ = h.auditService.LogEvent(c.Request.Context(), event)
 
 	c.JSON(http.StatusCreated, scope)
 }
@@ -205,30 +204,29 @@ func (h *OAuthScopeHandler) UpdateScope(c *gin.Context) {
 	}
 
 	// Log audit event
-	if actor, err := extractActorFromContext(c); err == nil {
-		sourceIP, userAgent := extractSourceInfo(c)
-		target := &models.AuditTarget{
-			Type:       "oauth_scope",
-			ID:         scope.ID,
-			Identifier: scope.Name,
-		}
-		event := &models.AuditEvent{
-			EventType: models.EventTypeOAuthScopeUpdated,
-			Actor:     actor,
-			Target:    target,
-			TenantID:  &tenantID,
-			SourceIP:  sourceIP,
-			UserAgent: userAgent,
-			Metadata: map[string]interface{}{
-				"scope_name": scope.Name,
-				"permissions": scope.Permissions,
-				"is_default": scope.IsDefault,
-			},
-			Result: models.ResultSuccess,
-		}
-		event.Flatten()
-		_ = h.auditService.LogEvent(c.Request.Context(), event)
+	actor, _ := extractActorFromContext(c)
+	sourceIP, userAgent := extractSourceInfo(c)
+	target := &models.AuditTarget{
+		Type:       "oauth_scope",
+		ID:         scope.ID,
+		Identifier: scope.Name,
 	}
+	event := &models.AuditEvent{
+		EventType: models.EventTypeOAuthScopeUpdated,
+		Actor:     actor,
+		Target:    target,
+		TenantID:  &tenantID,
+		SourceIP:  sourceIP,
+		UserAgent: userAgent,
+		Metadata: map[string]interface{}{
+			"scope_name": scope.Name,
+			"permissions": scope.Permissions,
+			"is_default": scope.IsDefault,
+		},
+		Result: models.ResultSuccess,
+	}
+	event.Flatten()
+	_ = h.auditService.LogEvent(c.Request.Context(), event)
 
 	c.JSON(http.StatusOK, scope)
 }
@@ -272,28 +270,26 @@ func (h *OAuthScopeHandler) DeleteScope(c *gin.Context) {
 	}
 
 	// Log audit event
-	if actor, err := extractActorFromContext(c); err == nil {
-		sourceIP, userAgent := extractSourceInfo(c)
-		target := &models.AuditTarget{
-			Type:       "oauth_scope",
-			ID:         scopeID,
-			Identifier: existingScope.Name,
-		}
-		event := &models.AuditEvent{
-			EventType: models.EventTypeOAuthScopeDeleted,
-			Actor:     actor,
-			Target:    target,
-			TenantID:  &tenantID,
-			SourceIP:  sourceIP,
-			UserAgent: userAgent,
-			Result:    models.ResultSuccess,
-		}
-		event.Flatten()
-		_ = h.auditService.LogEvent(c.Request.Context(), event)
+	actor, _ := extractActorFromContext(c)
+	sourceIP, userAgent := extractSourceInfo(c)
+	target := &models.AuditTarget{
+		Type:       "oauth_scope",
+		ID:         scopeID,
+		Identifier: existingScope.Name,
 	}
+	event := &models.AuditEvent{
+		EventType: models.EventTypeOAuthScopeDeleted,
+		Actor:     actor,
+		Target:    target,
+		TenantID:  &tenantID,
+		SourceIP:  sourceIP,
+		UserAgent: userAgent,
+		Result:    models.ResultSuccess,
+	}
+	event.Flatten()
+	_ = h.auditService.LogEvent(c.Request.Context(), event)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "OAuth scope deleted",
 	})
 }
-
