@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
+	"github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/identity/capability"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/tenant"
@@ -18,15 +19,17 @@ type SystemHandler struct {
 	tenantRepo         interfaces.TenantRepository
 	tenantSettingsRepo interfaces.TenantSettingsRepository
 	capabilityService  capability.ServiceInterface
+	auditService       audit.ServiceInterface
 }
 
 // NewSystemHandler creates a new system handler
-func NewSystemHandler(tenantService tenant.ServiceInterface, tenantRepo interfaces.TenantRepository, tenantSettingsRepo interfaces.TenantSettingsRepository, capabilityService capability.ServiceInterface) *SystemHandler {
+func NewSystemHandler(tenantService tenant.ServiceInterface, tenantRepo interfaces.TenantRepository, tenantSettingsRepo interfaces.TenantSettingsRepository, capabilityService capability.ServiceInterface, auditService audit.ServiceInterface) *SystemHandler {
 	return &SystemHandler{
 		tenantService:      tenantService,
 		tenantRepo:         tenantRepo,
 		tenantSettingsRepo: tenantSettingsRepo,
 		capabilityService:  capabilityService,
+		auditService:       auditService,
 	}
 }
 
@@ -115,6 +118,17 @@ func (h *SystemHandler) CreateTenant(c *gin.Context) {
 		return
 	}
 
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "tenant",
+			ID:         createdTenant.ID,
+			Identifier: createdTenant.Name,
+		}
+		_ = h.auditService.LogTenantCreated(c.Request.Context(), actor, target, sourceIP, userAgent)
+	}
+
 	c.JSON(http.StatusCreated, createdTenant)
 }
 
@@ -163,10 +177,24 @@ func (h *SystemHandler) UpdateTenant(c *gin.Context) {
 		existing.Metadata = req.Metadata
 	}
 
+	// Store old status for audit logging
+	oldStatus := existing.Status
+
 	if err := h.tenantRepo.Update(c.Request.Context(), existing); err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
 			"Failed to update tenant: "+err.Error(), nil)
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "tenant",
+			ID:         existing.ID,
+			Identifier: existing.Name,
+		}
+		_ = h.auditService.LogTenantUpdated(c.Request.Context(), actor, target, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, existing)
@@ -182,10 +210,24 @@ func (h *SystemHandler) DeleteTenant(c *gin.Context) {
 		return
 	}
 
+	// Get tenant before deletion for audit logging
+	tenantToDelete, _ := h.tenantRepo.GetByID(c.Request.Context(), tenantID)
+
 	if err := h.tenantRepo.Delete(c.Request.Context(), tenantID); err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
 			"Failed to delete tenant: "+err.Error(), nil)
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil && tenantToDelete != nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "tenant",
+			ID:         tenantToDelete.ID,
+			Identifier: tenantToDelete.Name,
+		}
+		_ = h.auditService.LogTenantDeleted(c.Request.Context(), actor, target, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Tenant deleted successfully"})
@@ -208,11 +250,23 @@ func (h *SystemHandler) SuspendTenant(c *gin.Context) {
 		return
 	}
 
+	oldStatus := existing.Status
 	existing.Status = models.TenantStatusSuspended
 	if err := h.tenantRepo.Update(c.Request.Context(), existing); err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
 			"Failed to suspend tenant: "+err.Error(), nil)
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "tenant",
+			ID:         existing.ID,
+			Identifier: existing.Name,
+		}
+		_ = h.auditService.LogTenantSuspended(c.Request.Context(), actor, target, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, existing)
@@ -235,11 +289,23 @@ func (h *SystemHandler) ResumeTenant(c *gin.Context) {
 		return
 	}
 
+	oldStatus := existing.Status
 	existing.Status = models.TenantStatusActive
 	if err := h.tenantRepo.Update(c.Request.Context(), existing); err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
 			"Failed to resume tenant: "+err.Error(), nil)
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "tenant",
+			ID:         existing.ID,
+			Identifier: existing.Name,
+		}
+		_ = h.auditService.LogTenantResumed(c.Request.Context(), actor, target, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, existing)
@@ -429,7 +495,8 @@ func (h *SystemHandler) UpdateTenantSettingsFromContext(c *gin.Context) {
 	}
 
 	// Save settings
-	if settings.ID == uuid.Nil {
+	isNew := settings.ID == uuid.Nil
+	if isNew {
 		if err := h.tenantSettingsRepo.Create(c.Request.Context(), settings); err != nil {
 			middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
 				"Failed to create tenant settings: "+err.Error(), nil)
@@ -440,6 +507,21 @@ func (h *SystemHandler) UpdateTenantSettingsFromContext(c *gin.Context) {
 			middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
 				"Failed to update tenant settings: "+err.Error(), nil)
 			return
+		}
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "tenant_settings",
+			ID:         tenantID,
+			Identifier: "",
+		}
+		if isNew {
+			_ = h.auditService.LogTenantSettingsCreated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
+		} else {
+			_ = h.auditService.LogTenantSettingsUpdated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
 		}
 	}
 
@@ -599,7 +681,8 @@ func (h *SystemHandler) UpdateTenantSettings(c *gin.Context) {
 	}
 
 	// Save settings
-	if settings.ID == uuid.Nil {
+	isNew := settings.ID == uuid.Nil
+	if isNew {
 		// Create new settings
 		if err := h.tenantSettingsRepo.Create(c.Request.Context(), settings); err != nil {
 			middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
@@ -612,6 +695,21 @@ func (h *SystemHandler) UpdateTenantSettings(c *gin.Context) {
 			middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
 				"Failed to update tenant settings: "+err.Error(), nil)
 			return
+		}
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "tenant_settings",
+			ID:         tenantID,
+			Identifier: "",
+		}
+		if isNew {
+			_ = h.auditService.LogTenantSettingsCreated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
+		} else {
+			_ = h.auditService.LogTenantSettingsUpdated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
 		}
 	}
 
