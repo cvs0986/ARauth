@@ -43,7 +43,7 @@ func (r *InvitationRepository) Create(ctx context.Context, invitation *models.Us
 	}
 
 	// Convert role IDs to UUID array
-	var roleIDsArray pq.Array
+	var roleIDsArray interface{}
 	if len(invitation.RoleIDs) > 0 {
 		roleIDsArray = pq.Array(invitation.RoleIDs)
 	} else {
