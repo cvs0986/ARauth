@@ -134,8 +134,17 @@ func main() {
 	// Initialize audit logger (legacy)
 	auditLogger := auditlogger.NewLogger(auditRepo)
 
-	// Initialize audit event service (new structured audit)
-	auditEventService := auditevent.NewService(auditEventRepo)
+	// Initialize webhook service first (needed by audit service)
+	webhookDispatcher := webhookdispatcher.NewDispatcher(webhookDeliveryRepo, logger.Logger)
+	webhookService := webhook.NewService(
+		webhookRepo,
+		webhookDeliveryRepo,
+		webhookDispatcher,
+		logger.Logger,
+	)
+
+	// Initialize audit event service (new structured audit) with webhook integration
+	auditEventService := auditevent.NewService(auditEventRepo, webhookService)
 
 	// Initialize encryption (for MFA secrets)
 	encryptionKey := []byte(cfg.Security.EncryptionKey)
@@ -211,17 +220,6 @@ func main() {
 		credentialRepo,
 		claimsBuilder,
 		tokenService,
-	)
-
-	// Initialize webhook dispatcher
-	webhookDispatcher := webhookdispatcher.NewDispatcher(webhookDeliveryRepo, logger.Logger)
-
-	// Initialize webhook service
-	webhookService := webhook.NewService(
-		webhookRepo,
-		webhookDeliveryRepo,
-		webhookDispatcher,
-		logger.Logger,
 	)
 
 	// Initialize handlers

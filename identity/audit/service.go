@@ -2,23 +2,27 @@ package audit
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
+	"github.com/arauth-identity/iam/identity/webhook"
 	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // Service provides audit event logging functionality
 type Service struct {
-	repo interfaces.AuditEventRepository
+	repo          interfaces.AuditEventRepository
+	webhookService webhook.ServiceInterface
 }
 
 // NewService creates a new audit service
-func NewService(repo interfaces.AuditEventRepository) ServiceInterface {
+func NewService(repo interfaces.AuditEventRepository, webhookService webhook.ServiceInterface) ServiceInterface {
 	return &Service{
-		repo: repo,
+		repo:          repo,
+		webhookService: webhookService,
 	}
 }
 
@@ -28,7 +32,61 @@ func (s *Service) LogEvent(ctx context.Context, event *models.AuditEvent) error 
 		return fmt.Errorf("invalid audit event: %w", err)
 	}
 
-	return s.repo.Create(ctx, event)
+	// Save audit event
+	if err := s.repo.Create(ctx, event); err != nil {
+		return err
+	}
+
+	// Trigger webhooks asynchronously (don't block on webhook delivery)
+	go s.triggerWebhooks(context.Background(), event)
+
+	return nil
+}
+
+// triggerWebhooks triggers webhooks for an audit event
+func (s *Service) triggerWebhooks(ctx context.Context, event *models.AuditEvent) {
+	if s.webhookService == nil {
+		return
+	}
+
+	// Convert audit event to webhook payload
+	payload := s.eventToPayload(event)
+
+	// Get tenant ID (may be nil for system events)
+	var tenantID uuid.UUID
+	if event.TenantID != nil {
+		tenantID = *event.TenantID
+	} else {
+		// System events don't trigger tenant webhooks
+		return
+	}
+
+	// Trigger webhook (async, errors are logged by webhook service)
+	_ = s.webhookService.TriggerWebhook(ctx, tenantID, event.EventType, payload, &event.ID)
+}
+
+// eventToPayload converts an audit event to a webhook payload map
+func (s *Service) eventToPayload(event *models.AuditEvent) map[string]interface{} {
+	// Marshal event to JSON and unmarshal to map to get all fields
+	eventJSON, err := json.Marshal(event)
+	if err != nil {
+		return map[string]interface{}{
+			"event_type": event.EventType,
+			"timestamp":  event.Timestamp,
+			"error":      "failed to serialize event",
+		}
+	}
+
+	var payload map[string]interface{}
+	if err := json.Unmarshal(eventJSON, &payload); err != nil {
+		return map[string]interface{}{
+			"event_type": event.EventType,
+			"timestamp":  event.Timestamp,
+			"error":      "failed to deserialize event",
+		}
+	}
+
+	return payload
 }
 
 // QueryEvents queries audit events with filters
