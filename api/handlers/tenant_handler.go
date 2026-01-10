@@ -113,9 +113,6 @@ func (h *TenantHandler) Update(c *gin.Context) {
 		return
 	}
 
-	// Get existing tenant for audit logging
-	existingTenant, _ := h.tenantService.GetByID(c.Request.Context(), id)
-
 	updatedTenant, err := h.tenantService.Update(c.Request.Context(), id, &req)
 	if err != nil {
 		middleware.RespondWithError(c, http.StatusBadRequest, "update_failed",

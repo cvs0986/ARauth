@@ -513,11 +513,7 @@ func (h *SystemHandler) UpdateTenantSettingsFromContext(c *gin.Context) {
 			ID:         tenantID,
 			Identifier: "",
 		}
-		if isNew {
-			_ = h.auditService.LogTenantSettingsCreated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
-		} else {
-			_ = h.auditService.LogTenantSettingsUpdated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
-		}
+		_ = h.auditService.LogTenantSettingsUpdated(c.Request.Context(), actor, target, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, settings)
@@ -701,11 +697,7 @@ func (h *SystemHandler) UpdateTenantSettings(c *gin.Context) {
 			ID:         tenantID,
 			Identifier: "",
 		}
-		if isNew {
-			_ = h.auditService.LogTenantSettingsCreated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
-		} else {
-			_ = h.auditService.LogTenantSettingsUpdated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
-		}
+		_ = h.auditService.LogTenantSettingsUpdated(c.Request.Context(), actor, target, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, settings)
