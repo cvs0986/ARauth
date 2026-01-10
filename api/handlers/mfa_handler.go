@@ -10,14 +10,17 @@ import (
 	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/auth/mfa"
 	"github.com/arauth-identity/iam/auth/token"
-	"github.com/arauth-identity/iam/internal/audit"
+	auditlogger "github.com/arauth-identity/iam/internal/audit"
+	auditevent "github.com/arauth-identity/iam/identity/audit"
+	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // MFAHandler handles MFA-related HTTP requests
 type MFAHandler struct {
 	mfaService      mfa.ServiceInterface
-	auditLogger     *audit.Logger
+	auditLogger     *auditlogger.Logger // Legacy audit logger (keep for backward compatibility)
+	auditService    auditevent.ServiceInterface // New structured audit service
 	tokenService    token.ServiceInterface
 	claimsBuilder   *claims.Builder
 	userRepo        interfaces.UserRepository
@@ -27,15 +30,17 @@ type MFAHandler struct {
 // NewMFAHandler creates a new MFA handler
 func NewMFAHandler(
 	mfaService mfa.ServiceInterface,
-	auditLogger *audit.Logger,
+	auditLogger *auditlogger.Logger,
 	tokenService token.ServiceInterface,
 	claimsBuilder *claims.Builder,
 	userRepo interfaces.UserRepository,
 	lifetimeResolver *token.LifetimeResolver,
+	auditService auditevent.ServiceInterface,
 ) *MFAHandler {
 	return &MFAHandler{
 		mfaService:       mfaService,
 		auditLogger:      auditLogger,
+		auditService:     auditService,
 		tokenService:     tokenService,
 		claimsBuilder:    claimsBuilder,
 		userRepo:         userRepo,
@@ -72,6 +77,18 @@ func (h *MFAHandler) Enroll(c *gin.Context) {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "enrollment_failed",
 			err.Error(), nil)
 		return
+	}
+
+	// Log audit event for MFA enrollment
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		var tenantID *uuid.UUID
+		if userClaims.TenantID != "" {
+			if tid, err := uuid.Parse(userClaims.TenantID); err == nil {
+				tenantID = &tid
+			}
+		}
+		_ = h.auditService.LogMFAEnrolled(c.Request.Context(), actor, tenantID, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, resp)
@@ -114,6 +131,18 @@ func (h *MFAHandler) Verify(c *gin.Context) {
 
 	valid, err := h.mfaService.Verify(c.Request.Context(), req)
 	if err != nil {
+		// Log MFA verification failure
+		if actor, err := extractActorFromContext(c); err == nil {
+			sourceIP, userAgent := extractSourceInfo(c)
+			var tenantID *uuid.UUID
+			if userClaims.TenantID != "" {
+				if tid, err := uuid.Parse(userClaims.TenantID); err == nil {
+					tenantID = &tid
+				}
+			}
+			_ = h.auditService.LogMFAVerified(c.Request.Context(), actor, tenantID, sourceIP, userAgent, false)
+		}
+
 		// Log the actual error for debugging
 		// Check if it's a user not found, MFA not enabled, or secret not found error
 		if err.Error() == "MFA is not enabled for this user" {
@@ -132,9 +161,32 @@ func (h *MFAHandler) Verify(c *gin.Context) {
 	}
 
 	if !valid {
+		// Log MFA verification failure
+		if actor, err := extractActorFromContext(c); err == nil {
+			sourceIP, userAgent := extractSourceInfo(c)
+			var tenantID *uuid.UUID
+			if userClaims.TenantID != "" {
+				if tid, err := uuid.Parse(userClaims.TenantID); err == nil {
+					tenantID = &tid
+				}
+			}
+			_ = h.auditService.LogMFAVerified(c.Request.Context(), actor, tenantID, sourceIP, userAgent, false)
+		}
 		middleware.RespondWithError(c, http.StatusUnauthorized, "invalid_code",
 			"Invalid TOTP code or recovery code. Please check your authenticator app and try again.", nil)
 		return
+	}
+
+	// Log MFA verification success
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		var tenantID *uuid.UUID
+		if userClaims.TenantID != "" {
+			if tid, err := uuid.Parse(userClaims.TenantID); err == nil {
+				tenantID = &tid
+			}
+		}
+		_ = h.auditService.LogMFAVerified(c.Request.Context(), actor, tenantID, sourceIP, userAgent, true)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
