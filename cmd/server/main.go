@@ -189,6 +189,20 @@ func main() {
 		logger.Logger.Fatal("Failed to initialize token service", zap.Error(err))
 	}
 
+	// Get JWT secret and public key for introspection
+	var jwtSecret []byte
+	var publicKey *rsa.PublicKey
+	if cfg.Security.JWT.Secret != "" {
+		jwtSecret = []byte(cfg.Security.JWT.Secret)
+	}
+	if tokenService != nil {
+		if pk := tokenService.GetPublicKey(); pk != nil {
+			if rsaKey, ok := pk.(*rsa.PublicKey); ok {
+				publicKey = rsaKey
+			}
+		}
+	}
+
 	// Initialize capability service (needed for claims builder)
 	capabilityService := capability.NewService(
 		systemCapabilityRepo,
