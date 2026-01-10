@@ -84,6 +84,14 @@ func (s *Service) GenerateAccessToken(claimsObj *claims.Claims, expiresIn time.D
 		"jti":                uuid.New().String(),
 	}
 
+	// Add impersonation claims if present
+	if claimsObj.ImpersonatedBy != "" {
+		tokenClaims["impersonated_by"] = claimsObj.ImpersonatedBy
+	}
+	if claimsObj.ImpersonationSessionID != "" {
+		tokenClaims["impersonation_session_id"] = claimsObj.ImpersonationSessionID
+	}
+
 	// Create token
 	var token *jwt.Token
 	if s.privateKey != nil {
