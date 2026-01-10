@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/auth/claims"
+	"github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/role"
 	"github.com/arauth-identity/iam/storage/interfaces"
@@ -19,14 +20,16 @@ type RoleHandler struct {
 	roleService     role.ServiceInterface
 	systemRoleRepo  interfaces.SystemRoleRepository
 	userRepo        interfaces.UserRepository
+	auditService    audit.ServiceInterface
 }
 
 // NewRoleHandler creates a new role handler
-func NewRoleHandler(roleService role.ServiceInterface, systemRoleRepo interfaces.SystemRoleRepository, userRepo interfaces.UserRepository) *RoleHandler {
+func NewRoleHandler(roleService role.ServiceInterface, systemRoleRepo interfaces.SystemRoleRepository, userRepo interfaces.UserRepository, auditService audit.ServiceInterface) *RoleHandler {
 	return &RoleHandler{
 		roleService:    roleService,
 		systemRoleRepo: systemRoleRepo,
 		userRepo:       userRepo,
+		auditService:   auditService,
 	}
 }
 
@@ -53,6 +56,17 @@ func (h *RoleHandler) Create(c *gin.Context) {
 		middleware.RespondWithError(c, http.StatusBadRequest, "creation_failed",
 			err.Error(), nil)
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "role",
+			ID:         createdRole.ID,
+			Identifier: createdRole.Name,
+		}
+		_ = h.auditService.LogRoleCreated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusCreated, createdRole)
@@ -134,6 +148,17 @@ func (h *RoleHandler) Update(c *gin.Context) {
 		return
 	}
 
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "role",
+			ID:         updatedRole.ID,
+			Identifier: updatedRole.Name,
+		}
+		_ = h.auditService.LogRoleUpdated(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
+	}
+
 	c.JSON(http.StatusOK, updatedRole)
 }
 
@@ -170,6 +195,17 @@ func (h *RoleHandler) Delete(c *gin.Context) {
 		middleware.RespondWithError(c, http.StatusBadRequest, "delete_failed",
 			err.Error(), nil)
 		return
+	}
+
+	// Log audit event
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "role",
+			ID:         existingRole.ID,
+			Identifier: existingRole.Name,
+		}
+		_ = h.auditService.LogRoleDeleted(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Role deleted successfully"})
@@ -424,6 +460,26 @@ func (h *RoleHandler) AssignRoleToUser(c *gin.Context) {
 				err.Error(), nil)
 			return
 		}
+
+		// Log audit event for system role assignment
+		if actor, err := extractActorFromContext(c); err == nil {
+			sourceIP, userAgent := extractSourceInfo(c)
+			// Get user info for target
+			user, err := h.userRepo.GetByID(c.Request.Context(), userID)
+			if err == nil {
+				target := &models.AuditTarget{
+					Type:       "user",
+					ID:         userID,
+					Identifier: user.Username,
+				}
+				_ = h.auditService.LogRoleAssigned(c.Request.Context(), actor, target, nil, sourceIP, userAgent, map[string]interface{}{
+					"role_id":   roleID.String(),
+					"role_name": systemRole.Name,
+					"is_system": true,
+				})
+			}
+		}
+
 		c.JSON(http.StatusOK, gin.H{"message": "System role assigned successfully"})
 		return
 	}

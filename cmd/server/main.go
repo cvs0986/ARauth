@@ -197,7 +197,7 @@ func main() {
 	userHandler := handlers.NewUserHandler(userService, systemRoleRepo, roleRepo, auditEventService)
 	authHandler := handlers.NewAuthHandler(loginService, refreshService)
 	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger, tokenService, claimsBuilder, userRepo, lifetimeResolver)
-	roleHandler := handlers.NewRoleHandler(roleService, systemRoleRepo, userRepo)
+	roleHandler := handlers.NewRoleHandler(roleService, systemRoleRepo, userRepo, auditEventService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
 	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo, tenantSettingsRepo, capabilityService) // NEW: System handler with tenant settings
 	capabilityHandler := handlers.NewCapabilityHandler(capabilityService) // NEW: Capability handler
