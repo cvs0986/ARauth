@@ -308,11 +308,29 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		// Log failed attempt if we have user info
 		if resp != nil && resp.UserID != "" {
 			userID, _ := uuid.Parse(resp.UserID)
-			var tenantID uuid.UUID
+			var tenantID *uuid.UUID
 			if resp.TenantID != "" {
-				tenantID, _ = uuid.Parse(resp.TenantID)
+				if tid, err := uuid.Parse(resp.TenantID); err == nil {
+					tenantID = &tid
+				}
 			}
-			_ = h.auditLogger.LogMFAAction(c.Request.Context(), tenantID, userID, "verify_challenge", c.Request, "failure", err.Error()) // Ignore audit log errors
+			// Get user for actor info
+			user, err := h.userRepo.GetByID(c.Request.Context(), userID)
+			if err == nil {
+				sourceIP, userAgent := extractSourceInfo(c)
+				actor := models.AuditActor{
+					UserID:        userID,
+					Username:      user.Username,
+					PrincipalType: string(user.PrincipalType),
+				}
+				_ = h.auditService.LogMFAVerified(c.Request.Context(), actor, tenantID, sourceIP, userAgent, false)
+			}
+			// Also log to legacy logger for backward compatibility
+			var tenantIDLegacy uuid.UUID
+			if tenantID != nil {
+				tenantIDLegacy = *tenantID
+			}
+			_ = h.auditLogger.LogMFAAction(c.Request.Context(), tenantIDLegacy, userID, "verify_challenge", c.Request, "failure", err.Error())
 		}
 		// Provide more detailed error message
 		errorMsg := err.Error()
@@ -334,8 +352,29 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		// Log failed verification
 		if resp.UserID != "" {
 			userID, _ := uuid.Parse(resp.UserID)
-			tenantID, _ := uuid.Parse(resp.TenantID)
-			_ = h.auditLogger.LogMFAAction(c.Request.Context(), tenantID, userID, "verify_challenge", c.Request, "failure", "Invalid MFA code") // Ignore audit log errors
+			var tenantID *uuid.UUID
+			if resp.TenantID != "" {
+				if tid, err := uuid.Parse(resp.TenantID); err == nil {
+					tenantID = &tid
+				}
+			}
+			// Get user for actor info
+			user, err := h.userRepo.GetByID(c.Request.Context(), userID)
+			if err == nil {
+				sourceIP, userAgent := extractSourceInfo(c)
+				actor := models.AuditActor{
+					UserID:        userID,
+					Username:      user.Username,
+					PrincipalType: string(user.PrincipalType),
+				}
+				_ = h.auditService.LogMFAVerified(c.Request.Context(), actor, tenantID, sourceIP, userAgent, false)
+			}
+			// Also log to legacy logger
+			var tenantIDLegacy uuid.UUID
+			if tenantID != nil {
+				tenantIDLegacy = *tenantID
+			}
+			_ = h.auditLogger.LogMFAAction(c.Request.Context(), tenantIDLegacy, userID, "verify_challenge", c.Request, "failure", "Invalid MFA code")
 		}
 		middleware.RespondWithError(c, http.StatusUnauthorized, "invalid_code",
 			"Invalid TOTP code or recovery code", nil)
@@ -345,8 +384,29 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 	// Log successful verification
 	if resp.UserID != "" {
 		userID, _ := uuid.Parse(resp.UserID)
-		tenantID, _ := uuid.Parse(resp.TenantID)
-		_ = h.auditLogger.LogMFAAction(c.Request.Context(), tenantID, userID, "verify_challenge", c.Request, "success", "MFA challenge verified") // Ignore audit log errors
+		var tenantID *uuid.UUID
+		if resp.TenantID != "" {
+			if tid, err := uuid.Parse(resp.TenantID); err == nil {
+				tenantID = &tid
+			}
+		}
+		// Get user for actor info
+		user, err := h.userRepo.GetByID(c.Request.Context(), userID)
+		if err == nil {
+			sourceIP, userAgent := extractSourceInfo(c)
+			actor := models.AuditActor{
+				UserID:        userID,
+				Username:      user.Username,
+				PrincipalType: string(user.PrincipalType),
+			}
+			_ = h.auditService.LogMFAVerified(c.Request.Context(), actor, tenantID, sourceIP, userAgent, true)
+		}
+		// Also log to legacy logger
+		var tenantIDLegacy uuid.UUID
+		if tenantID != nil {
+			tenantIDLegacy = *tenantID
+		}
+		_ = h.auditLogger.LogMFAAction(c.Request.Context(), tenantIDLegacy, userID, "verify_challenge", c.Request, "success", "MFA challenge verified")
 	}
 
 	// Issue tokens after successful MFA verification
