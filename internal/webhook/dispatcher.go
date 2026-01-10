@@ -141,7 +141,7 @@ func (d *Dispatcher) RetryFailedDeliveries(ctx context.Context, webhookRepo inte
 
 		// Skip if webhook is disabled
 		if !w.Enabled {
-			delivery.Status = webhook.DeliveryStatusFailed
+			delivery.Status = models.DeliveryStatusFailed
 			delivery.NextRetryAt = nil
 			if err := d.deliveryRepo.Update(ctx, delivery); err != nil {
 				d.logger.Error("Failed to update delivery", zap.Error(err))
@@ -163,7 +163,7 @@ func (d *Dispatcher) RetryFailedDeliveries(ctx context.Context, webhookRepo inte
 
 		payloadJSON, err := json.Marshal(webhookPayload)
 		if err != nil {
-			delivery.Status = webhook.DeliveryStatusFailed
+			delivery.Status = models.DeliveryStatusFailed
 			delivery.NextRetryAt = nil
 			if err := d.deliveryRepo.Update(ctx, delivery); err != nil {
 				d.logger.Error("Failed to update delivery", zap.Error(err))
@@ -177,7 +177,7 @@ func (d *Dispatcher) RetryFailedDeliveries(ctx context.Context, webhookRepo inte
 		// Create HTTP request
 		req, err := http.NewRequestWithContext(ctx, "POST", w.URL, bytes.NewReader(payloadJSON))
 		if err != nil {
-			delivery.Status = webhook.DeliveryStatusFailed
+			delivery.Status = models.DeliveryStatusFailed
 			delivery.NextRetryAt = nil
 			if err := d.deliveryRepo.Update(ctx, delivery); err != nil {
 				d.logger.Error("Failed to update delivery", zap.Error(err))

@@ -4,20 +4,21 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/arauth-identity/iam/identity/models"
 )
 
 // ServiceInterface defines the interface for webhook service operations
 type ServiceInterface interface {
 	// Webhook Management
-	CreateWebhook(ctx context.Context, tenantID uuid.UUID, req *CreateWebhookRequest) (*Webhook, error)
-	GetWebhook(ctx context.Context, id uuid.UUID) (*Webhook, error)
-	GetWebhooksByTenant(ctx context.Context, tenantID uuid.UUID) ([]*Webhook, error)
-	UpdateWebhook(ctx context.Context, id uuid.UUID, req *UpdateWebhookRequest) (*Webhook, error)
+	CreateWebhook(ctx context.Context, tenantID uuid.UUID, req *CreateWebhookRequest) (*models.Webhook, error)
+	GetWebhook(ctx context.Context, id uuid.UUID) (*models.Webhook, error)
+	GetWebhooksByTenant(ctx context.Context, tenantID uuid.UUID) ([]*models.Webhook, error)
+	UpdateWebhook(ctx context.Context, id uuid.UUID, req *UpdateWebhookRequest) (*models.Webhook, error)
 	DeleteWebhook(ctx context.Context, id uuid.UUID) error
 
 	// Delivery Management
-	GetDeliveriesByWebhook(ctx context.Context, webhookID uuid.UUID, limit, offset int) ([]*WebhookDelivery, int, error)
-	GetDeliveryByID(ctx context.Context, id uuid.UUID) (*WebhookDelivery, error)
+	GetDeliveriesByWebhook(ctx context.Context, webhookID uuid.UUID, limit, offset int) ([]*models.WebhookDelivery, int, error)
+	GetDeliveryByID(ctx context.Context, id uuid.UUID) (*models.WebhookDelivery, error)
 
 	// Trigger webhook delivery (called by audit service)
 	TriggerWebhook(ctx context.Context, tenantID uuid.UUID, eventType string, payload map[string]interface{}, eventID *uuid.UUID) error

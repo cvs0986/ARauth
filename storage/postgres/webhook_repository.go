@@ -95,7 +95,7 @@ func (r *webhookRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.
 }
 
 // GetByTenantID retrieves all webhooks for a tenant
-func (r *webhookRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*webhook.Webhook, error) {
+func (r *webhookRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*models.Webhook, error) {
 	query := `
 		SELECT id, tenant_id, name, url, secret, enabled, events,
 		       created_at, updated_at, deleted_at
@@ -144,7 +144,7 @@ func (r *webhookRepository) GetByTenantID(ctx context.Context, tenantID uuid.UUI
 }
 
 // GetEnabledByTenantID retrieves all enabled webhooks for a tenant
-func (r *webhookRepository) GetEnabledByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*webhook.Webhook, error) {
+func (r *webhookRepository) GetEnabledByTenantID(ctx context.Context, tenantID uuid.UUID) ([]*models.Webhook, error) {
 	query := `
 		SELECT id, tenant_id, name, url, secret, enabled, events,
 		       created_at, updated_at, deleted_at
@@ -193,7 +193,7 @@ func (r *webhookRepository) GetEnabledByTenantID(ctx context.Context, tenantID u
 }
 
 // GetByEventType retrieves all enabled webhooks subscribed to an event type
-func (r *webhookRepository) GetByEventType(ctx context.Context, tenantID uuid.UUID, eventType string) ([]*webhook.Webhook, error) {
+func (r *webhookRepository) GetByEventType(ctx context.Context, tenantID uuid.UUID, eventType string) ([]*models.Webhook, error) {
 	query := `
 		SELECT id, tenant_id, name, url, secret, enabled, events,
 		       created_at, updated_at, deleted_at
@@ -429,7 +429,7 @@ func (r *webhookDeliveryRepository) GetByID(ctx context.Context, id uuid.UUID) (
 }
 
 // GetByWebhookID retrieves all deliveries for a webhook
-func (r *webhookDeliveryRepository) GetByWebhookID(ctx context.Context, webhookID uuid.UUID, limit, offset int) ([]*webhook.WebhookDelivery, int, error) {
+func (r *webhookDeliveryRepository) GetByWebhookID(ctx context.Context, webhookID uuid.UUID, limit, offset int) ([]*models.WebhookDelivery, int, error) {
 	// Get total count
 	countQuery := `SELECT COUNT(*) FROM webhook_deliveries WHERE webhook_id = $1`
 	var total int
@@ -468,7 +468,7 @@ func (r *webhookDeliveryRepository) GetByWebhookID(ctx context.Context, webhookI
 }
 
 // GetPendingRetries retrieves all deliveries that need to be retried
-func (r *webhookDeliveryRepository) GetPendingRetries(ctx context.Context, before time.Time) ([]*webhook.WebhookDelivery, error) {
+func (r *webhookDeliveryRepository) GetPendingRetries(ctx context.Context, before time.Time) ([]*models.WebhookDelivery, error) {
 	query := `
 		SELECT id, webhook_id, event_id, event_type, payload, status,
 		       http_status_code, response_body, attempt_number, next_retry_at,
@@ -534,7 +534,7 @@ func (r *webhookDeliveryRepository) Update(ctx context.Context, delivery *models
 }
 
 // scanDelivery scans a delivery from a row
-func (r *webhookDeliveryRepository) scanDelivery(rows *sql.Rows) (*webhook.WebhookDelivery, error) {
+func (r *webhookDeliveryRepository) scanDelivery(rows *sql.Rows) (*models.WebhookDelivery, error) {
 	var delivery models.WebhookDelivery
 	var payloadJSON []byte
 	var eventID sql.NullString

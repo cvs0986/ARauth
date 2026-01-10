@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
