@@ -417,8 +417,8 @@ func (s *Service) findOrCreateUser(ctx context.Context, provider *federation.Ide
 		username = email
 	}
 
-	// Check if user with this email already exists
-	existingUser, _ := s.userRepo.GetByEmail(ctx, email)
+	// Check if user with this email already exists (need tenant ID for tenant users)
+	existingUser, _ := s.userRepo.GetByEmail(ctx, email, tenantID)
 	if existingUser != nil {
 		// Link to existing user
 		fedIdentity := &federation.FederatedIdentity{
@@ -445,10 +445,12 @@ func (s *Service) findOrCreateUser(ctx context.Context, provider *federation.Ide
 	// Create new user
 	var firstName, lastName *string
 	if userInfo.GivenName != "" {
-		firstName = &userInfo.GivenName
+		fn := userInfo.GivenName
+		firstName = &fn
 	}
 	if userInfo.FamilyName != "" {
-		lastName = &userInfo.FamilyName
+		ln := userInfo.FamilyName
+		lastName = &ln
 	}
 
 	user := &models.User{
