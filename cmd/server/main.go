@@ -261,6 +261,16 @@ func main() {
 	introspectionService := introspection.NewService(jwtSecret, publicKey, cfg.Security.JWT.Issuer)
 	introspectionHandler := handlers.NewIntrospectionHandler(introspectionService) // NEW: Token introspection handler
 
+	// Initialize impersonation service
+	impersonationService := impersonation.NewService(
+		impersonationRepo,
+		userRepo,
+		claimsBuilder,
+		tokenService,
+		lifetimeResolver,
+	)
+	impersonationHandler := handlers.NewImpersonationHandler(impersonationService, auditEventService) // NEW: Impersonation handler
+
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
 		gin.SetMode(gin.DebugMode)
