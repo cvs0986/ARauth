@@ -50,6 +50,10 @@ const (
 	EventTypeLoginFailure = "login.failure"
 	EventTypeTokenIssued  = "token.issued"
 	EventTypeTokenRevoked = "token.revoked"
+
+	// Impersonation events
+	EventTypeUserImpersonated      = "user.impersonated"
+	EventTypeUserImpersonationEnded = "user.impersonation.ended"
 )
 
 // Result constants
