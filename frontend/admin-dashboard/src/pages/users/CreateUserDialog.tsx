@@ -70,7 +70,7 @@ export function CreateUserDialog({ open, onOpenChange, tenantId: propTenantId }:
   const { principalType, homeTenantId, selectedTenantId } = usePrincipalContext();
   const [error, setError] = useState<string | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string>('');
-  const [selectedTenantId, setSelectedTenantId] = useState<string>(propTenantId || '');
+  const [localSelectedTenantId, setLocalSelectedTenantId] = useState<string>(propTenantId || '');
 
   const {
     register,
@@ -128,7 +128,7 @@ export function CreateUserDialog({ open, onOpenChange, tenantId: propTenantId }:
       queryClient.invalidateQueries({ queryKey: ['system', 'users'] });
       reset();
       setSelectedRoleId('');
-      setSelectedTenantId('');
+      setLocalSelectedTenantId('');
       setError(null);
       onOpenChange(false);
     },
@@ -193,9 +193,9 @@ export function CreateUserDialog({ open, onOpenChange, tenantId: propTenantId }:
             <div className="space-y-2">
               <Label htmlFor="tenant_id">Tenant *</Label>
               <Select
-                value={selectedTenantId}
+                value={localSelectedTenantId}
                 onValueChange={(value) => {
-                  setSelectedTenantId(value);
+                  setLocalSelectedTenantId(value);
                   setValue('tenant_id', value);
                   setSelectedRoleId(''); // Reset role when tenant changes
                 }}
@@ -334,7 +334,7 @@ export function CreateUserDialog({ open, onOpenChange, tenantId: propTenantId }:
                 onOpenChange(false);
                 reset();
                 setSelectedRoleId('');
-                setSelectedTenantId('');
+                setLocalSelectedTenantId('');
               }}
               disabled={createUserMutation.isPending}
             >
