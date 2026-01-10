@@ -199,7 +199,7 @@ func main() {
 	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger, tokenService, claimsBuilder, userRepo, lifetimeResolver, auditEventService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService, auditEventService)
 	roleHandler := handlers.NewRoleHandler(roleService, systemRoleRepo, userRepo, auditEventService, permissionService)
-	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo, tenantSettingsRepo, capabilityService) // NEW: System handler with tenant settings
+	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo, tenantSettingsRepo, capabilityService, auditEventService) // NEW: System handler with tenant settings
 	capabilityHandler := handlers.NewCapabilityHandler(capabilityService) // NEW: Capability handler
 	auditHandler := handlers.NewAuditHandler(auditEventService) // NEW: Audit event handler
 
