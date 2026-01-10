@@ -97,7 +97,7 @@ func (s *Service) StartImpersonation(ctx context.Context, impersonatorID uuid.UU
 	}
 
 	// Get token lifetime
-	expiresIn := s.lifetimeResolver.ResolveAccessTokenLifetime(ctx, targetUser.TenantID)
+	expiresIn := s.lifetimeResolver.Resolve(ctx, targetUser.TenantID)
 
 	// Generate token JTI
 	tokenJTI := uuid.New()

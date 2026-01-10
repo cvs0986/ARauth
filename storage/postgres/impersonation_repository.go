@@ -88,7 +88,7 @@ func (r *ImpersonationRepository) GetByID(ctx context.Context, id uuid.UUID) (*m
 	session := &models.ImpersonationSession{}
 	var metadataJSON []byte
 	var endedAt sql.NullTime
-	var tokenJTIUUID sql.NullString
+	var tokenJTIStr sql.NullString
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&session.ID,
@@ -115,8 +115,8 @@ func (r *ImpersonationRepository) GetByID(ctx context.Context, id uuid.UUID) (*m
 		session.EndedAt = &endedAt.Time
 	}
 
-	if tokenJTIUUID.Valid {
-		if jti, err := uuid.Parse(tokenJTIUUID.String); err == nil {
+	if tokenJTIStr.Valid && tokenJTIStr.String != "" {
+		if jti, err := uuid.Parse(tokenJTIStr.String); err == nil {
 			session.TokenJTI = &jti
 		}
 	}
@@ -207,7 +207,7 @@ func (r *ImpersonationRepository) GetActiveByImpersonator(ctx context.Context, i
 		session := &models.ImpersonationSession{}
 		var metadataJSON []byte
 		var endedAt sql.NullTime
-		var tokenJTIUUID sql.NullString
+		var tokenJTIStr sql.NullString
 
 		err := rows.Scan(
 			&session.ID,
@@ -271,7 +271,7 @@ func (r *ImpersonationRepository) GetActiveByTarget(ctx context.Context, targetU
 		session := &models.ImpersonationSession{}
 		var metadataJSON []byte
 		var endedAt sql.NullTime
-		var tokenJTIUUID sql.NullString
+		var tokenJTIStr sql.NullString
 
 		err := rows.Scan(
 			&session.ID,
@@ -393,7 +393,7 @@ func (r *ImpersonationRepository) List(ctx context.Context, filters *interfaces.
 		session := &models.ImpersonationSession{}
 		var metadataJSON []byte
 		var endedAt sql.NullTime
-		var tokenJTIUUID sql.NullString
+		var tokenJTIStr sql.NullString
 
 		err := rows.Scan(
 			&session.ID,
