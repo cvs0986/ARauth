@@ -8,16 +8,20 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/arauth-identity/iam/internal/webhook"
 	"github.com/arauth-identity/iam/storage/interfaces"
 	"go.uber.org/zap"
 )
+
+// DispatcherInterface defines the interface for webhook delivery
+type DispatcherInterface interface {
+	Deliver(ctx context.Context, w *Webhook, eventType string, payload map[string]interface{}, eventID *uuid.UUID) error
+}
 
 // Service provides webhook functionality
 type Service struct {
 	webhookRepo    interfaces.WebhookRepository
 	deliveryRepo   interfaces.WebhookDeliveryRepository
-	dispatcher     *webhook.Dispatcher
+	dispatcher     DispatcherInterface
 	logger         *zap.Logger
 }
 
@@ -25,7 +29,7 @@ type Service struct {
 func NewService(
 	webhookRepo interfaces.WebhookRepository,
 	deliveryRepo interfaces.WebhookDeliveryRepository,
-	dispatcher *webhook.Dispatcher,
+	dispatcher DispatcherInterface,
 	logger *zap.Logger,
 ) ServiceInterface {
 	return &Service{
