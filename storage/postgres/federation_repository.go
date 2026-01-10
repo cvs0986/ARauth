@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -91,9 +92,9 @@ func (r *identityProviderRepository) GetByID(ctx context.Context, id uuid.UUID) 
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, interfaces.ErrNotFound
+			return nil, fmt.Errorf("identity provider not found: %w", err)
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get identity provider: %w", err)
 	}
 
 	if deletedAt.Valid {
@@ -200,9 +201,9 @@ func (r *identityProviderRepository) GetByName(ctx context.Context, tenantID uui
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, interfaces.ErrNotFound
+			return nil, fmt.Errorf("identity provider not found: %w", err)
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get identity provider: %w", err)
 	}
 
 	if deletedAt.Valid {
@@ -267,7 +268,7 @@ func (r *identityProviderRepository) Update(ctx context.Context, provider *feder
 	}
 
 	if rowsAffected == 0 {
-		return interfaces.ErrNotFound
+		return fmt.Errorf("identity provider not found")
 	}
 
 	return nil
@@ -292,7 +293,7 @@ func (r *identityProviderRepository) Delete(ctx context.Context, id uuid.UUID) e
 	}
 
 	if rowsAffected == 0 {
-		return interfaces.ErrNotFound
+		return fmt.Errorf("identity provider not found")
 	}
 
 	return nil
@@ -375,9 +376,9 @@ func (r *federatedIdentityRepository) GetByID(ctx context.Context, id uuid.UUID)
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, interfaces.ErrNotFound
+			return nil, fmt.Errorf("identity provider not found: %w", err)
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get identity provider: %w", err)
 	}
 
 	if verifiedAt.Valid {
@@ -476,9 +477,9 @@ func (r *federatedIdentityRepository) GetByProviderAndExternalID(ctx context.Con
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, interfaces.ErrNotFound
+			return nil, fmt.Errorf("identity provider not found: %w", err)
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get identity provider: %w", err)
 	}
 
 	if verifiedAt.Valid {
@@ -506,7 +507,7 @@ func (r *federatedIdentityRepository) GetByProviderID(ctx context.Context, provi
 	`
 
 	var identities []*federation.FederatedIdentity
-	rows, err := r.db.QueryxContext(ctx, query, providerID)
+	rows, err := r.db.QueryContext(ctx, query, providerID)
 	if err != nil {
 		return nil, err
 	}
@@ -590,7 +591,7 @@ func (r *federatedIdentityRepository) Update(ctx context.Context, identity *fede
 	}
 
 	if rowsAffected == 0 {
-		return interfaces.ErrNotFound
+		return fmt.Errorf("identity provider not found")
 	}
 
 	return nil
@@ -611,7 +612,7 @@ func (r *federatedIdentityRepository) Delete(ctx context.Context, id uuid.UUID) 
 	}
 
 	if rowsAffected == 0 {
-		return interfaces.ErrNotFound
+		return fmt.Errorf("identity provider not found")
 	}
 
 	return nil
