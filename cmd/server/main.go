@@ -135,6 +135,9 @@ func main() {
 	webhookRepo := postgres.NewWebhookRepository(db)
 	webhookDeliveryRepo := postgres.NewWebhookDeliveryRepository(db)
 
+	// Initialize impersonation repository
+	impersonationRepo := postgres.NewImpersonationRepository(db)
+
 	// Initialize audit logger (legacy)
 	auditLogger := auditlogger.NewLogger(auditRepo)
 
