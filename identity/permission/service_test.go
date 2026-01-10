@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -76,13 +76,13 @@ func (m *MockPermissionRepository) GetRolePermissions(ctx context.Context, roleI
 
 func TestService_Create(t *testing.T) {
 	mockRepo := new(MockPermissionRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	tenantID := uuid.New()
 	req := &CreatePermissionRequest{
 		TenantID: tenantID,
 		Name:     "users:read",
-		Resource: "users",
+		Resource: "resource.users",
 		Action:   "read",
 	}
 
@@ -108,7 +108,7 @@ func TestService_Create(t *testing.T) {
 
 func TestService_GetByID(t *testing.T) {
 	mockRepo := new(MockPermissionRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	permissionID := uuid.New()
 	expectedPermission := &models.Permission{
@@ -128,7 +128,7 @@ func TestService_GetByID(t *testing.T) {
 
 func TestService_List(t *testing.T) {
 	mockRepo := new(MockPermissionRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	tenantID := uuid.New()
 	expectedPermissions := []*models.Permission{
@@ -144,4 +144,3 @@ func TestService_List(t *testing.T) {
 
 	mockRepo.AssertExpectations(t)
 }
-
