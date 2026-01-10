@@ -712,16 +712,14 @@ func (h *RoleHandler) AssignPermissionToRole(c *gin.Context) {
 	// Log audit event for permission assignment
 	if actor, err := extractActorFromContext(c); err == nil {
 		sourceIP, userAgent := extractSourceInfo(c)
-		// Get permission details
-		perm, err := h.permissionService.GetByID(c.Request.Context(), permissionID)
-		if err == nil {
-			target := &models.AuditTarget{
-				Type:       "role",
-				ID:         roleID,
-				Identifier: existingRole.Name,
-			}
-			_ = h.auditService.LogPermissionAssigned(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
+		// Get permission details for better audit logging
+		_, _ = h.permissionService.GetByID(c.Request.Context(), permissionID)
+		target := &models.AuditTarget{
+			Type:       "role",
+			ID:         roleID,
+			Identifier: existingRole.Name,
 		}
+		_ = h.auditService.LogPermissionAssigned(c.Request.Context(), actor, target, &tenantID, sourceIP, userAgent)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Permission assigned successfully"})
