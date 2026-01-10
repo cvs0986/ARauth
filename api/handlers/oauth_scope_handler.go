@@ -50,7 +50,7 @@ func (h *OAuthScopeHandler) CreateScope(c *gin.Context) {
 	}
 
 	// Log audit event
-	actor := extractActorFromContext(c)
+	actor, _ := extractActorFromContext(c)
 	sourceIP, userAgent := extractSourceInfo(c)
 	target := &models.AuditTarget{
 		Type:       "oauth_scope",
@@ -204,7 +204,7 @@ func (h *OAuthScopeHandler) UpdateScope(c *gin.Context) {
 	}
 
 	// Log audit event
-	actor := extractActorFromContext(c)
+	actor, _ := extractActorFromContext(c)
 	sourceIP, userAgent := extractSourceInfo(c)
 	target := &models.AuditTarget{
 		Type:       "oauth_scope",
@@ -270,7 +270,7 @@ func (h *OAuthScopeHandler) DeleteScope(c *gin.Context) {
 	}
 
 	// Log audit event
-	actor := extractActorFromContext(c)
+	actor, _ := extractActorFromContext(c)
 	sourceIP, userAgent := extractSourceInfo(c)
 	target := &models.AuditTarget{
 		Type:       "oauth_scope",
