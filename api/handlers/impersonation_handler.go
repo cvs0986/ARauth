@@ -92,13 +92,23 @@ func (h *ImpersonationHandler) StartImpersonation(c *gin.Context) {
 			ID:         targetUserID,
 			Identifier: "impersonation_target",
 		}
-		tenantID := result.Session.TenantID
-		_ = h.auditService.LogEvent(c.Request.Context(), models.EventTypeUserImpersonated, actor, target, &tenantID, sourceIP, userAgent, map[string]interface{}{
-			"session_id":      result.Session.ID,
-			"impersonator_id": impersonatorID,
-			"target_user_id":  targetUserID,
-			"reason":          req.Reason,
-		}, models.ResultSuccess, nil)
+		event := &models.AuditEvent{
+			EventType: models.EventTypeUserImpersonated,
+			Actor:     actor,
+			Target:    target,
+			TenantID:  result.Session.TenantID,
+			SourceIP:  sourceIP,
+			UserAgent: userAgent,
+			Metadata: map[string]interface{}{
+				"session_id":      result.Session.ID,
+				"impersonator_id": impersonatorID,
+				"target_user_id":  targetUserID,
+				"reason":          req.Reason,
+			},
+			Result: models.ResultSuccess,
+		}
+		event.Flatten()
+		_ = h.auditService.LogEvent(c.Request.Context(), event)
 	}
 
 	c.JSON(http.StatusOK, result)
