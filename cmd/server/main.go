@@ -30,6 +30,7 @@ import (
 	"github.com/arauth-identity/iam/identity/linking"
 	"github.com/arauth-identity/iam/identity/impersonation"
 	"github.com/arauth-identity/iam/identity/oauth_scope"
+	"github.com/arauth-identity/iam/identity/scim"
 	"github.com/arauth-identity/iam/auth/introspection"
 	webhookdispatcher "github.com/arauth-identity/iam/internal/webhook"
 	auditlogger "github.com/arauth-identity/iam/internal/audit"
