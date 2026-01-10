@@ -51,6 +51,9 @@ type Claims struct {
 	// Capability context (informational only, not authoritative for authorization)
 	Capabilities     map[string]bool   `json:"capabilities,omitempty"` // Capabilities available to tenant
 	Features         map[string]FeatureInfo `json:"features,omitempty"` // Features enabled by tenant
+	// Impersonation claims (if token is from impersonation)
+	ImpersonatedBy   string   `json:"impersonated_by,omitempty"` // ID of user who is impersonating
+	ImpersonationSessionID string `json:"impersonation_session_id,omitempty"` // Session ID for the impersonation
 }
 
 // FeatureInfo represents information about an enabled feature

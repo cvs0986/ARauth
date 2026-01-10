@@ -231,8 +231,8 @@ func (r *ImpersonationRepository) GetActiveByImpersonator(ctx context.Context, i
 			session.EndedAt = &endedAt.Time
 		}
 
-		if tokenJTIUUID.Valid {
-			if jti, err := uuid.Parse(tokenJTIUUID.String); err == nil {
+		if tokenJTIStr.Valid && tokenJTIStr.String != "" {
+			if jti, err := uuid.Parse(tokenJTIStr.String); err == nil {
 				session.TokenJTI = &jti
 			}
 		}
@@ -295,8 +295,8 @@ func (r *ImpersonationRepository) GetActiveByTarget(ctx context.Context, targetU
 			session.EndedAt = &endedAt.Time
 		}
 
-		if tokenJTIUUID.Valid {
-			if jti, err := uuid.Parse(tokenJTIUUID.String); err == nil {
+		if tokenJTIStr.Valid && tokenJTIStr.String != "" {
+			if jti, err := uuid.Parse(tokenJTIStr.String); err == nil {
 				session.TokenJTI = &jti
 			}
 		}
@@ -417,8 +417,8 @@ func (r *ImpersonationRepository) List(ctx context.Context, filters *interfaces.
 			session.EndedAt = &endedAt.Time
 		}
 
-		if tokenJTIUUID.Valid {
-			if jti, err := uuid.Parse(tokenJTIUUID.String); err == nil {
+		if tokenJTIStr.Valid && tokenJTIStr.String != "" {
+			if jti, err := uuid.Parse(tokenJTIStr.String); err == nil {
 				session.TokenJTI = &jti
 			}
 		}
