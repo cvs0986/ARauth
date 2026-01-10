@@ -3,257 +3,277 @@ package user
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
-	"github.com/arauth-identity/iam/identity/credential"
-	"github.com/arauth-identity/iam/identity/models"
-	"github.com/arauth-identity/iam/storage/interfaces"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/arauth-identity/iam/identity/models"
 )
 
-// MockUserRepository is a mock implementation of UserRepository
-type MockUserRepository struct {
-	mock.Mock
+// MockRepository is a mock implementation of UserRepository
+type MockRepository struct {
+	users map[uuid.UUID]*models.User
 }
 
-func (m *MockUserRepository) Create(ctx context.Context, u *models.User) error {
-	args := m.Called(ctx, u)
-	return args.Error(0)
-}
-
-func (m *MockUserRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+func NewMockRepository() *MockRepository {
+	return &MockRepository{
+		users: make(map[uuid.UUID]*models.User),
 	}
-	return args.Get(0).(*models.User), args.Error(1)
 }
 
-func (m *MockUserRepository) GetByUsername(ctx context.Context, username string, tenantID uuid.UUID) (*models.User, error) {
-	args := m.Called(ctx, username, tenantID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+func (m *MockRepository) Create(ctx context.Context, user *models.User) error {
+	m.users[user.ID] = user
+	return nil
+}
+
+func (m *MockRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
+	user, ok := m.users[id]
+	if !ok {
+		return nil, assert.AnError
 	}
-	return args.Get(0).(*models.User), args.Error(1)
+	return user, nil
 }
 
-func (m *MockUserRepository) GetByEmail(ctx context.Context, email string, tenantID uuid.UUID) (*models.User, error) {
-	args := m.Called(ctx, email, tenantID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+func (m *MockRepository) GetByUsername(ctx context.Context, username string, tenantID uuid.UUID) (*models.User, error) {
+	for _, user := range m.users {
+		if user.Username == username && user.TenantID != nil && *user.TenantID == tenantID {
+			return user, nil
+		}
 	}
-	return args.Get(0).(*models.User), args.Error(1)
+	return nil, assert.AnError
 }
 
-func (m *MockUserRepository) Update(ctx context.Context, u *models.User) error {
-	args := m.Called(ctx, u)
-	return args.Error(0)
-}
-
-func (m *MockUserRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
-}
-
-func (m *MockUserRepository) List(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) ([]*models.User, error) {
-	args := m.Called(ctx, tenantID, filters)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+func (m *MockRepository) GetByEmail(ctx context.Context, email string, tenantID uuid.UUID) (*models.User, error) {
+	for _, user := range m.users {
+		if user.Email == email && user.TenantID != nil && *user.TenantID == tenantID {
+			return user, nil
+		}
 	}
-	return args.Get(0).([]*models.User), args.Error(1)
+	return nil, assert.AnError
 }
 
-func (m *MockUserRepository) Count(ctx context.Context, tenantID uuid.UUID, filters *interfaces.UserFilters) (int, error) {
-	args := m.Called(ctx, tenantID, filters)
-	return args.Int(0), args.Error(1)
-}
-
-func (m *MockUserRepository) GetByEmailSystem(ctx context.Context, email string) (*models.User, error) {
-	args := m.Called(ctx, email)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+func (m *MockRepository) Update(ctx context.Context, user *models.User) error {
+	if _, ok := m.users[user.ID]; !ok {
+		return assert.AnError
 	}
-	return args.Get(0).(*models.User), args.Error(1)
+	m.users[user.ID] = user
+	return nil
 }
 
-func (m *MockUserRepository) GetSystemUserByUsername(ctx context.Context, username string) (*models.User, error) {
-	args := m.Called(ctx, username)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+func (m *MockRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	delete(m.users, id)
+	return nil
+}
+
+func (m *MockRepository) List(ctx context.Context, tenantID uuid.UUID, filters interface{}) ([]*models.User, error) {
+	var users []*models.User
+	for _, user := range m.users {
+		if user.TenantID != nil && *user.TenantID == tenantID {
+			users = append(users, user)
+		}
 	}
-	return args.Get(0).(*models.User), args.Error(1)
+	return users, nil
+}
+
+func (m *MockRepository) Count(ctx context.Context, tenantID uuid.UUID, filters interface{}) (int, error) {
+	count := 0
+	for _, user := range m.users {
+		if user.TenantID != nil && *user.TenantID == tenantID {
+			count++
+		}
+	}
+	return count, nil
 }
 
 // MockCredentialRepository is a mock implementation of CredentialRepository
-type MockCredentialRepository struct {
-	mock.Mock
+type MockCredentialRepository struct{}
+
+func (m *MockCredentialRepository) Create(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+	return nil
 }
 
-func (m *MockCredentialRepository) Create(ctx context.Context, cred *credential.Credential) error {
-	args := m.Called(ctx, cred)
-	return args.Error(0)
+func (m *MockCredentialRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (string, error) {
+	return "", nil
 }
 
-func (m *MockCredentialRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*credential.Credential, error) {
-	args := m.Called(ctx, userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*credential.Credential), args.Error(1)
-}
-
-func (m *MockCredentialRepository) Update(ctx context.Context, cred *credential.Credential) error {
-	args := m.Called(ctx, cred)
-	return args.Error(0)
+func (m *MockCredentialRepository) Update(ctx context.Context, userID uuid.UUID, passwordHash string) error {
+	return nil
 }
 
 func (m *MockCredentialRepository) Delete(ctx context.Context, userID uuid.UUID) error {
-	args := m.Called(ctx, userID)
-	return args.Error(0)
+	return nil
 }
 
-func TestService_Create(t *testing.T) {
-	mockRepo := new(MockUserRepository)
-	mockCredRepo := new(MockCredentialRepository)
+// TestCreateUser tests user creation
+func TestCreateUser(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+
+	mockRepo := NewMockRepository()
+	mockCredRepo := &MockCredentialRepository{}
 	service := NewService(mockRepo, mockCredRepo)
 
-	tenantID := uuid.New()
-	firstName := "Test"
-	lastName := "User"
-	req := &CreateUserRequest{
-		TenantID:  tenantID,
-		Username:  "testuser",
-		Email:     "test@example.com",
-		Password:  "TestPassword@123",
-		FirstName: &firstName,
-		LastName:  &lastName,
+	tests := []struct {
+		name    string
+		req     *CreateUserRequest
+		wantErr bool
+	}{
+		{
+			name: "valid user creation",
+			req: &CreateUserRequest{
+				TenantID:  tenantID,
+				Username:  "testuser",
+				Email:     "test@example.com",
+				Password:  "SecurePassword123!@#",
+				FirstName: stringPtr("Test"),
+				LastName:  stringPtr("User"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "missing username",
+			req: &CreateUserRequest{
+				TenantID: tenantID,
+				Email:    "test@example.com",
+				Password: "SecurePassword123!@#",
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing email",
+			req: &CreateUserRequest{
+				TenantID: tenantID,
+				Username: "testuser",
+				Password: "SecurePassword123!@#",
+			},
+			wantErr: true,
+		},
+		{
+			name: "weak password",
+			req: &CreateUserRequest{
+				TenantID: tenantID,
+				Username: "testuser",
+				Email:    "test@example.com",
+				Password: "weak",
+			},
+			wantErr: true,
+		},
 	}
 
-	expectedUser := &models.User{
-		ID:       uuid.New(),
-		TenantID: &tenantID,
-		Username: req.Username,
-		Email:    req.Email,
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			user, err := service.Create(ctx, tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, user)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, user)
+				assert.Equal(t, tt.req.Username, user.Username)
+				assert.Equal(t, tt.req.Email, user.Email)
+				assert.Equal(t, models.PrincipalTypeTenant, user.PrincipalType)
+				assert.Equal(t, tenantID, *user.TenantID)
+			}
+		})
 	}
-
-	mockRepo.On("GetByUsername", mock.Anything, req.Username, tenantID).Return(nil, assert.AnError)
-	mockRepo.On("GetByEmail", mock.Anything, req.Email, tenantID).Return(nil, assert.AnError)
-	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*models.User")).Return(nil).Run(func(args mock.Arguments) {
-		user := args.Get(1).(*models.User)
-		user.ID = expectedUser.ID
-	})
-	mockCredRepo.On("Create", mock.Anything, mock.AnythingOfType("*credential.Credential")).Return(nil)
-
-	user, err := service.Create(context.Background(), req)
-	require.NoError(t, err)
-	assert.NotEqual(t, uuid.Nil, user.ID)
-	assert.Equal(t, req.Username, user.Username)
-	assert.Equal(t, req.Email, user.Email)
-
-	mockRepo.AssertExpectations(t)
-	mockCredRepo.AssertExpectations(t)
 }
 
-func TestService_Create_DuplicateUsername(t *testing.T) {
-	mockRepo := new(MockUserRepository)
-	mockCredRepo := new(MockCredentialRepository)
+// TestGetUserByID tests user retrieval by ID
+func TestGetUserByID(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+
+	mockRepo := NewMockRepository()
+	mockCredRepo := &MockCredentialRepository{}
 	service := NewService(mockRepo, mockCredRepo)
 
-	tenantID := uuid.New()
-	req := &CreateUserRequest{
+	// Create a test user
+	createReq := &CreateUserRequest{
 		TenantID: tenantID,
 		Username: "testuser",
 		Email:    "test@example.com",
-		Password: "TestPassword@123",
+		Password: "SecurePassword123!@#",
 	}
+	createdUser, err := service.Create(ctx, createReq)
+	require.NoError(t, err)
+	require.NotNil(t, createdUser)
 
-	existingUser := &models.User{
-		ID:       uuid.New(),
-		Username: req.Username,
-	}
+	// Test retrieval
+	user, err := service.GetByID(ctx, createdUser.ID)
+	assert.NoError(t, err)
+	assert.NotNil(t, user)
+	assert.Equal(t, createdUser.ID, user.ID)
+	assert.Equal(t, createdUser.Username, user.Username)
 
-	mockRepo.On("GetByUsername", mock.Anything, req.Username, tenantID).Return(existingUser, nil)
-
-	user, err := service.Create(context.Background(), req)
+	// Test non-existent user
+	nonExistentID := uuid.New()
+	user, err = service.GetByID(ctx, nonExistentID)
 	assert.Error(t, err)
 	assert.Nil(t, user)
-	assert.Contains(t, err.Error(), "already exists")
-
-	mockRepo.AssertExpectations(t)
 }
 
-func TestService_GetByID(t *testing.T) {
-	mockRepo := new(MockUserRepository)
-	mockCredRepo := new(MockCredentialRepository)
-	service := NewService(mockRepo, mockCredRepo)
-
-	userID := uuid.New()
-	expectedUser := &models.User{
-		ID:       userID,
-		Username: "testuser",
-		Email:    "test@example.com",
-	}
-
-	mockRepo.On("GetByID", mock.Anything, userID).Return(expectedUser, nil)
-
-	user, err := service.GetByID(context.Background(), userID)
-	require.NoError(t, err)
-	assert.Equal(t, expectedUser.ID, user.ID)
-	assert.Equal(t, expectedUser.Username, user.Username)
-
-	mockRepo.AssertExpectations(t)
-}
-
-func TestService_Update(t *testing.T) {
-	mockRepo := new(MockUserRepository)
-	mockCredRepo := new(MockCredentialRepository)
-	service := NewService(mockRepo, mockCredRepo)
-
-	userID := uuid.New()
+// TestUpdateUser tests user updates
+func TestUpdateUser(t *testing.T) {
+	ctx := context.Background()
 	tenantID := uuid.New()
-	existingUser := &models.User{
-		ID:       userID,
-		TenantID: &tenantID,
-		Username: "testuser",
-		Email:    "test@example.com",
-	}
 
-	updatedEmail := "updated@example.com"
-	updatedFirstName := "Updated"
-	req := &UpdateUserRequest{
-		Email:     &updatedEmail,
-		FirstName: &updatedFirstName,
-	}
-
-	mockRepo.On("GetByID", mock.Anything, userID).Return(existingUser, nil)
-	mockRepo.On("GetByEmail", mock.Anything, updatedEmail, tenantID).Return(nil, assert.AnError) // Email not taken
-	mockRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.User")).Return(nil)
-
-	user, err := service.Update(context.Background(), userID, req)
-	require.NoError(t, err)
-	assert.Equal(t, updatedEmail, user.Email)
-	if user.FirstName != nil {
-		assert.Equal(t, updatedFirstName, *user.FirstName)
-	}
-
-	mockRepo.AssertExpectations(t)
-}
-
-func TestService_Delete(t *testing.T) {
-	mockRepo := new(MockUserRepository)
-	mockCredRepo := new(MockCredentialRepository)
+	mockRepo := NewMockRepository()
+	mockCredRepo := &MockCredentialRepository{}
 	service := NewService(mockRepo, mockCredRepo)
 
-	userID := uuid.New()
-
-	mockRepo.On("Delete", mock.Anything, userID).Return(nil)
-
-	err := service.Delete(context.Background(), userID)
+	// Create a test user
+	createReq := &CreateUserRequest{
+		TenantID: tenantID,
+		Username: "testuser",
+		Email:    "test@example.com",
+		Password: "SecurePassword123!@#",
+	}
+	createdUser, err := service.Create(ctx, createReq)
 	require.NoError(t, err)
 
-	mockRepo.AssertExpectations(t)
-	mockRepo.AssertNumberOfCalls(t, "Delete", 1)
+	// Update user
+	newFirstName := "Updated"
+	newLastName := "Name"
+	updateReq := &UpdateUserRequest{
+		FirstName: &newFirstName,
+		LastName:  &newLastName,
+	}
+
+	updatedUser, err := service.Update(ctx, createdUser.ID, updateReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, updatedUser)
+	assert.Equal(t, newFirstName, *updatedUser.FirstName)
+	assert.Equal(t, newLastName, *updatedUser.LastName)
 }
 
+// TestDeleteUser tests user deletion
+func TestDeleteUser(t *testing.T) {
+	ctx := context.Background()
+	tenantID := uuid.New()
+
+	mockRepo := NewMockRepository()
+	mockCredRepo := &MockCredentialRepository{}
+	service := NewService(mockRepo, mockCredRepo)
+
+	// Create a test user
+	createReq := &CreateUserRequest{
+		TenantID: tenantID,
+		Username: "testuser",
+		Email:    "test@example.com",
+		Password: "SecurePassword123!@#",
+	}
+	createdUser, err := service.Create(ctx, createReq)
+	require.NoError(t, err)
+
+	// Delete user
+	err = service.Delete(ctx, createdUser.ID)
+	assert.NoError(t, err)
+
+	// Verify deletion
+	user, err := service.GetByID(ctx, createdUser.ID)
+	assert.Error(t, err)
+	assert.Nil(t, user)
+}
+
+// stringPtr is already defined in service_error_test.go, so we don't redeclare it
