@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/capability"
+	"github.com/arauth-identity/iam/identity/oauth_scope"
 	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
