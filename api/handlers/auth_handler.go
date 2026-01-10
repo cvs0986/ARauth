@@ -68,11 +68,52 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	resp, err := h.loginService.Login(c.Request.Context(), &req)
 	if err != nil {
+		// Log login failure
+		sourceIP, userAgent := extractSourceInfo(c)
+		actor := models.AuditActor{
+			Username:      req.Username,
+			PrincipalType: "UNKNOWN", // We don't know the principal type for failed logins
+		}
+		var tenantID *uuid.UUID
+		if req.TenantID != uuid.Nil {
+			tenantID = &req.TenantID
+		}
+		_ = h.auditService.LogLoginFailure(c.Request.Context(), actor, tenantID, sourceIP, userAgent, err.Error())
+
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":   "authentication_failed",
 			"message": err.Error(),
 		})
 		return
+	}
+
+	// Log login success (only if tokens were issued, not if MFA is required)
+	if !resp.MFARequired && resp.AccessToken != "" {
+		sourceIP, userAgent := extractSourceInfo(c)
+		// Decode access token to get user info
+		claimsObj, err := h.tokenService.ValidateAccessToken(resp.AccessToken)
+		if err == nil {
+			userID, _ := uuid.Parse(claimsObj.Subject)
+			actor := models.AuditActor{
+				UserID:        userID,
+				Username:      claimsObj.Username,
+				PrincipalType: claimsObj.PrincipalType,
+			}
+			var tenantID *uuid.UUID
+			if claimsObj.TenantID != "" {
+				if tid, err := uuid.Parse(claimsObj.TenantID); err == nil {
+					tenantID = &tid
+				}
+			}
+			_ = h.auditService.LogLoginSuccess(c.Request.Context(), actor, tenantID, sourceIP, userAgent, map[string]interface{}{
+				"remember_me": resp.RememberMe,
+			})
+			// Log token issued
+			_ = h.auditService.LogTokenIssued(c.Request.Context(), actor, tenantID, sourceIP, userAgent, map[string]interface{}{
+				"token_type": "access_token",
+				"expires_in": resp.ExpiresIn,
+			})
+		}
 	}
 
 	if resp.MFARequired {
@@ -106,6 +147,32 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
+	// Log token issued on refresh
+	if resp.AccessToken != "" {
+		sourceIP, userAgent := extractSourceInfo(c)
+		// Decode access token to get user info
+		claimsObj, err := h.tokenService.ValidateAccessToken(resp.AccessToken)
+		if err == nil {
+			userID, _ := uuid.Parse(claimsObj.Subject)
+			actor := models.AuditActor{
+				UserID:        userID,
+				Username:      claimsObj.Username,
+				PrincipalType: claimsObj.PrincipalType,
+			}
+			var tenantID *uuid.UUID
+			if claimsObj.TenantID != "" {
+				if tid, err := uuid.Parse(claimsObj.TenantID); err == nil {
+					tenantID = &tid
+				}
+			}
+			_ = h.auditService.LogTokenIssued(c.Request.Context(), actor, tenantID, sourceIP, userAgent, map[string]interface{}{
+				"token_type": "access_token",
+				"expires_in": resp.ExpiresIn,
+				"refreshed":  true,
+			})
+		}
+	}
+
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -126,12 +193,47 @@ func (h *AuthHandler) RevokeToken(c *gin.Context) {
 	if req.TokenType == "refresh_token" || req.TokenType == "" {
 		// Try to revoke as refresh token
 		if err := h.refreshService.RevokeRefreshToken(c.Request.Context(), req.Token); err == nil {
+			// Log token revocation
+			sourceIP, userAgent := extractSourceInfo(c)
+			// Try to get user info from context if available
+			if actor, err := extractActorFromContext(c); err == nil {
+				var tenantID *uuid.UUID
+				if tenantIDStr, exists := middleware.GetTenantID(c); exists {
+					tenantID = &tenantIDStr
+				}
+				_ = h.auditService.LogTokenRevoked(c.Request.Context(), actor, tenantID, sourceIP, userAgent, map[string]interface{}{
+					"token_type": "refresh_token",
+				})
+			}
 			c.JSON(http.StatusOK, gin.H{"message": "Token revoked successfully"})
 			return
 		}
 	}
 
 	// If refresh token revocation failed or it's an access token, add to blacklist
+	// Try to decode access token to get user info
+	sourceIP, userAgent := extractSourceInfo(c)
+	if req.TokenType == "access_token" || req.TokenType == "" {
+		claimsObj, err := h.tokenService.ValidateAccessToken(req.Token)
+		if err == nil {
+			userID, _ := uuid.Parse(claimsObj.Subject)
+			actor := models.AuditActor{
+				UserID:        userID,
+				Username:      claimsObj.Username,
+				PrincipalType: claimsObj.PrincipalType,
+			}
+			var tenantID *uuid.UUID
+			if claimsObj.TenantID != "" {
+				if tid, err := uuid.Parse(claimsObj.TenantID); err == nil {
+					tenantID = &tid
+				}
+			}
+			_ = h.auditService.LogTokenRevoked(c.Request.Context(), actor, tenantID, sourceIP, userAgent, map[string]interface{}{
+				"token_type": "access_token",
+			})
+		}
+	}
+
 	// TODO: Implement Redis blacklist for access tokens
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Token revocation requested. Access tokens will be invalidated on expiry.",
