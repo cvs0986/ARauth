@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/google/uuid"
 )
 
 // issueDirectTokens issues access and refresh tokens directly
@@ -20,6 +20,9 @@ func (s *Service) issueDirectTokens(ctx context.Context, user *models.User, tena
 	if err != nil {
 		return nil, fmt.Errorf("failed to build claims: %w", err)
 	}
+
+	// Set AMR claim (assuming password authentication for direct tokens)
+	claimsObj.AMR = []string{"pwd"}
 
 	// Generate access token
 	accessToken, err := s.tokenService.GenerateAccessToken(claimsObj, lifetimes.AccessTokenTTL)
@@ -69,4 +72,3 @@ func (s *Service) issueDirectTokens(ctx context.Context, user *models.User, tena
 		RememberMe:       rememberMe,
 	}, nil
 }
-

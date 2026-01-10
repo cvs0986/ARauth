@@ -8,11 +8,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/role"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -99,7 +99,7 @@ func TestRoleHandler_Create(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockRoleService)
-	handler := NewRoleHandler(mockService)
+	handler := NewRoleHandler(mockService, nil, nil, nil, nil)
 
 	tenantID := uuid.New()
 	router := gin.New()
@@ -137,7 +137,7 @@ func TestRoleHandler_GetByID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockRoleService)
-	handler := NewRoleHandler(mockService)
+	handler := NewRoleHandler(mockService, nil, nil, nil, nil)
 
 	tenantID := uuid.New()
 	roleID := uuid.New()
@@ -169,7 +169,7 @@ func TestRoleHandler_List(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockRoleService)
-	handler := NewRoleHandler(mockService)
+	handler := NewRoleHandler(mockService, nil, nil, nil, nil)
 
 	tenantID := uuid.New()
 	router := gin.New()
@@ -194,4 +194,3 @@ func TestRoleHandler_List(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockService.AssertExpectations(t)
 }
-

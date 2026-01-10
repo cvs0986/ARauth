@@ -8,10 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/auth/mfa"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -23,6 +23,14 @@ type MockMFAService struct {
 
 func (m *MockMFAService) Enroll(ctx context.Context, req *mfa.EnrollRequest) (*mfa.EnrollResponse, error) {
 	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*mfa.EnrollResponse), args.Error(1)
+}
+
+func (m *MockMFAService) EnrollForLogin(ctx context.Context, sessionID string) (*mfa.EnrollResponse, error) {
+	args := m.Called(ctx, sessionID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -68,12 +76,20 @@ func (m *MockMFAService) VerifyChallenge(ctx context.Context, req *mfa.VerifyCha
 	return args.Get(0).(*mfa.VerifyChallengeResponse), args.Error(1)
 }
 
+func (m *MockMFAService) CreateSession(ctx context.Context, userID uuid.UUID, tenantID uuid.UUID) (string, error) {
+	args := m.Called(ctx, userID, tenantID)
+	return args.String(0), args.Error(1)
+}
+
 func TestMFAHandler_Enroll(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockMFAService)
-	// Note: Audit logger and other dependencies are not easily mockable, but tests can still verify handler behavior
-	handler := NewMFAHandler(mockService, nil, nil, nil, nil, nil)
+	mockAuditService := new(MockAuditService)
+	// Expect LogMFAEnrolled
+	mockAuditService.On("LogMFAEnrolled", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	handler := NewMFAHandler(mockService, nil, nil, nil, nil, nil, nil, mockAuditService)
 
 	userID := uuid.New()
 	router := gin.New()
@@ -112,7 +128,8 @@ func TestMFAHandler_Challenge(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockMFAService)
-	handler := NewMFAHandler(mockService, nil, nil, nil, nil, nil)
+	mockAuditService := new(MockAuditService)
+	handler := NewMFAHandler(mockService, nil, nil, nil, nil, nil, nil, mockAuditService)
 
 	router := gin.New()
 	router.POST("/api/v1/mfa/challenge", handler.Challenge)
@@ -145,7 +162,9 @@ func TestMFAHandler_Enroll_InvalidRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockMFAService)
-	handler := NewMFAHandler(mockService, nil, nil, nil, nil, nil)
+	mockAuditService := new(MockAuditService)
+	// pass nil for refreshTokenRepo
+	handler := NewMFAHandler(mockService, nil, nil, nil, nil, nil, nil, mockAuditService)
 
 	router := gin.New()
 	router.POST("/api/v1/mfa/enroll", handler.Enroll)
@@ -160,4 +179,3 @@ func TestMFAHandler_Enroll_InvalidRequest(t *testing.T) {
 	// Handler checks for user_claims first, so missing claims should return 401
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
-

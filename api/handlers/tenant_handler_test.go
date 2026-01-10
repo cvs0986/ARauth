@@ -8,11 +8,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/tenant"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -71,7 +71,7 @@ func TestTenantHandler_Create(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockTenantService)
-	handler := NewTenantHandler(mockService)
+	handler := NewTenantHandler(mockService, nil)
 
 	router := gin.New()
 	router.POST("/api/v1/tenants", handler.Create)
@@ -105,7 +105,7 @@ func TestTenantHandler_GetByID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockTenantService)
-	handler := NewTenantHandler(mockService)
+	handler := NewTenantHandler(mockService, nil)
 
 	router := gin.New()
 	router.GET("/api/v1/tenants/:id", handler.GetByID)
@@ -132,7 +132,7 @@ func TestTenantHandler_List(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockTenantService)
-	handler := NewTenantHandler(mockService)
+	handler := NewTenantHandler(mockService, nil)
 
 	router := gin.New()
 	router.GET("/api/v1/tenants", handler.List)
@@ -152,4 +152,3 @@ func TestTenantHandler_List(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockService.AssertExpectations(t)
 }
-

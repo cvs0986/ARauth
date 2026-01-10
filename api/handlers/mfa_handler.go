@@ -3,27 +3,29 @@ package handlers
 import (
 	"net/http"
 	"strings"
+	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/auth/mfa"
 	"github.com/arauth-identity/iam/auth/token"
-	auditlogger "github.com/arauth-identity/iam/internal/audit"
 	auditevent "github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/identity/models"
+	auditlogger "github.com/arauth-identity/iam/internal/audit"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // MFAHandler handles MFA-related HTTP requests
 type MFAHandler struct {
-	mfaService      mfa.ServiceInterface
-	auditLogger     *auditlogger.Logger // Legacy audit logger (keep for backward compatibility)
-	auditService    auditevent.ServiceInterface // New structured audit service
-	tokenService    token.ServiceInterface
-	claimsBuilder   *claims.Builder
-	userRepo        interfaces.UserRepository
+	mfaService       mfa.ServiceInterface
+	auditLogger      *auditlogger.Logger         // Legacy audit logger (keep for backward compatibility)
+	auditService     auditevent.ServiceInterface // New structured audit service
+	tokenService     token.ServiceInterface
+	refreshTokenRepo interfaces.RefreshTokenRepository // Dependency for storing refresh tokens
+	claimsBuilder    *claims.Builder
+	userRepo         interfaces.UserRepository
 	lifetimeResolver *token.LifetimeResolver
 }
 
@@ -32,6 +34,7 @@ func NewMFAHandler(
 	mfaService mfa.ServiceInterface,
 	auditLogger *auditlogger.Logger,
 	tokenService token.ServiceInterface,
+	refreshTokenRepo interfaces.RefreshTokenRepository, // New dependency
 	claimsBuilder *claims.Builder,
 	userRepo interfaces.UserRepository,
 	lifetimeResolver *token.LifetimeResolver,
@@ -42,6 +45,7 @@ func NewMFAHandler(
 		auditLogger:      auditLogger,
 		auditService:     auditService,
 		tokenService:     tokenService,
+		refreshTokenRepo: refreshTokenRepo,
 		claimsBuilder:    claimsBuilder,
 		userRepo:         userRepo,
 		lifetimeResolver: lifetimeResolver,
@@ -268,10 +272,10 @@ func (h *MFAHandler) EnrollForLogin(c *gin.Context) {
 func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 	// Parse request body - support both challenge_id/code and session_id/totp_code formats
 	var body struct {
-		ChallengeID string `json:"challenge_id"` // Frontend uses this
-		Code        string `json:"code"`          // Frontend uses this
-		SessionID   string `json:"session_id"`   // Backend expects this
-		TOTPCode    string `json:"totp_code"`     // Backend expects this
+		ChallengeID  string `json:"challenge_id"` // Frontend uses this
+		Code         string `json:"code"`         // Frontend uses this
+		SessionID    string `json:"session_id"`   // Backend expects this
+		TOTPCode     string `json:"totp_code"`    // Backend expects this
 		RecoveryCode string `json:"recovery_code"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -298,8 +302,8 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 
 	// Create verify challenge request
 	req := &mfa.VerifyChallengeRequest{
-		SessionID:   sessionID,
-		TOTPCode:    totpCode,
+		SessionID:    sessionID,
+		TOTPCode:     totpCode,
 		RecoveryCode: body.RecoveryCode,
 	}
 
@@ -426,6 +430,9 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		return
 	}
 
+	// Set AMR claim to include MFA
+	claimsObj.AMR = []string{"pwd", "mfa"}
+
 	// Get token lifetimes
 	var tenantID uuid.UUID
 	if user.TenantID != nil {
@@ -449,9 +456,34 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		return
 	}
 
-	// Note: Refresh token storage is skipped in MFA flow
-	// The refresh token is returned to the client but not stored in the database
-	// This can be enhanced later if refresh token storage is needed for MFA flow
+	// Note: Refresh token storage is executed here to enforce MFA verification
+	// The refresh token is returned to the client and stored in the database with MFAVerified=true
+
+	// Hash the refresh token
+	tokenHash, err := h.tokenService.HashRefreshToken(refreshToken)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "token_hash_failed",
+			"Failed to hash refresh token", nil)
+		return
+	}
+
+	// Store the refresh token with MFAVerified = true
+	rt := &interfaces.RefreshToken{
+		UserID:      userID,
+		TenantID:    tenantID, // Use the tenant ID from the user object or context
+		TokenHash:   tokenHash,
+		ExpiresAt:   time.Now().Add(lifetimes.RefreshTokenTTL),
+		RememberMe:  false, // TODO: Support remember_me from request
+		MFAVerified: true,  // CRITICAL: Mark as MFA verified
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	if err := h.refreshTokenRepo.Create(c.Request.Context(), rt); err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "token_storage_failed",
+			"Failed to store refresh token", nil)
+		return
+	}
 
 	// Generate ID token (same as access token for now, can be enhanced later)
 	idToken, err := h.tokenService.GenerateAccessToken(claimsObj, lifetimes.IDTokenTTL)
@@ -476,8 +508,8 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		"mfa_verified": true,
 	})
 	_ = h.auditService.LogTokenIssued(c.Request.Context(), actor, tenantIDPtr, sourceIP, userAgent, map[string]interface{}{
-		"token_type": "access_token",
-		"expires_in": int(lifetimes.AccessTokenTTL.Seconds()),
+		"token_type":   "access_token",
+		"expires_in":   int(lifetimes.AccessTokenTTL.Seconds()),
 		"mfa_required": true,
 	})
 
@@ -491,4 +523,3 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		"refresh_expires_in": int(lifetimes.RefreshTokenTTL.Seconds()),
 	})
 }
-

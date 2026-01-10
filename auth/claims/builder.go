@@ -4,28 +4,28 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
-	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/capability"
+	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/oauth_scope"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/google/uuid"
 )
 
 // Builder builds JWT claims from user, roles, and permissions
 type Builder struct {
-	roleRepo        interfaces.RoleRepository
-	permissionRepo  interfaces.PermissionRepository
-	systemRoleRepo  interfaces.SystemRoleRepository // NEW: For SYSTEM users
-	capabilityService capability.ServiceInterface // NEW: For capability context
-	oauthScopeService oauth_scope.ServiceInterface // NEW: For OAuth scope mapping
+	roleRepo          interfaces.RoleRepository
+	permissionRepo    interfaces.PermissionRepository
+	systemRoleRepo    interfaces.SystemRoleRepository // NEW: For SYSTEM users
+	capabilityService capability.ServiceInterface     // NEW: For capability context
+	oauthScopeService oauth_scope.ServiceInterface    // NEW: For OAuth scope mapping
 }
 
 // NewBuilder creates a new claims builder
 func NewBuilder(roleRepo interfaces.RoleRepository, permissionRepo interfaces.PermissionRepository, systemRoleRepo interfaces.SystemRoleRepository, capabilityService capability.ServiceInterface, oauthScopeService oauth_scope.ServiceInterface) *Builder {
 	return &Builder{
-		roleRepo:       roleRepo,
-		permissionRepo: permissionRepo,
-		systemRoleRepo: systemRoleRepo,
+		roleRepo:          roleRepo,
+		permissionRepo:    permissionRepo,
+		systemRoleRepo:    systemRoleRepo,
 		capabilityService: capabilityService,
 		oauthScopeService: oauthScopeService,
 	}
@@ -34,50 +34,52 @@ func NewBuilder(roleRepo interfaces.RoleRepository, permissionRepo interfaces.Pe
 // Claims represents JWT claims
 type Claims struct {
 	// Standard claims
-	Subject string `json:"sub"` // User ID
-	Issuer  string `json:"iss,omitempty"`
-	Audience string `json:"aud,omitempty"`
-	ExpiresAt int64 `json:"exp,omitempty"`
-	IssuedAt  int64 `json:"iat,omitempty"`
-	NotBefore int64 `json:"nbf,omitempty"`
+	Subject   string   `json:"sub"`           // User ID
+	ID        string   `json:"jti,omitempty"` // Unique Token Identifier
+	Issuer    string   `json:"iss,omitempty"`
+	Audience  string   `json:"aud,omitempty"`
+	ExpiresAt int64    `json:"exp,omitempty"`
+	IssuedAt  int64    `json:"iat,omitempty"`
+	NotBefore int64    `json:"nbf,omitempty"`
+	AMR       []string `json:"amr,omitempty"` // Authentication Methods References
 
 	// Custom claims
-	PrincipalType    string   `json:"principal_type"` // NEW: SYSTEM, TENANT, SERVICE
-	TenantID         string   `json:"tenant_id,omitempty"` // Optional for SYSTEM users
-	Email            string   `json:"email,omitempty"`
-	Username         string   `json:"username,omitempty"`
-	Roles            []string `json:"roles,omitempty"` // Tenant roles
-	Permissions      []string `json:"permissions,omitempty"` // Tenant permissions
-	SystemRoles      []string `json:"system_roles,omitempty"` // NEW: System roles
+	PrincipalType     string   `json:"principal_type"`      // NEW: SYSTEM, TENANT, SERVICE
+	TenantID          string   `json:"tenant_id,omitempty"` // Optional for SYSTEM users
+	Email             string   `json:"email,omitempty"`
+	Username          string   `json:"username,omitempty"`
+	Roles             []string `json:"roles,omitempty"`              // Tenant roles
+	Permissions       []string `json:"permissions,omitempty"`        // Tenant permissions
+	SystemRoles       []string `json:"system_roles,omitempty"`       // NEW: System roles
 	SystemPermissions []string `json:"system_permissions,omitempty"` // NEW: System permissions
-	Scope            string   `json:"scope,omitempty"` // Space-separated scopes
+	Scope             string   `json:"scope,omitempty"`              // Space-separated scopes
 	// Capability context (informational only, not authoritative for authorization)
-	Capabilities     map[string]bool   `json:"capabilities,omitempty"` // Capabilities available to tenant
-	Features         map[string]FeatureInfo `json:"features,omitempty"` // Features enabled by tenant
+	Capabilities map[string]bool        `json:"capabilities,omitempty"` // Capabilities available to tenant
+	Features     map[string]FeatureInfo `json:"features,omitempty"`     // Features enabled by tenant
 	// Impersonation claims (if token is from impersonation)
-	ImpersonatedBy   string   `json:"impersonated_by,omitempty"` // ID of user who is impersonating
+	ImpersonatedBy         string `json:"impersonated_by,omitempty"`          // ID of user who is impersonating
 	ImpersonationSessionID string `json:"impersonation_session_id,omitempty"` // Session ID for the impersonation
 }
 
 // FeatureInfo represents information about an enabled feature
 type FeatureInfo struct {
-	Enabled    bool   `json:"enabled"`
-	Required   bool   `json:"required,omitempty"` // If feature is required (e.g., MFA for admins)
+	Enabled  bool `json:"enabled"`
+	Required bool `json:"required,omitempty"` // If feature is required (e.g., MFA for admins)
 }
 
 // BuildClaims builds claims for a user
 func (b *Builder) BuildClaims(ctx context.Context, user *models.User) (*Claims, error) {
 	claims := &Claims{
-		Subject:       user.ID.String(),
-		PrincipalType: string(user.PrincipalType),
-		Email:         user.Email,
-		Username:      user.Username,
-		Roles:         []string{},
-		Permissions:   []string{},
-		SystemRoles:  []string{},
+		Subject:           user.ID.String(),
+		PrincipalType:     string(user.PrincipalType),
+		Email:             user.Email,
+		Username:          user.Username,
+		Roles:             []string{},
+		Permissions:       []string{},
+		SystemRoles:       []string{},
 		SystemPermissions: []string{},
-		Capabilities:  make(map[string]bool),
-		Features:      make(map[string]FeatureInfo),
+		Capabilities:      make(map[string]bool),
+		Features:          make(map[string]FeatureInfo),
 	}
 
 	// Handle tenant_id (nullable for SYSTEM users)
@@ -264,4 +266,3 @@ func joinStrings(strs []string, sep string) string {
 	}
 	return result
 }
-

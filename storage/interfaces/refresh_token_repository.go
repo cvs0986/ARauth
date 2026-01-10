@@ -9,15 +9,16 @@ import (
 
 // RefreshToken represents a refresh token
 type RefreshToken struct {
-	ID         uuid.UUID  `db:"id"`
-	UserID     uuid.UUID  `db:"user_id"`
-	TenantID   uuid.UUID  `db:"tenant_id"`
-	TokenHash  string     `db:"token_hash"`
-	ExpiresAt  time.Time  `db:"expires_at"`
-	RevokedAt  *time.Time `db:"revoked_at"`
-	RememberMe bool       `db:"remember_me"`
-	CreatedAt  time.Time  `db:"created_at"`
-	UpdatedAt  time.Time  `db:"updated_at"`
+	ID          uuid.UUID  `db:"id"`
+	UserID      uuid.UUID  `db:"user_id"`
+	TenantID    uuid.UUID  `db:"tenant_id"`
+	TokenHash   string     `db:"token_hash"`
+	ExpiresAt   time.Time  `db:"expires_at"`
+	RevokedAt   *time.Time `db:"revoked_at"`
+	RememberMe  bool       `db:"remember_me"`
+	MFAVerified bool       `db:"mfa_verified"`
+	CreatedAt   time.Time  `db:"created_at"`
+	UpdatedAt   time.Time  `db:"updated_at"`
 }
 
 // RefreshTokenRepository defines operations for refresh tokens
@@ -43,4 +44,3 @@ type RefreshTokenRepository interface {
 	// DeleteExpired deletes expired refresh tokens
 	DeleteExpired(ctx context.Context) error
 }
-

@@ -196,7 +196,10 @@ func main() {
 	lifetimeResolver := token.NewLifetimeResolver(&cfg.Security, tenantSettingsRepo)
 
 	// Initialize token service
-	tokenService, err := token.NewService(&cfg.Security, lifetimeResolver)
+	// Initialize blacklist service
+	blacklistService := token.NewBlacklistService(cacheClient, logger.Logger)
+	
+	tokenService, err := token.NewService(&cfg.Security, lifetimeResolver, blacklistService)
 	if err != nil {
 		logger.Logger.Fatal("Failed to initialize token service", zap.Error(err))
 	}
@@ -260,7 +263,7 @@ func main() {
 	tenantHandler := handlers.NewTenantHandler(tenantService, auditEventService)
 	userHandler := handlers.NewUserHandler(userService, systemRoleRepo, roleRepo, auditEventService)
 	authHandler := handlers.NewAuthHandler(loginService, refreshService, tokenService, auditEventService, mfaService)
-	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger, tokenService, claimsBuilder, userRepo, lifetimeResolver, auditEventService)
+	mfaHandler := handlers.NewMFAHandler(mfaService, auditLogger, tokenService, refreshTokenRepo, claimsBuilder, userRepo, lifetimeResolver, auditEventService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService, auditEventService)
 	roleHandler := handlers.NewRoleHandler(roleService, systemRoleRepo, userRepo, auditEventService, permissionService)
 	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo, tenantSettingsRepo, capabilityService, auditEventService) // NEW: System handler with tenant settings

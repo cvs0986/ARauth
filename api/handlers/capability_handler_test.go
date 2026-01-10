@@ -8,12 +8,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/arauth-identity/iam/identity/capability"
+	"github.com/arauth-identity/iam/identity/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/arauth-identity/iam/identity/capability"
-	"github.com/arauth-identity/iam/identity/models"
 )
 
 // MockCapabilityService is a mock implementation of capability.ServiceInterface
@@ -120,6 +120,22 @@ func (m *MockCapabilityService) EvaluateCapability(ctx context.Context, tenantID
 	return args.Get(0).(*capability.CapabilityEvaluation), args.Error(1)
 }
 
+func (m *MockCapabilityService) GetTenantCapabilities(ctx context.Context, tenantID uuid.UUID) ([]*models.TenantCapability, error) {
+	args := m.Called(ctx, tenantID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.TenantCapability), args.Error(1)
+}
+
+func (m *MockCapabilityService) GetTenantFeatureEnablements(ctx context.Context, tenantID uuid.UUID) ([]*models.TenantFeatureEnablement, error) {
+	args := m.Called(ctx, tenantID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*models.TenantFeatureEnablement), args.Error(1)
+}
+
 func TestCapabilityHandler_ListSystemCapabilities(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -134,7 +150,7 @@ func TestCapabilityHandler_ListSystemCapabilities(t *testing.T) {
 				m.On("GetAllSystemCapabilities", mock.Anything).Return([]*models.SystemCapability{
 					{
 						CapabilityKey: "mfa",
-						Enabled:      true,
+						Enabled:       true,
 					},
 				}, nil)
 			},
@@ -264,4 +280,3 @@ func TestCapabilityHandler_UpdateSystemCapability(t *testing.T) {
 		})
 	}
 }
-

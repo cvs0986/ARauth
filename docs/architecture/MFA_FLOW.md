@@ -65,3 +65,17 @@ All significant events are audit logged:
 - WebAuthn/Passkey support.
 - SMS/Email OTP (low priority, insecure).
 - Push Notifications.
+
+## Refresh Token Preservation
+To prevent bypass of MFA via refresh tokens:
+1.  **MFAVerified Flag**: The refresh token table (`refresh_tokens`) includes an `mfa_verified` (boolean) column.
+    - Set to `true` ONLY when a refresh token is issued after a successful MFA verification.
+    - Set to `false` for standard password-only logins (if MFA is not required).
+2.  **Rotation**: When a refresh token is rotated (used to get a new pair), the new refresh token **inherits** the `mfa_verified` status of the parent token.
+3.  **Enforcement**: The Refresh Service checks: `IF User.MFAEnabled == true AND RefreshToken.MFAVerified == false THEN DENY`.
+
+## JWT Claims (AMR)
+The system implements the `amr` (Authentication Methods References) claim in Access Tokens:
+- `["pwd"]`: Standard password authentication.
+- `["pwd", "mfa"]`: Multi-factor authentication verified.
+- The `amr` claim is set based on the `mfa_verified` status of the refresh token during refresh flows.
