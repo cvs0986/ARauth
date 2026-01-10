@@ -3,11 +3,9 @@ package handlers
 import (
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/scim"
 )
