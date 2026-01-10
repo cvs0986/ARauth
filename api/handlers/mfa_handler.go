@@ -461,6 +461,26 @@ func (h *MFAHandler) VerifyChallenge(c *gin.Context) {
 		return
 	}
 
+	// Log login success and token issued after successful MFA verification
+	sourceIP, userAgent := extractSourceInfo(c)
+	actor := models.AuditActor{
+		UserID:        userID,
+		Username:      user.Username,
+		PrincipalType: string(user.PrincipalType),
+	}
+	var tenantIDPtr *uuid.UUID
+	if user.TenantID != nil {
+		tenantIDPtr = user.TenantID
+	}
+	_ = h.auditService.LogLoginSuccess(c.Request.Context(), actor, tenantIDPtr, sourceIP, userAgent, map[string]interface{}{
+		"mfa_verified": true,
+	})
+	_ = h.auditService.LogTokenIssued(c.Request.Context(), actor, tenantIDPtr, sourceIP, userAgent, map[string]interface{}{
+		"token_type": "access_token",
+		"expires_in": int(lifetimes.AccessTokenTTL.Seconds()),
+		"mfa_required": true,
+	})
+
 	c.JSON(http.StatusOK, gin.H{
 		"verified":           true,
 		"access_token":       accessToken,
