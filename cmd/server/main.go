@@ -24,6 +24,7 @@ import (
 	"github.com/arauth-identity/iam/identity/role"
 	"github.com/arauth-identity/iam/identity/tenant"
 	"github.com/arauth-identity/iam/identity/user"
+	"github.com/arauth-identity/iam/auth/federation"
 	auditlogger "github.com/arauth-identity/iam/internal/audit"
 	auditevent "github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/internal/cache"
@@ -120,6 +121,10 @@ func main() {
 	tenantFeatureEnablementRepo := postgres.NewTenantFeatureEnablementRepository(db)
 	userCapabilityStateRepo := postgres.NewUserCapabilityStateRepository(db)
 
+	// Initialize federation repositories
+	idpRepo := postgres.NewIdentityProviderRepository(db)
+	fedIdRepo := postgres.NewFederatedIdentityRepository(db)
+
 	// Initialize audit logger (legacy)
 	auditLogger := auditlogger.NewLogger(auditRepo)
 
@@ -192,6 +197,16 @@ func main() {
 	// Initialize refresh service
 	refreshService := token.NewRefreshService(tokenService, refreshTokenRepo, userRepo, claimsBuilder, lifetimeResolver)
 
+	// Initialize federation service
+	federationService := federation.NewService(
+		idpRepo,
+		fedIdRepo,
+		userRepo,
+		credentialRepo,
+		claimsBuilder,
+		tokenService,
+	)
+
 	// Initialize handlers
 	tenantHandler := handlers.NewTenantHandler(tenantService, auditEventService)
 	userHandler := handlers.NewUserHandler(userService, systemRoleRepo, roleRepo, auditEventService)
@@ -202,6 +217,7 @@ func main() {
 	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo, tenantSettingsRepo, capabilityService, auditEventService) // NEW: System handler with tenant settings
 	capabilityHandler := handlers.NewCapabilityHandler(capabilityService) // NEW: Capability handler
 	auditHandler := handlers.NewAuditHandler(auditEventService) // NEW: Audit event handler
+	federationHandler := handlers.NewFederationHandler(federationService) // NEW: Federation handler
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
@@ -214,7 +230,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
 
 	// Create HTTP server
 	srv := &http.Server{

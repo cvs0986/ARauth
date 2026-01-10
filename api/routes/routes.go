@@ -35,7 +35,7 @@ func getRedis(redisClient interface{}) *redis.Client {
 }
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -242,6 +242,26 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 				audit.GET("/events", auditHandler.QueryEvents)
 				audit.GET("/events/:id", auditHandler.GetEvent)
 			}
+
+			// Federation routes (Identity Providers)
+			identityProviders := tenantScoped.Group("/identity-providers")
+			{
+				identityProviders.POST("", federationHandler.CreateIdentityProvider)
+				identityProviders.GET("", federationHandler.ListIdentityProviders)
+				identityProviders.GET("/:id", federationHandler.GetIdentityProvider)
+				identityProviders.PUT("/:id", federationHandler.UpdateIdentityProvider)
+				identityProviders.DELETE("/:id", federationHandler.DeleteIdentityProvider)
+			}
+		}
+
+		// Federation authentication routes (public, no auth required for initiation)
+		// These routes handle OIDC/SAML login flows
+		federationAuth := v1.Group("/auth")
+		{
+			federationAuth.GET("/oidc/:provider_id/initiate", federationHandler.InitiateOIDCLogin)
+			federationAuth.GET("/oidc/:provider_id/callback", federationHandler.HandleOIDCCallback)
+			federationAuth.GET("/saml/:provider_id/initiate", federationHandler.InitiateSAMLLogin)
+			federationAuth.POST("/saml/:provider_id/callback", federationHandler.HandleSAMLCallback)
 		}
 	}
 
