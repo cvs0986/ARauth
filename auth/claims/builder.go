@@ -21,12 +21,13 @@ type Builder struct {
 }
 
 // NewBuilder creates a new claims builder
-func NewBuilder(roleRepo interfaces.RoleRepository, permissionRepo interfaces.PermissionRepository, systemRoleRepo interfaces.SystemRoleRepository, capabilityService capability.ServiceInterface) *Builder {
+func NewBuilder(roleRepo interfaces.RoleRepository, permissionRepo interfaces.PermissionRepository, systemRoleRepo interfaces.SystemRoleRepository, capabilityService capability.ServiceInterface, oauthScopeService oauth_scope.ServiceInterface) *Builder {
 	return &Builder{
 		roleRepo:       roleRepo,
 		permissionRepo: permissionRepo,
 		systemRoleRepo: systemRoleRepo,
 		capabilityService: capabilityService,
+		oauthScopeService: oauthScopeService,
 	}
 }
 
@@ -189,15 +190,52 @@ func (b *Builder) BuildClaims(ctx context.Context, user *models.User) (*Claims, 
 	claims.Permissions = permissions
 
 	// Build scope string for tenant users
+	// First, get OAuth scopes that match user's permissions
 	scopeParts := make([]string, 0)
 	if user.TenantID != nil {
-		scopeParts = append(scopeParts, "tenant:"+user.TenantID.String())
-	}
-	for _, role := range roleNames {
-		scopeParts = append(scopeParts, "role:"+role)
-	}
-	for perm := range permissionMap {
-		scopeParts = append(scopeParts, "perm:"+perm)
+		// Add default scopes
+		if b.oauthScopeService != nil {
+			defaultScopes, err := b.oauthScopeService.GetDefaultScopes(ctx, *user.TenantID)
+			if err == nil {
+				for _, scope := range defaultScopes {
+					scopeParts = append(scopeParts, scope.Name)
+				}
+			}
+
+			// Get scopes that match user's permissions
+			permissionList := make([]string, 0, len(permissionMap))
+			for perm := range permissionMap {
+				permissionList = append(permissionList, perm)
+			}
+			if len(permissionList) > 0 {
+				matchingScopes, err := b.oauthScopeService.GetScopesForPermissions(ctx, *user.TenantID, permissionList)
+				if err == nil {
+					scopeMap := make(map[string]bool)
+					// Add default scopes to map to avoid duplicates
+					for _, scope := range defaultScopes {
+						scopeMap[scope.Name] = true
+					}
+					// Add matching scopes
+					for _, scope := range matchingScopes {
+						if !scopeMap[scope.Name] {
+							scopeParts = append(scopeParts, scope.Name)
+							scopeMap[scope.Name] = true
+						}
+					}
+				}
+			}
+		}
+
+		// Fallback: if no OAuth scopes configured, use legacy format
+		if len(scopeParts) == 0 {
+			scopeParts = append(scopeParts, "tenant:"+user.TenantID.String())
+			for _, role := range roleNames {
+				scopeParts = append(scopeParts, "role:"+role)
+			}
+			for perm := range permissionMap {
+				scopeParts = append(scopeParts, perm)
+			}
+		}
 	}
 	claims.Scope = joinStrings(scopeParts, " ")
 
