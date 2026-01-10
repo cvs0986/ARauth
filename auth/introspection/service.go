@@ -2,34 +2,49 @@ package introspection
 
 import (
 	"context"
-	"fmt"
+	"crypto/rsa"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
-	"github.com/arauth-identity/iam/auth/claims"
-	"github.com/arauth-identity/iam/auth/token"
 )
 
 // Service provides token introspection functionality (RFC 7662)
 type Service struct {
-	tokenService token.ServiceInterface
-	claimsParser *claims.Parser
+	jwtSecret []byte
+	publicKey *rsa.PublicKey
+	issuer    string
 }
 
 // NewService creates a new token introspection service
-func NewService(tokenService token.ServiceInterface, claimsParser *claims.Parser) ServiceInterface {
+func NewService(jwtSecret []byte, publicKey *rsa.PublicKey, issuer string) ServiceInterface {
 	return &Service{
-		tokenService: tokenService,
-		claimsParser: claimsParser,
+		jwtSecret: jwtSecret,
+		publicKey: publicKey,
+		issuer:    issuer,
 	}
 }
 
 // IntrospectToken introspects a token and returns its metadata
 func (s *Service) IntrospectToken(ctx context.Context, tokenString string, tokenTypeHint string) (*TokenInfo, error) {
-	// Parse and validate the token
-	token, err := s.tokenService.ValidateToken(ctx, tokenString)
-	if err != nil {
+	// Parse the token
+	parsedToken, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Verify signing method
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); ok {
+			if s.publicKey == nil {
+				return nil, jwt.ErrSignatureInvalid
+			}
+			return s.publicKey, nil
+		}
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); ok {
+			if len(s.jwtSecret) == 0 {
+				return nil, jwt.ErrSignatureInvalid
+			}
+			return s.jwtSecret, nil
+		}
+		return nil, jwt.ErrSignatureInvalid
+	})
+
+	if err != nil || !parsedToken.Valid {
 		// Token is invalid or expired - return inactive token
 		return &TokenInfo{
 			Active: false,
@@ -37,7 +52,7 @@ func (s *Service) IntrospectToken(ctx context.Context, tokenString string, token
 	}
 
 	// Extract claims
-	claims, ok := token.Claims.(jwt.MapClaims)
+	claims, ok := parsedToken.Claims.(jwt.MapClaims)
 	if !ok {
 		return &TokenInfo{
 			Active: false,
@@ -45,8 +60,7 @@ func (s *Service) IntrospectToken(ctx context.Context, tokenString string, token
 	}
 
 	// Check if token is expired
-	exp, ok := claims["exp"].(float64)
-	if ok {
+	if exp, ok := claims["exp"].(float64); ok {
 		expTime := time.Unix(int64(exp), 0)
 		if time.Now().After(expTime) {
 			return &TokenInfo{
@@ -148,4 +162,3 @@ func (s *Service) IntrospectToken(ctx context.Context, tokenString string, token
 
 	return info, nil
 }
-
