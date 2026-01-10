@@ -1,13 +1,12 @@
 package routes
 
 import (
-	"github.com/arauth-identity/iam/identity/scim"
 	"database/sql"
 
 	"github.com/gin-gonic/gin"
 	"github.com/arauth-identity/iam/api/handlers"
-	"github.com/arauth-identity/iam/identity/scim"
 	"github.com/arauth-identity/iam/api/middleware"
+	"github.com/arauth-identity/iam/identity/scim"
 	"github.com/arauth-identity/iam/auth/token"
 	"github.com/arauth-identity/iam/internal/cache"
 	"github.com/arauth-identity/iam/storage/interfaces"
