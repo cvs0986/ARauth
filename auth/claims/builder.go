@@ -16,6 +16,7 @@ type Builder struct {
 	permissionRepo  interfaces.PermissionRepository
 	systemRoleRepo  interfaces.SystemRoleRepository // NEW: For SYSTEM users
 	capabilityService capability.ServiceInterface // NEW: For capability context
+	oauthScopeService oauth_scope.ServiceInterface // NEW: For OAuth scope mapping
 }
 
 // NewBuilder creates a new claims builder

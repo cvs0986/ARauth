@@ -54,6 +54,11 @@ const (
 	// Impersonation events
 	EventTypeUserImpersonated      = "user.impersonated"
 	EventTypeUserImpersonationEnded = "user.impersonation.ended"
+
+	// OAuth Scope events
+	EventTypeOAuthScopeCreated = "oauth_scope.created"
+	EventTypeOAuthScopeUpdated = "oauth_scope.updated"
+	EventTypeOAuthScopeDeleted = "oauth_scope.deleted"
 )
 
 // Result constants
