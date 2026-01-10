@@ -2,8 +2,6 @@ package federation
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -684,8 +682,8 @@ func (s *Service) findOrCreateSAMLUser(ctx context.Context, provider *federation
 		return user, false, nil
 	}
 
-	// Check if user with this email already exists
-	existingUser, _ := s.userRepo.GetByEmail(ctx, email)
+	// Check if user with this email already exists (need tenant ID for tenant users)
+	existingUser, _ := s.userRepo.GetByEmail(ctx, email, tenantID)
 	if existingUser != nil {
 		// Link to existing user
 		fedIdentity := &federation.FederatedIdentity{
