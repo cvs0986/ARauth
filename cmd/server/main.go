@@ -281,6 +281,9 @@ func main() {
 	)
 	impersonationHandler := handlers.NewImpersonationHandler(impersonationService, auditEventService) // NEW: Impersonation handler
 
+	// Initialize OAuth scope handler
+	oauthScopeHandler := handlers.NewOAuthScopeHandler(oauthScopeService, auditEventService) // NEW: OAuth scope handler
+
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
 		gin.SetMode(gin.DebugMode)
