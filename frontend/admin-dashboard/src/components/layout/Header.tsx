@@ -16,16 +16,34 @@ import { TenantSelector } from '@/components/TenantSelector';
 import { UserTypeBadge } from '@/components/UserTypeBadge';
 import { Shield, LogOut, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { authApi } from '@/services/api';
 
 export function Header() {
   const { username, email, principalType, isAuthenticated } = usePrincipalContext();
-  const { clearAuth } = useAuthStore();
+  const { clearAuth, accessToken, refreshToken } = useAuthStore();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const handleLogout = () => {
-    clearAuth();
-    navigate('/login');
+  const handleLogout = async () => {
+    // Revoke tokens before clearing auth state
+    try {
+      // Try to revoke refresh token first (if exists)
+      if (refreshToken) {
+        await authApi.revoke(refreshToken, 'refresh_token');
+      }
+      // Then revoke access token
+      if (accessToken) {
+        await authApi.revoke(accessToken, 'access_token');
+      }
+    } catch (error) {
+      // Even if revocation fails, clear local auth state
+      // This ensures user is logged out locally even if backend is unreachable
+      console.error('Token revocation failed:', error);
+    } finally {
+      // Always clear auth state and redirect
+      clearAuth();
+      navigate('/login');
+    }
   };
 
   if (!isAuthenticated) {
