@@ -177,9 +177,6 @@ func (h *SystemHandler) UpdateTenant(c *gin.Context) {
 		existing.Metadata = req.Metadata
 	}
 
-	// Store old status for audit logging
-	oldStatus := existing.Status
-
 	if err := h.tenantRepo.Update(c.Request.Context(), existing); err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
 			"Failed to update tenant: "+err.Error(), nil)
@@ -250,7 +247,6 @@ func (h *SystemHandler) SuspendTenant(c *gin.Context) {
 		return
 	}
 
-	oldStatus := existing.Status
 	existing.Status = models.TenantStatusSuspended
 	if err := h.tenantRepo.Update(c.Request.Context(), existing); err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
@@ -289,7 +285,6 @@ func (h *SystemHandler) ResumeTenant(c *gin.Context) {
 		return
 	}
 
-	oldStatus := existing.Status
 	existing.Status = models.TenantStatusActive
 	if err := h.tenantRepo.Update(c.Request.Context(), existing); err != nil {
 		middleware.RespondWithError(c, http.StatusInternalServerError, "internal_error",
