@@ -8,19 +8,25 @@ import (
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/auth/login"
 	"github.com/arauth-identity/iam/auth/token"
+	"github.com/arauth-identity/iam/identity/audit"
+	"github.com/arauth-identity/iam/identity/models"
 )
 
 // AuthHandler handles authentication-related HTTP requests
 type AuthHandler struct {
 	loginService   login.ServiceInterface
 	refreshService *token.RefreshService
+	tokenService   token.ServiceInterface
+	auditService   audit.ServiceInterface
 }
 
 // NewAuthHandler creates a new auth handler
-func NewAuthHandler(loginService login.ServiceInterface, refreshService *token.RefreshService) *AuthHandler {
+func NewAuthHandler(loginService login.ServiceInterface, refreshService *token.RefreshService, tokenService token.ServiceInterface, auditService audit.ServiceInterface) *AuthHandler {
 	return &AuthHandler{
 		loginService:   loginService,
 		refreshService: refreshService,
+		tokenService:   tokenService,
+		auditService:   auditService,
 	}
 }
 
