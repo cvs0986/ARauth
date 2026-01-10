@@ -1,10 +1,12 @@
 package routes
 
 import (
+	"github.com/arauth-identity/iam/identity/scim"
 	"database/sql"
 
 	"github.com/gin-gonic/gin"
 	"github.com/arauth-identity/iam/api/handlers"
+	"github.com/arauth-identity/iam/identity/scim"
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/auth/token"
 	"github.com/arauth-identity/iam/internal/cache"
@@ -35,7 +37,7 @@ func getRedis(redisClient interface{}) *redis.Client {
 }
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, scimHandler *handlers.SCIMHandler, scimTokenService scim.TokenServiceInterface, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
