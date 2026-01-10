@@ -12,7 +12,7 @@ import (
 
 func TestService_Create_EmptyName(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	req := &CreateTenantRequest{
 		Name:   "", // Empty name - service doesn't validate this, only domain
@@ -32,7 +32,7 @@ func TestService_Create_EmptyName(t *testing.T) {
 
 func TestService_Create_EmptyDomain(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	req := &CreateTenantRequest{
 		Name:   "Test Tenant",
@@ -45,7 +45,7 @@ func TestService_Create_EmptyDomain(t *testing.T) {
 
 func TestService_Create_InvalidDomain(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	req := &CreateTenantRequest{
 		Name:   "Test Tenant",
@@ -59,7 +59,7 @@ func TestService_Create_InvalidDomain(t *testing.T) {
 
 func TestService_Create_DuplicateDomain_Error(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	domain := "test.example.com"
 
@@ -83,7 +83,7 @@ func TestService_Create_DuplicateDomain_Error(t *testing.T) {
 
 func TestService_GetByID_NotFound(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	nonExistentID := uuid.New()
 	mockRepo.On("GetByID", mock.Anything, nonExistentID).Return(nil, assert.AnError)
@@ -95,7 +95,7 @@ func TestService_GetByID_NotFound(t *testing.T) {
 
 func TestService_GetByDomain_NotFound(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	domain := "nonexistent.example.com"
 	mockRepo.On("GetByDomain", mock.Anything, domain).Return(nil, assert.AnError)

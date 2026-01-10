@@ -58,7 +58,7 @@ func (m *MockTenantRepository) List(ctx context.Context, filters *interfaces.Ten
 
 func TestService_Create(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	req := &CreateTenantRequest{
 		Name:   "Test Tenant",
@@ -89,7 +89,7 @@ func TestService_Create(t *testing.T) {
 
 func TestService_Create_DuplicateDomain(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	req := &CreateTenantRequest{
 		Name:   "Test Tenant",
@@ -113,7 +113,7 @@ func TestService_Create_DuplicateDomain(t *testing.T) {
 
 func TestService_GetByID(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	tenantID := uuid.New()
 	expectedTenant := &models.Tenant{
@@ -135,7 +135,7 @@ func TestService_GetByID(t *testing.T) {
 
 func TestService_Update(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	tenantID := uuid.New()
 	existingTenant := &models.Tenant{
@@ -162,7 +162,7 @@ func TestService_Update(t *testing.T) {
 
 func TestService_Delete(t *testing.T) {
 	mockRepo := new(MockTenantRepository)
-	service := NewService(mockRepo)
+	service := NewService(mockRepo, nil)
 
 	tenantID := uuid.New()
 	existingTenant := &models.Tenant{
