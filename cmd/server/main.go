@@ -121,10 +121,10 @@ func main() {
 	userCapabilityStateRepo := postgres.NewUserCapabilityStateRepository(db)
 
 	// Initialize audit logger (legacy)
-	auditLogger := audit.NewLogger(auditRepo)
+	auditLogger := auditlogger.NewLogger(auditRepo)
 
 	// Initialize audit event service (new structured audit)
-	auditEventService := audit.NewService(auditEventRepo)
+	auditEventService := auditevent.NewService(auditEventRepo)
 
 	// Initialize encryption (for MFA secrets)
 	encryptionKey := []byte(cfg.Security.EncryptionKey)
