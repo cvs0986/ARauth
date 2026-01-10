@@ -26,6 +26,7 @@ import (
 	"github.com/arauth-identity/iam/identity/user"
 	"github.com/arauth-identity/iam/auth/federation"
 	"github.com/arauth-identity/iam/identity/webhook"
+	"github.com/arauth-identity/iam/identity/linking"
 	webhookdispatcher "github.com/arauth-identity/iam/internal/webhook"
 	auditlogger "github.com/arauth-identity/iam/internal/audit"
 	auditevent "github.com/arauth-identity/iam/identity/audit"
@@ -222,6 +223,9 @@ func main() {
 		tokenService,
 	)
 
+	// Initialize identity linking service
+	identityLinkingService := linking.NewService(fedIdRepo, idpRepo)
+
 	// Initialize handlers
 	tenantHandler := handlers.NewTenantHandler(tenantService, auditEventService)
 	userHandler := handlers.NewUserHandler(userService, systemRoleRepo, roleRepo, auditEventService)
@@ -234,6 +238,7 @@ func main() {
 	auditHandler := handlers.NewAuditHandler(auditEventService) // NEW: Audit event handler
 	federationHandler := handlers.NewFederationHandler(federationService) // NEW: Federation handler
 	webhookHandler := handlers.NewWebhookHandler(webhookService) // NEW: Webhook handler
+	identityLinkingHandler := handlers.NewIdentityLinkingHandler(identityLinkingService) // NEW: Identity linking handler
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
@@ -246,7 +251,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
 
 	// Create HTTP server
 	srv := &http.Server{

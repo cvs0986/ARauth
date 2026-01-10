@@ -35,7 +35,7 @@ func getRedis(redisClient interface{}) *redis.Client {
 }
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -177,6 +177,12 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			users.GET("/:id/capabilities/:key", capabilityHandler.GetUserCapability)
 			users.POST("/:id/capabilities/:key/enroll", capabilityHandler.EnrollUserCapability)
 			users.DELETE("/:id/capabilities/:key", capabilityHandler.UnenrollUserCapability)
+			// User identity linking routes (must come before /:id)
+			users.GET("/:id/identities", identityLinkingHandler.GetUserIdentities)
+			users.POST("/:id/identities", identityLinkingHandler.LinkIdentity)
+			users.DELETE("/:id/identities/:identity_id", identityLinkingHandler.UnlinkIdentity)
+			users.PUT("/:id/identities/:identity_id/primary", identityLinkingHandler.SetPrimaryIdentity)
+			users.POST("/:id/identities/:identity_id/verify", identityLinkingHandler.VerifyIdentity)
 			// Generic user routes
 			users.GET("/:id", userHandler.GetByID)
 				users.PUT("/:id", userHandler.Update)
