@@ -32,17 +32,18 @@ const (
 	EventTypePermissionDeleted  = "permission.deleted"
 
 	// MFA events
-	EventTypeMFAEnrolled = "mfa.enrolled"
-	EventTypeMFAVerified = "mfa.verified"
-	EventTypeMFADisabled = "mfa.disabled"
-	EventTypeMFAReset    = "mfa.reset"
+	EventTypeMFAEnrolled         = "mfa.enrolled"
+	EventTypeMFAChallengeCreated = "mfa.challenge.created"
+	EventTypeMFAVerified         = "mfa.verified"
+	EventTypeMFADisabled         = "mfa.disabled"
+	EventTypeMFAReset            = "mfa.reset"
 
 	// Tenant events
-	EventTypeTenantCreated   = "tenant.created"
-	EventTypeTenantUpdated   = "tenant.updated"
-	EventTypeTenantDeleted   = "tenant.deleted"
-	EventTypeTenantSuspended  = "tenant.suspended"
-	EventTypeTenantResumed   = "tenant.resumed"
+	EventTypeTenantCreated         = "tenant.created"
+	EventTypeTenantUpdated         = "tenant.updated"
+	EventTypeTenantDeleted         = "tenant.deleted"
+	EventTypeTenantSuspended       = "tenant.suspended"
+	EventTypeTenantResumed         = "tenant.resumed"
 	EventTypeTenantSettingsUpdated = "tenant.settings.updated"
 
 	// Authentication events
@@ -52,7 +53,7 @@ const (
 	EventTypeTokenRevoked = "token.revoked"
 
 	// Impersonation events
-	EventTypeUserImpersonated      = "user.impersonated"
+	EventTypeUserImpersonated       = "user.impersonated"
 	EventTypeUserImpersonationEnded = "user.impersonation.ended"
 
 	// OAuth Scope events
@@ -70,26 +71,26 @@ const (
 
 // AuditEvent represents a structured audit event
 type AuditEvent struct {
-	ID          uuid.UUID              `json:"id" db:"id"`
-	EventType   string                 `json:"event_type" db:"event_type"`
-	Actor       AuditActor             `json:"actor" db:"-"`
-	Target      *AuditTarget           `json:"target,omitempty" db:"-"`
-	Timestamp   time.Time              `json:"timestamp" db:"timestamp"`
-	SourceIP    string                 `json:"source_ip,omitempty" db:"source_ip"`
-	UserAgent   string                 `json:"user_agent,omitempty" db:"user_agent"`
-	TenantID    *uuid.UUID             `json:"tenant_id,omitempty" db:"tenant_id"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
-	Result      string                 `json:"result" db:"result"`
-	Error       string                 `json:"error,omitempty" db:"error"`
-	CreatedAt   time.Time              `json:"created_at" db:"created_at"`
+	ID        uuid.UUID              `json:"id" db:"id"`
+	EventType string                 `json:"event_type" db:"event_type"`
+	Actor     AuditActor             `json:"actor" db:"-"`
+	Target    *AuditTarget           `json:"target,omitempty" db:"-"`
+	Timestamp time.Time              `json:"timestamp" db:"timestamp"`
+	SourceIP  string                 `json:"source_ip,omitempty" db:"source_ip"`
+	UserAgent string                 `json:"user_agent,omitempty" db:"user_agent"`
+	TenantID  *uuid.UUID             `json:"tenant_id,omitempty" db:"tenant_id"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty" db:"metadata"`
+	Result    string                 `json:"result" db:"result"`
+	Error     string                 `json:"error,omitempty" db:"error"`
+	CreatedAt time.Time              `json:"created_at" db:"created_at"`
 
 	// Database fields (flattened for storage)
-	ActorUserID        uuid.UUID `json:"-" db:"actor_user_id"`
-	ActorUsername      string    `json:"-" db:"actor_username"`
-	ActorPrincipalType string    `json:"-" db:"actor_principal_type"`
-	TargetType         *string   `json:"-" db:"target_type"`
+	ActorUserID        uuid.UUID  `json:"-" db:"actor_user_id"`
+	ActorUsername      string     `json:"-" db:"actor_username"`
+	ActorPrincipalType string     `json:"-" db:"actor_principal_type"`
+	TargetType         *string    `json:"-" db:"target_type"`
 	TargetID           *uuid.UUID `json:"-" db:"target_id"`
-	TargetIdentifier   *string   `json:"-" db:"target_identifier"`
+	TargetIdentifier   *string    `json:"-" db:"target_identifier"`
 }
 
 // AuditActor represents who performed the action
@@ -101,7 +102,7 @@ type AuditActor struct {
 
 // AuditTarget represents what was affected
 type AuditTarget struct {
-	Type       string    `json:"type"`       // "user", "role", "tenant", etc.
+	Type       string    `json:"type"` // "user", "role", "tenant", etc.
 	ID         uuid.UUID `json:"id"`
 	Identifier string    `json:"identifier"` // username, role name, etc.
 }
@@ -171,4 +172,3 @@ type ValidationError struct {
 func (e *ValidationError) Error() string {
 	return e.Message
 }
-

@@ -6,22 +6,22 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/webhook"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/google/uuid"
 )
 
 // Service provides audit event logging functionality
 type Service struct {
-	repo          interfaces.AuditEventRepository
+	repo           interfaces.AuditEventRepository
 	webhookService webhook.ServiceInterface
 }
 
 // NewService creates a new audit service
 func NewService(repo interfaces.AuditEventRepository, webhookService webhook.ServiceInterface) ServiceInterface {
 	return &Service{
-		repo:          repo,
+		repo:           repo,
 		webhookService: webhookService,
 	}
 }
@@ -118,18 +118,18 @@ func (s *Service) GetEvent(ctx context.Context, eventID uuid.UUID) (*models.Audi
 // createEvent is a helper to create an audit event
 func (s *Service) createEvent(eventType string, actor models.AuditActor, target *models.AuditTarget, tenantID *uuid.UUID, sourceIP, userAgent string, result string, errorMsg string, metadata map[string]interface{}) *models.AuditEvent {
 	event := &models.AuditEvent{
-		ID:          uuid.New(),
-		EventType:   eventType,
-		Actor:       actor,
-		Target:      target,
-		Timestamp:   time.Now(),
-		SourceIP:    sourceIP,
-		UserAgent:   userAgent,
-		TenantID:    tenantID,
-		Metadata:    metadata,
-		Result:      result,
-		Error:       errorMsg,
-		CreatedAt:   time.Now(),
+		ID:        uuid.New(),
+		EventType: eventType,
+		Actor:     actor,
+		Target:    target,
+		Timestamp: time.Now(),
+		SourceIP:  sourceIP,
+		UserAgent: userAgent,
+		TenantID:  tenantID,
+		Metadata:  metadata,
+		Result:    result,
+		Error:     errorMsg,
+		CreatedAt: time.Now(),
 	}
 	return event
 }
@@ -230,6 +230,12 @@ func (s *Service) LogMFAEnrolled(ctx context.Context, actor models.AuditActor, t
 	return s.LogEvent(ctx, event)
 }
 
+// LogMFAChallengeCreated logs an MFA challenge creation event
+func (s *Service) LogMFAChallengeCreated(ctx context.Context, actor models.AuditActor, tenantID *uuid.UUID, sourceIP, userAgent string) error {
+	event := s.createEvent(models.EventTypeMFAChallengeCreated, actor, nil, tenantID, sourceIP, userAgent, models.ResultSuccess, "", nil)
+	return s.LogEvent(ctx, event)
+}
+
 // LogMFAVerified logs an MFA verification event
 func (s *Service) LogMFAVerified(ctx context.Context, actor models.AuditActor, tenantID *uuid.UUID, sourceIP, userAgent string, success bool) error {
 	result := models.ResultSuccess
@@ -311,4 +317,3 @@ func (s *Service) LogTokenRevoked(ctx context.Context, actor models.AuditActor, 
 	event := s.createEvent(models.EventTypeTokenRevoked, actor, nil, tenantID, sourceIP, userAgent, models.ResultSuccess, "", metadata)
 	return s.LogEvent(ctx, event)
 }
-

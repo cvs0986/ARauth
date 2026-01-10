@@ -3,9 +3,9 @@ package audit
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/google/uuid"
 )
 
 // ServiceInterface defines the interface for audit service
@@ -39,6 +39,7 @@ type ServiceInterface interface {
 	LogPermissionDeleted(ctx context.Context, actor models.AuditActor, target *models.AuditTarget, tenantID *uuid.UUID, sourceIP, userAgent string) error
 
 	LogMFAEnrolled(ctx context.Context, actor models.AuditActor, tenantID *uuid.UUID, sourceIP, userAgent string) error
+	LogMFAChallengeCreated(ctx context.Context, actor models.AuditActor, tenantID *uuid.UUID, sourceIP, userAgent string) error
 	LogMFAVerified(ctx context.Context, actor models.AuditActor, tenantID *uuid.UUID, sourceIP, userAgent string, success bool) error
 	LogMFADisabled(ctx context.Context, actor models.AuditActor, tenantID *uuid.UUID, sourceIP, userAgent string) error
 	LogMFAReset(ctx context.Context, actor models.AuditActor, target *models.AuditTarget, tenantID *uuid.UUID, sourceIP, userAgent string) error
@@ -55,4 +56,3 @@ type ServiceInterface interface {
 	LogTokenIssued(ctx context.Context, actor models.AuditActor, tenantID *uuid.UUID, sourceIP, userAgent string, metadata map[string]interface{}) error
 	LogTokenRevoked(ctx context.Context, actor models.AuditActor, tenantID *uuid.UUID, sourceIP, userAgent string, metadata map[string]interface{}) error
 }
-

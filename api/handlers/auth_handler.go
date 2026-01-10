@@ -3,13 +3,14 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/auth/login"
+	"github.com/arauth-identity/iam/auth/mfa"
 	"github.com/arauth-identity/iam/auth/token"
 	"github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/identity/models"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // AuthHandler handles authentication-related HTTP requests
@@ -18,15 +19,17 @@ type AuthHandler struct {
 	refreshService *token.RefreshService
 	tokenService   token.ServiceInterface
 	auditService   audit.ServiceInterface
+	mfaService     mfa.ServiceInterface
 }
 
 // NewAuthHandler creates a new auth handler
-func NewAuthHandler(loginService login.ServiceInterface, refreshService *token.RefreshService, tokenService token.ServiceInterface, auditService audit.ServiceInterface) *AuthHandler {
+func NewAuthHandler(loginService login.ServiceInterface, refreshService *token.RefreshService, tokenService token.ServiceInterface, auditService audit.ServiceInterface, mfaService mfa.ServiceInterface) *AuthHandler {
 	return &AuthHandler{
 		loginService:   loginService,
 		refreshService: refreshService,
 		tokenService:   tokenService,
 		auditService:   auditService,
+		mfaService:     mfaService,
 	}
 }
 
@@ -46,23 +49,23 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			req.TenantID = tenantID
 		}
 	}
-	
+
 	// 2. From query parameter
 	if tenantIDStr := c.Query("tenant_id"); tenantIDStr != "" && req.TenantID == uuid.Nil {
 		if tenantID, err := uuid.Parse(tenantIDStr); err == nil {
 			req.TenantID = tenantID
 		}
 	}
-	
+
 	// 3. From request body (if provided)
 	// Note: LoginRequest.TenantID is already bound from JSON if present
-	
+
 	// 4. From context (if TenantMiddleware was applied)
 	tenantID, exists := middleware.GetTenantID(c)
 	if exists && req.TenantID == uuid.Nil {
 		req.TenantID = tenantID
 	}
-	
+
 	// For SYSTEM users, tenant_id will remain uuid.Nil
 	// Login service will handle SYSTEM users (no tenant_id required)
 
@@ -84,6 +87,60 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			"error":   "authentication_failed",
 			"message": err.Error(),
 		})
+		return
+	}
+
+	// Handle MFA requirement
+	if resp.MFARequired {
+		// Parse UserID and TenantID from response
+		userID, err := uuid.Parse(resp.UserID)
+		if err != nil {
+			middleware.RespondWithError(c, http.StatusInternalServerError, "login_failed", "Invalid user ID in response", nil)
+			return
+		}
+
+		var tenantID uuid.UUID
+		if resp.TenantID != "" {
+			tenantID, err = uuid.Parse(resp.TenantID)
+			if err != nil {
+				middleware.RespondWithError(c, http.StatusInternalServerError, "login_failed", "Invalid tenant ID in response", nil)
+				return
+			}
+		}
+
+		// CREATE MFA SESSION (CRITICAL FIX)
+		sessionID, err := h.mfaService.CreateSession(c.Request.Context(), userID, tenantID)
+		if err != nil {
+			// Log MFA challenge creation failure
+			// For now, logging error internally and returning error to user
+			// Ideally we should emit "mfa.challenge.failed"
+
+			middleware.RespondWithError(c, http.StatusInternalServerError, "mfa_init_failed", "Failed to initiate MFA session", nil)
+			return
+		}
+
+		// Log MFA challenge created
+		sourceIP, userAgent := extractSourceInfo(c)
+		actor := models.AuditActor{
+			UserID:        userID,
+			Username:      req.Username,
+			PrincipalType: "UNKNOWN",
+		}
+		var tenantIDPtr *uuid.UUID
+		if tenantID != uuid.Nil {
+			tenantIDPtr = &tenantID
+		}
+		_ = h.auditService.LogMFAChallengeCreated(c.Request.Context(), actor, tenantIDPtr, sourceIP, userAgent)
+
+		// Set session ID in response
+		resp.MFASessionID = sessionID
+
+		// CRITICAL: Ensure no tokens are issued
+		resp.AccessToken = ""
+		resp.RefreshToken = ""
+		resp.IDToken = ""
+
+		c.JSON(http.StatusOK, resp)
 		return
 	}
 
@@ -114,11 +171,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 				"expires_in": resp.ExpiresIn,
 			})
 		}
-	}
-
-	if resp.MFARequired {
-		c.JSON(http.StatusOK, resp)
-		return
 	}
 
 	if resp.RedirectTo != "" {
@@ -179,8 +231,8 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 // RevokeToken handles POST /api/v1/auth/revoke
 func (h *AuthHandler) RevokeToken(c *gin.Context) {
 	var req struct {
-		Token      string `json:"token" binding:"required"`
-		TokenType  string `json:"token_type_hint,omitempty"` // "access_token" or "refresh_token"
+		Token     string `json:"token" binding:"required"`
+		TokenType string `json:"token_type_hint,omitempty"` // "access_token" or "refresh_token"
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -239,4 +291,3 @@ func (h *AuthHandler) RevokeToken(c *gin.Context) {
 		"message": "Token revocation requested. Access tokens will be invalidated on expiry.",
 	})
 }
-

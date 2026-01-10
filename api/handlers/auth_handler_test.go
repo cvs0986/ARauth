@@ -32,7 +32,7 @@ func TestAuthHandler_Login(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockLoginService)
-	handler := NewAuthHandler(mockService, nil) // refreshService not needed for login test
+	handler := NewAuthHandler(mockService, nil, nil, nil, nil) // fixed: pass nil for all new args
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
@@ -69,7 +69,7 @@ func TestAuthHandler_Login_InvalidRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockLoginService)
-	handler := NewAuthHandler(mockService, nil) // refreshService not needed for login test
+	handler := NewAuthHandler(mockService, nil, nil, nil, nil) // fixed
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
@@ -92,7 +92,7 @@ func TestAuthHandler_Login_AuthenticationFailed(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	mockService := new(MockLoginService)
-	handler := NewAuthHandler(mockService, nil) // refreshService not needed for login test
+	handler := NewAuthHandler(mockService, nil, nil, nil, nil) // fixed
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) {

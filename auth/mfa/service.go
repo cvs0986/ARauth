@@ -5,12 +5,12 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/capability"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/security/encryption"
 	"github.com/arauth-identity/iam/security/totp"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/google/uuid"
 )
 
 // Service provides MFA functionality
@@ -52,16 +52,16 @@ type EnrollRequest struct {
 
 // EnrollResponse represents the response from MFA enrollment
 type EnrollResponse struct {
-	Secret    string   `json:"secret"`
-	QRCode    string   `json:"qr_code"` // Base64 encoded PNG
+	Secret        string   `json:"secret"`
+	QRCode        string   `json:"qr_code"` // Base64 encoded PNG
 	RecoveryCodes []string `json:"recovery_codes"`
 }
 
 // VerifyRequest represents a request to verify MFA
 type VerifyRequest struct {
-	UserID      uuid.UUID `json:"user_id"`
-	TOTPCode    string    `json:"totp_code,omitempty"`
-	RecoveryCode string   `json:"recovery_code,omitempty"`
+	UserID       uuid.UUID `json:"user_id"`
+	TOTPCode     string    `json:"totp_code,omitempty"`
+	RecoveryCode string    `json:"recovery_code,omitempty"`
 }
 
 // Enroll enrolls a user in MFA
@@ -107,7 +107,7 @@ func (s *Service) Enroll(ctx context.Context, req *EnrollRequest) (*EnrollRespon
 	}
 
 	// Encode QR code as base64
-	qrCodeBase64 := fmt.Sprintf("data:image/png;base64,%s", 
+	qrCodeBase64 := fmt.Sprintf("data:image/png;base64,%s",
 		base64.StdEncoding.EncodeToString(qrCodeBytes))
 
 	// Generate recovery codes
@@ -204,7 +204,7 @@ func (s *Service) Verify(ctx context.Context, req *VerifyRequest) (bool, error) 
 
 		// Verify TOTP code
 		valid := s.totpGenerator.Validate(secret, req.TOTPCode)
-		
+
 		// If verification is successful and MFA is not yet enabled, enable it now
 		// This allows enrollment without immediate verification, but requires verification before MFA is active
 		if valid && !user.MFAEnabled {
@@ -215,7 +215,7 @@ func (s *Service) Verify(ctx context.Context, req *VerifyRequest) (bool, error) 
 				fmt.Printf("Warning: Failed to enable MFA flag after verification: %v\n", err)
 			}
 		}
-		
+
 		return valid, nil
 	}
 
@@ -231,3 +231,7 @@ func (s *Service) Verify(ctx context.Context, req *VerifyRequest) (bool, error) 
 	return false, fmt.Errorf("either totp_code or recovery_code must be provided")
 }
 
+// CreateSession creates a new MFA session
+func (s *Service) CreateSession(ctx context.Context, userID, tenantID uuid.UUID) (string, error) {
+	return s.sessionManager.CreateSession(ctx, userID, tenantID)
+}
