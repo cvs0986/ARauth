@@ -29,6 +29,7 @@ import (
 	"github.com/arauth-identity/iam/identity/webhook"
 	"github.com/arauth-identity/iam/identity/linking"
 	"github.com/arauth-identity/iam/identity/impersonation"
+	"github.com/arauth-identity/iam/identity/oauth_scope"
 	"github.com/arauth-identity/iam/auth/introspection"
 	webhookdispatcher "github.com/arauth-identity/iam/internal/webhook"
 	auditlogger "github.com/arauth-identity/iam/internal/audit"
@@ -138,6 +139,9 @@ func main() {
 	// Initialize impersonation repository
 	impersonationRepo := postgres.NewImpersonationRepository(db)
 
+	// Initialize OAuth scope repository
+	oauthScopeRepo := postgres.NewOAuthScopeRepository(db)
+
 	// Initialize audit logger (legacy)
 	auditLogger := auditlogger.NewLogger(auditRepo)
 
@@ -216,8 +220,11 @@ func main() {
 		userCapabilityStateRepo,
 	)
 
-	// Initialize claims builder with capability service
-	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo, systemRoleRepo, capabilityService)
+	// Initialize OAuth scope service (needed for claims builder)
+	oauthScopeService := oauth_scope.NewService(oauthScopeRepo)
+
+	// Initialize claims builder with capability service and OAuth scope service
+	claimsBuilder := claims.NewBuilder(roleRepo, permissionRepo, systemRoleRepo, capabilityService, oauthScopeService)
 
 	// Initialize tenant initializer
 	tenantInitializer := tenant.NewInitializer(roleRepo, permissionRepo)
@@ -274,6 +281,9 @@ func main() {
 	)
 	impersonationHandler := handlers.NewImpersonationHandler(impersonationService, auditEventService) // NEW: Impersonation handler
 
+	// Initialize OAuth scope handler
+	oauthScopeHandler := handlers.NewOAuthScopeHandler(oauthScopeService, auditEventService) // NEW: OAuth scope handler
+
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
 		gin.SetMode(gin.DebugMode)
@@ -285,7 +295,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, oauthScopeHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
 
 	// Create HTTP server
 	srv := &http.Server{
