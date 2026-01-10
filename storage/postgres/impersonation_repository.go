@@ -170,8 +170,8 @@ func (r *ImpersonationRepository) GetByTokenJTI(ctx context.Context, tokenJTI uu
 		session.EndedAt = &endedAt.Time
 	}
 
-	if tokenJTIUUID.Valid {
-		if jti, err := uuid.Parse(tokenJTIUUID.String); err == nil {
+	if tokenJTIStr.Valid && tokenJTIStr.String != "" {
+		if jti, err := uuid.Parse(tokenJTIStr.String); err == nil {
 			session.TokenJTI = &jti
 		}
 	}
