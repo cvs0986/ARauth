@@ -30,6 +30,7 @@ import (
 	"github.com/arauth-identity/iam/identity/linking"
 	"github.com/arauth-identity/iam/identity/impersonation"
 	"github.com/arauth-identity/iam/identity/oauth_scope"
+	"github.com/arauth-identity/iam/identity/scim"
 	"github.com/arauth-identity/iam/auth/introspection"
 	webhookdispatcher "github.com/arauth-identity/iam/internal/webhook"
 	auditlogger "github.com/arauth-identity/iam/internal/audit"
@@ -284,6 +285,16 @@ func main() {
 	// Initialize OAuth scope handler
 	oauthScopeHandler := handlers.NewOAuthScopeHandler(oauthScopeService, auditEventService) // NEW: OAuth scope handler
 
+	// Initialize SCIM token repository and service
+	scimTokenRepo := postgres.NewSCIMTokenRepository(db)
+	scimTokenService := scim.NewTokenService(scimTokenRepo)
+
+	// Initialize SCIM provisioning service
+	scimProvisioningService := scim.NewProvisioningService(userService, roleService, userRepo, roleRepo)
+
+	// Initialize SCIM handler
+	scimHandler := handlers.NewSCIMHandler(scimProvisioningService, scimTokenService)
+
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
 		gin.SetMode(gin.DebugMode)
@@ -295,7 +306,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, oauthScopeHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, oauthScopeHandler, scimHandler, scimTokenService, tenantRepo, cacheClient, db, redisClient, tokenService)
 
 	// Create HTTP server
 	srv := &http.Server{

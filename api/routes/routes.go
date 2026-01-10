@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/arauth-identity/iam/api/handlers"
 	"github.com/arauth-identity/iam/api/middleware"
+	"github.com/arauth-identity/iam/identity/scim"
 	"github.com/arauth-identity/iam/auth/token"
 	"github.com/arauth-identity/iam/internal/cache"
 	"github.com/arauth-identity/iam/storage/interfaces"
@@ -35,7 +36,7 @@ func getRedis(redisClient interface{}) *redis.Client {
 }
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, scimHandler *handlers.SCIMHandler, scimTokenService scim.TokenServiceInterface, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -291,6 +292,85 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			oauthScopes.GET("/:id", oauthScopeHandler.GetScope)
 			oauthScopes.PUT("/:id", oauthScopeHandler.UpdateScope)
 			oauthScopes.DELETE("/:id", oauthScopeHandler.DeleteScope)
+		}
+
+	// SCIM 2.0 API routes (public, authenticated via Bearer token)
+	scimV2 := router.Group("/scim/v2")
+	{
+		// SCIM discovery endpoints (no auth required)
+		scimV2.GET("/ServiceProviderConfig", scimHandler.ServiceProviderConfig)
+		scimV2.GET("/ResourceTypes", scimHandler.ResourceTypes)
+		scimV2.GET("/Schemas", scimHandler.Schemas)
+
+		// SCIM resource endpoints (require authentication)
+		scimUsers := scimV2.Group("/Users")
+		scimUsers.Use(middleware.SCIMAuthMiddleware(scimTokenService))
+		scimUsers.Use(middleware.RequireSCIMScope("users"))
+		{
+			scimUsers.POST("", scimHandler.CreateUser)
+			scimUsers.GET("", scimHandler.ListUsers)
+			scimUsers.GET("/:id", scimHandler.GetUser)
+			scimUsers.PUT("/:id", scimHandler.UpdateUser)
+			scimUsers.DELETE("/:id", scimHandler.DeleteUser)
+		}
+
+		scimGroups := scimV2.Group("/Groups")
+		scimGroups.Use(middleware.SCIMAuthMiddleware(scimTokenService))
+		scimGroups.Use(middleware.RequireSCIMScope("groups"))
+		{
+			scimGroups.POST("", scimHandler.CreateGroup)
+			scimGroups.GET("", scimHandler.ListGroups)
+			scimGroups.GET("/:id", scimHandler.GetGroup)
+			scimGroups.PUT("/:id", scimHandler.UpdateGroup)
+			scimGroups.DELETE("/:id", scimHandler.DeleteGroup)
+		}
+
+		// Bulk operations
+		scimBulk := scimV2.Group("/Bulk")
+		scimBulk.Use(middleware.SCIMAuthMiddleware(scimTokenService))
+		{
+			scimBulk.POST("", scimHandler.BulkOperations)
+		}
+	}
+
+	}
+
+	// SCIM 2.0 API routes (public, authenticated via Bearer token)
+	scimV2 := router.Group("/scim/v2")
+	{
+		// SCIM discovery endpoints (no auth required)
+		scimV2.GET("/ServiceProviderConfig", scimHandler.ServiceProviderConfig)
+		scimV2.GET("/ResourceTypes", scimHandler.ResourceTypes)
+		scimV2.GET("/Schemas", scimHandler.Schemas)
+
+		// SCIM resource endpoints (require authentication)
+		scimUsers := scimV2.Group("/Users")
+		scimUsers.Use(middleware.SCIMAuthMiddleware(scimTokenService))
+		scimUsers.Use(middleware.RequireSCIMScope("users"))
+		{
+			scimUsers.POST("", scimHandler.CreateUser)
+			scimUsers.GET("", scimHandler.ListUsers)
+			scimUsers.GET("/:id", scimHandler.GetUser)
+			scimUsers.PUT("/:id", scimHandler.UpdateUser)
+			scimUsers.DELETE("/:id", scimHandler.DeleteUser)
+		}
+
+		scimGroups := scimV2.Group("/Groups")
+		scimGroups.Use(middleware.SCIMAuthMiddleware(scimTokenService))
+		scimGroups.Use(middleware.RequireSCIMScope("groups"))
+		{
+			scimGroups.POST("", scimHandler.CreateGroup)
+			scimGroups.GET("", scimHandler.ListGroups)
+			scimGroups.GET("/:id", scimHandler.GetGroup)
+			scimGroups.PUT("/:id", scimHandler.UpdateGroup)
+			scimGroups.DELETE("/:id", scimHandler.DeleteGroup)
+		}
+
+		// Bulk operations
+		scimBulk := scimV2.Group("/Bulk")
+		scimBulk.Use(middleware.SCIMAuthMiddleware(scimTokenService))
+		{
+			scimBulk.POST("", scimHandler.BulkOperations)
 		}
 	}
 
