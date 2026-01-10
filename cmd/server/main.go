@@ -25,6 +25,8 @@ import (
 	"github.com/arauth-identity/iam/identity/tenant"
 	"github.com/arauth-identity/iam/identity/user"
 	"github.com/arauth-identity/iam/auth/federation"
+	"github.com/arauth-identity/iam/identity/webhook"
+	webhookdispatcher "github.com/arauth-identity/iam/internal/webhook"
 	auditlogger "github.com/arauth-identity/iam/internal/audit"
 	auditevent "github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/internal/cache"
@@ -125,11 +127,24 @@ func main() {
 	idpRepo := postgres.NewIdentityProviderRepository(db)
 	fedIdRepo := postgres.NewFederatedIdentityRepository(db)
 
+	// Initialize webhook repositories
+	webhookRepo := postgres.NewWebhookRepository(db)
+	webhookDeliveryRepo := postgres.NewWebhookDeliveryRepository(db)
+
 	// Initialize audit logger (legacy)
 	auditLogger := auditlogger.NewLogger(auditRepo)
 
-	// Initialize audit event service (new structured audit)
-	auditEventService := auditevent.NewService(auditEventRepo)
+	// Initialize webhook service first (needed by audit service)
+	webhookDispatcher := webhookdispatcher.NewDispatcher(webhookDeliveryRepo, logger.Logger)
+	webhookService := webhook.NewService(
+		webhookRepo,
+		webhookDeliveryRepo,
+		webhookDispatcher,
+		logger.Logger,
+	)
+
+	// Initialize audit event service (new structured audit) with webhook integration
+	auditEventService := auditevent.NewService(auditEventRepo, webhookService)
 
 	// Initialize encryption (for MFA secrets)
 	encryptionKey := []byte(cfg.Security.EncryptionKey)
@@ -218,6 +233,7 @@ func main() {
 	capabilityHandler := handlers.NewCapabilityHandler(capabilityService) // NEW: Capability handler
 	auditHandler := handlers.NewAuditHandler(auditEventService) // NEW: Audit event handler
 	federationHandler := handlers.NewFederationHandler(federationService) // NEW: Federation handler
+	webhookHandler := handlers.NewWebhookHandler(webhookService) // NEW: Webhook handler
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
@@ -230,7 +246,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
 
 	// Create HTTP server
 	srv := &http.Server{
