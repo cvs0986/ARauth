@@ -16,7 +16,7 @@
  */
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usePrincipalContext } from '@/contexts/PrincipalContext';
 import { PermissionGate } from '@/components/PermissionGate';
 import { Button } from '@/components/ui/button';
@@ -32,27 +32,20 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Webhook, AlertTriangle, Clock } from 'lucide-react';
-import { APINotConnectedError, isAPINotConnected } from '@/lib/errors';
+import { Plus, Webhook as WebhookIcon, AlertTriangle, Trash2 } from 'lucide-react';
+import { isAPINotConnected } from '@/lib/errors';
 import { CreateWebhookDialog } from './CreateWebhookDialog';
-
-interface Webhook {
-    id: string;
-    name: string;
-    url: string;
-    events: string[];
-    status: 'active' | 'disabled';
-    last_delivery_at: string | null;
-    last_delivery_status: 'success' | 'failed' | null;
-    created_at: string;
-}
+import { webhookApi } from '../../services/api';
+// @ts-ignore
+import { Webhook } from '../../../../shared/types/api';
 
 export function WebhookList() {
     const { principalType, homeTenantId, selectedTenantId, consoleMode } = usePrincipalContext();
     const [createOpen, setCreateOpen] = useState(false);
+    const queryClient = useQueryClient();
 
     // Determine effective tenant ID
-    const effectiveTenantId = principalType === 'SYSTEM' ? selectedTenantId : homeTenantId;
+    const effectiveTenantId = principalType === 'SYSTEM' ? (selectedTenantId || undefined) : (homeTenantId || undefined);
 
     // Fetch webhooks
     const { data: webhooks, isLoading, error } = useQuery({
@@ -60,12 +53,30 @@ export function WebhookList() {
             ? ['system-webhooks']
             : ['webhooks', effectiveTenantId],
         queryFn: async () => {
-            // UI CONTRACT MODE: Throw APINotConnectedError
-            throw new APINotConnectedError('webhooks.list');
+            return await webhookApi.list(effectiveTenantId);
         },
         enabled: consoleMode === 'SYSTEM' ? true : !!effectiveTenantId,
         retry: false,
     });
+
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            await webhookApi.delete(id);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: consoleMode === 'SYSTEM' && !effectiveTenantId
+                    ? ['system-webhooks']
+                    : ['webhooks', effectiveTenantId]
+            });
+        },
+    });
+
+    const handleDelete = (id: string) => {
+        if (confirm('Are you sure you want to delete this webhook?')) {
+            deleteMutation.mutate(id);
+        }
+    };
 
     return (
         <PermissionGate permission="webhooks:read" systemPermission={principalType === 'SYSTEM'}>
@@ -90,7 +101,7 @@ export function WebhookList() {
 
                 {/* Scope Indicator */}
                 <Alert className="bg-blue-50 border-blue-200">
-                    <Webhook className="h-4 w-4 text-blue-600" />
+                    <WebhookIcon className="h-4 w-4 text-blue-600" />
                     <AlertDescription className="text-blue-800 text-sm">
                         {consoleMode === 'SYSTEM' && !effectiveTenantId ? (
                             <><strong>Scope:</strong> System webhooks apply to all tenants</>
@@ -111,7 +122,7 @@ export function WebhookList() {
                 {/* API Not Connected Notice */}
                 {error && isAPINotConnected(error) && (
                     <Alert className="bg-blue-50 border-blue-200">
-                        <Webhook className="h-4 w-4 text-blue-600" />
+                        <WebhookIcon className="h-4 w-4 text-blue-600" />
                         <AlertDescription className="text-blue-800">
                             <strong>Backend Integration Pending:</strong> The webhooks API is not yet connected.
                             This UI serves as the contract for implementation.
@@ -128,7 +139,7 @@ export function WebhookList() {
                     </div>
                 ) : !webhooks || webhooks.length === 0 ? (
                     <EmptyState
-                        icon={Webhook}
+                        icon={WebhookIcon}
                         title="No Webhooks Configured"
                         description="Create a webhook to receive real-time notifications for events in your system."
                         action={{
@@ -145,13 +156,12 @@ export function WebhookList() {
                                     <TableHead>URL</TableHead>
                                     <TableHead>Events</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Last Delivery</TableHead>
                                     <TableHead>Created</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {webhooks.map((webhook) => (
+                                {webhooks.map((webhook: Webhook) => (
                                     <TableRow key={webhook.id}>
                                         <TableCell className="font-medium">{webhook.name}</TableCell>
                                         <TableCell className="font-mono text-sm">{webhook.url}</TableCell>
@@ -170,35 +180,22 @@ export function WebhookList() {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={webhook.status === 'active' ? 'default' : 'secondary'}>
-                                                {webhook.status}
+                                            <Badge variant={webhook.enabled ? 'default' : 'secondary'}>
+                                                {webhook.enabled ? 'Active' : 'Disabled'}
                                             </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            {webhook.last_delivery_at ? (
-                                                <div className="flex items-center gap-2">
-                                                    <Clock className="h-4 w-4 text-gray-400" />
-                                                    <span className="text-sm">
-                                                        {new Date(webhook.last_delivery_at).toLocaleDateString()}
-                                                    </span>
-                                                    {webhook.last_delivery_status && (
-                                                        <Badge
-                                                            variant={webhook.last_delivery_status === 'success' ? 'default' : 'destructive'}
-                                                            className="text-xs"
-                                                        >
-                                                            {webhook.last_delivery_status}
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <span className="text-gray-400">Never</span>
-                                            )}
                                         </TableCell>
                                         <TableCell>{new Date(webhook.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="outline" size="sm">
-                                                Configure
-                                            </Button>
+                                            <PermissionGate permission="webhooks:delete" systemPermission={principalType === 'SYSTEM'}>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDelete(webhook.id)}
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </PermissionGate>
                                         </TableCell>
                                     </TableRow>
                                 ))}

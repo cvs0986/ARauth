@@ -267,10 +267,152 @@ export interface EnrollUserCapabilityRequest {
   state_data?: Record<string, unknown>;
 }
 
-// Error types
-export interface ApiError {
-  message: string;
-  code?: string;
+// Audit types
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  event_type: string;
+  actor: {
+    id: string;
+    type: string;
+    username?: string;
+  };
+  target?: {
+    id: string;
+    type: string;
+    name?: string;
+  };
+  result: 'success' | 'failure';
+  error?: string;
+  ip_address: string;
+  user_agent: string;
   details?: Record<string, unknown>;
+}
+
+export interface AuditExportFilters {
+  start_date?: string;
+  end_date?: string;
+  event_type?: string;
+  actor_user_id?: string;
+  target_type?: string;
+  target_id?: string;
+  result?: string;
+}
+
+// Webhook types
+export interface Webhook {
+  id: string;
+  tenant_id: string;
+  name: string;
+  url: string;
+  secret?: string; // Only returned on creation/rotation if requested, usually hidden
+  enabled: boolean;
+  events: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateWebhookRequest {
+  name: string;
+  url: string;
+  secret: string;
+  enabled?: boolean;
+  events: string[];
+}
+
+export interface UpdateWebhookRequest {
+  name?: string;
+  url?: string;
+  secret?: string;
+  enabled?: boolean;
+  events?: string[];
+}
+
+export interface WebhookDelivery {
+  id: string;
+  webhook_id: string;
+  event_id?: string;
+  event_type: string;
+  status: 'pending' | 'success' | 'failed' | 'retrying';
+  http_status_code?: number;
+  response_body?: string;
+  attempt_number: number;
+  next_retry_at?: string;
+  delivered_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Federation types
+export interface IdentityProvider {
+  id: string;
+  tenant_id: string;
+  name: string;
+  type: 'oidc' | 'saml';
+  enabled: boolean;
+  configuration: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateIdentityProviderRequest {
+  name: string;
+  type: 'oidc' | 'saml';
+  configuration: Record<string, unknown>;
+}
+
+export interface UpdateIdentityProviderRequest {
+  name?: string;
+  enabled?: boolean;
+  configuration?: Record<string, unknown>;
+}
+
+export interface VerifyIdentityProviderResponse {
+  success: boolean;
+  message: string;
+  error?: string;
+  details?: Record<string, unknown>;
+}
+
+// OAuth2 Client types
+export interface OAuth2Client {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description?: string;
+  client_id: string;
+  client_secret?: string; // Only returned on creation/rotation
+  redirect_uris: string[];
+  grant_types: string[];
+  response_types: string[];
+  scope: string;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateOAuth2ClientRequest {
+  name: string;
+  description?: string;
+  redirect_uris: string[];
+  grant_types: string[];
+  response_types: string[];
+  scope: string;
+  is_public: boolean;
+}
+
+export interface UpdateOAuth2ClientRequest {
+  name?: string;
+  description?: string;
+  redirect_uris?: string[];
+  grant_types?: string[];
+  response_types?: string[];
+  scope?: string;
+  is_public?: boolean;
+}
+
+export interface RotateOAuth2ClientSecretResponse {
+  client_secret: string;
+  revoked_tokens?: number;
 }
 

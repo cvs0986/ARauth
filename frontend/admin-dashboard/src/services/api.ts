@@ -27,7 +27,20 @@ import type {
   SetTenantCapabilityRequest,
   EnableTenantFeatureRequest,
   EnrollUserCapabilityRequest,
-} from '../../shared/types/api';
+  AuditLog,
+  AuditExportFilters,
+  Webhook,
+  CreateWebhookRequest,
+  UpdateWebhookRequest,
+  WebhookDelivery,
+  IdentityProvider,
+  CreateIdentityProviderRequest,
+  VerifyIdentityProviderResponse,
+  OAuth2Client,
+  CreateOAuth2ClientRequest,
+  UpdateOAuth2ClientRequest,
+  RotateOAuth2ClientSecretResponse,
+} from '../../../shared/types/api';
 
 // Auth API
 export const authApi = {
@@ -556,6 +569,129 @@ export const userCapabilityApi = {
 
   unenroll: async (userId: string, key: string): Promise<void> => {
     await apiClient.delete(API_ENDPOINTS.USER_CAPABILITIES.BY_KEY(userId, key));
+  },
+};
+
+// Audit API
+export const auditApi = {
+  list: async (filters?: AuditExportFilters, tenantId?: string): Promise<AuditLog[]> => {
+    const config: any = { params: filters };
+    if (tenantId) {
+      config.headers = { 'X-Tenant-ID': tenantId };
+    }
+    const response = await apiClient.get<{ events: AuditLog[] }>('/api/v1/audit/events', config);
+    return response.data.events || [];
+  },
+
+  export: async (filters: AuditExportFilters, tenantId?: string): Promise<void> => {
+    const config: any = {
+      params: filters,
+      responseType: 'blob',
+    };
+    if (tenantId) {
+      config.headers = { 'X-Tenant-ID': tenantId };
+    }
+    const response = await apiClient.get('/api/v1/audit/export', config);
+
+    // Trigger download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = 'audit_export.csv';
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (filenameMatch && filenameMatch.length === 2) {
+        filename = filenameMatch[1];
+      }
+    }
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  },
+};
+
+// Webhook API
+export const webhookApi = {
+  list: async (tenantId?: string | null): Promise<Webhook[]> => {
+    const config = tenantId ? { headers: { 'X-Tenant-ID': tenantId } } : undefined;
+    const response = await apiClient.get<Webhook[]>('/api/v1/webhooks', config);
+    return response.data || [];
+  },
+
+  create: async (data: CreateWebhookRequest): Promise<Webhook> => {
+    const response = await apiClient.post<Webhook>('/api/v1/webhooks', data);
+    return response.data;
+  },
+
+  get: async (id: string): Promise<Webhook> => {
+    const response = await apiClient.get<Webhook>(`/api/v1/webhooks/${id}`);
+    return response.data;
+  },
+
+  update: async (id: string, data: UpdateWebhookRequest): Promise<Webhook> => {
+    const response = await apiClient.put<Webhook>(`/api/v1/webhooks/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/webhooks/${id}`);
+  },
+
+  getDeliveries: async (webhookId: string, limit = 50, offset = 0): Promise<{ deliveries: WebhookDelivery[]; total: number }> => {
+    const response = await apiClient.get<{ deliveries: WebhookDelivery[]; total: number }>(
+      `/api/v1/webhooks/${webhookId}/deliveries`,
+      { params: { limit, offset } }
+    );
+    return response.data;
+  },
+};
+
+// Federation API
+export const federationApi = {
+  list: async (tenantId?: string): Promise<IdentityProvider[]> => {
+    const config = tenantId ? { headers: { 'X-Tenant-ID': tenantId } } : undefined;
+    const response = await apiClient.get<{ providers: IdentityProvider[] }>('/api/v1/identity-providers', config);
+    return response.data.providers || [];
+  },
+
+  create: async (data: CreateIdentityProviderRequest): Promise<IdentityProvider> => {
+    const response = await apiClient.post<IdentityProvider>('/api/v1/identity-providers', data);
+    return response.data;
+  },
+
+  verify: async (id: string): Promise<VerifyIdentityProviderResponse> => {
+    const response = await apiClient.post<VerifyIdentityProviderResponse>(`/api/v1/identity-providers/${id}/verify`);
+    return response.data;
+  },
+};
+
+// OAuth2 Client API
+export const oauthClientApi = {
+  list: async (tenantId?: string | null): Promise<OAuth2Client[]> => {
+    const config = tenantId ? { headers: { 'X-Tenant-ID': tenantId } } : undefined;
+    const response = await apiClient.get<{ clients: OAuth2Client[] }>('/api/v1/oauth/clients', config);
+    return response.data.clients || [];
+  },
+
+  create: async (data: CreateOAuth2ClientRequest): Promise<OAuth2Client> => {
+    const response = await apiClient.post<OAuth2Client>('/api/v1/oauth/clients', data);
+    return response.data;
+  },
+
+  update: async (id: string, data: UpdateOAuth2ClientRequest): Promise<OAuth2Client> => {
+    const response = await apiClient.put<OAuth2Client>(`/api/v1/oauth/clients/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await apiClient.delete(`/api/v1/oauth/clients/${id}`);
+  },
+
+  rotateSecret: async (id: string): Promise<RotateOAuth2ClientSecretResponse> => {
+    const response = await apiClient.post<RotateOAuth2ClientSecretResponse>(`/api/v1/oauth/clients/${id}/rotate-secret`);
+    return response.data;
   },
 };
 

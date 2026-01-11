@@ -16,7 +16,7 @@
  */
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { usePrincipalContext } from '@/contexts/PrincipalContext';
 import { PermissionGate } from '@/components/PermissionGate';
 import { Button } from '@/components/ui/button';
@@ -31,37 +31,52 @@ import {
 } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EmptyState } from '@/components/EmptyState';
-import { Plus, AlertTriangle, Link2, Users } from 'lucide-react';
-import { APINotConnectedError } from '@/lib/errors';
+import { Plus, AlertTriangle, Link2, CheckCircle2, Loader2 } from 'lucide-react';
+import { isAPINotConnected } from '@/lib/errors';
 import { CreateOIDCIdPDialog } from './CreateOIDCIdPDialog';
-
-interface OIDCIdP {
-    id: string;
-    name: string;
-    issuer_url: string;
-    client_id: string;
-    status: 'active' | 'disabled';
-    users_linked: number;
-    created_at: string;
-}
+import { federationApi } from '../../services/api';
+// @ts-ignore
+import { IdentityProvider } from '../../../../shared/types/api';
 
 export function OIDCIdPList() {
     const { principalType, homeTenantId, selectedTenantId } = usePrincipalContext();
     const [createOpen, setCreateOpen] = useState(false);
+    const [verifyingId, setVerifyingId] = useState<string | null>(null);
 
     // Determine effective tenant ID
-    const effectiveTenantId = principalType === 'SYSTEM' ? selectedTenantId : homeTenantId;
+    const effectiveTenantId = principalType === 'SYSTEM' ? (selectedTenantId || undefined) : (homeTenantId || undefined);
 
     // Fetch OIDC IdPs
     const { data: idps, isLoading, error } = useQuery({
         queryKey: ['oidc-idps', effectiveTenantId],
         queryFn: async () => {
-            // UI CONTRACT MODE: Throw APINotConnectedError
-            throw new APINotConnectedError('federation.oidc.list');
+            return await federationApi.list(effectiveTenantId);
         },
         enabled: !!effectiveTenantId,
         retry: false,
     });
+
+    const verifyMutation = useMutation({
+        mutationFn: async (id: string) => {
+            setVerifyingId(id);
+            try {
+                const result = await federationApi.verify(id);
+                if (result.success) {
+                    alert(`Connection Successful: ${result.message}`);
+                } else {
+                    alert(`Connection Failed: ${result.message}\nError: ${result.error || 'Unknown error'}`);
+                }
+            } catch (err: any) {
+                alert(`Connection Error: ${err.message || 'Failed to connect'}`);
+            } finally {
+                setVerifyingId(null);
+            }
+        },
+    });
+
+    const handleVerify = (id: string) => {
+        verifyMutation.mutate(id);
+    };
 
     if (!effectiveTenantId) {
         return (
@@ -76,6 +91,9 @@ export function OIDCIdPList() {
             </div>
         );
     }
+
+    // Filter only OIDC providers (assuming backend returns all types)
+    const oidcProviders = idps?.filter((idp: IdentityProvider) => idp.type === 'oidc') || [];
 
     return (
         <PermissionGate permission="federation:idp:read" systemPermission={principalType === 'SYSTEM'}>
@@ -106,7 +124,7 @@ export function OIDCIdPList() {
                 </Alert>
 
                 {/* API Not Connected Notice */}
-                {error && (
+                {error && isAPINotConnected(error) && (
                     <Alert className="bg-blue-50 border-blue-200">
                         <Link2 className="h-4 w-4 text-blue-600" />
                         <AlertDescription className="text-blue-800">
@@ -119,7 +137,7 @@ export function OIDCIdPList() {
                 {/* Table */}
                 {isLoading ? (
                     <div className="p-4">Loading OIDC providers...</div>
-                ) : !idps || idps.length === 0 ? (
+                ) : !oidcProviders || oidcProviders.length === 0 ? (
                     <EmptyState
                         icon={Link2}
                         title="No OIDC Providers Configured"
@@ -138,33 +156,45 @@ export function OIDCIdPList() {
                                     <TableHead>Issuer URL</TableHead>
                                     <TableHead>Client ID</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Users Linked</TableHead>
                                     <TableHead>Created</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {idps.map((idp) => (
+                                {oidcProviders.map((idp: IdentityProvider) => (
                                     <TableRow key={idp.id}>
                                         <TableCell className="font-medium">{idp.name}</TableCell>
-                                        <TableCell className="font-mono text-sm">{idp.issuer_url}</TableCell>
-                                        <TableCell className="font-mono text-sm">{idp.client_id}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={idp.status === 'active' ? 'default' : 'secondary'}>
-                                                {idp.status}
-                                            </Badge>
+                                        <TableCell className="font-mono text-sm">
+                                            {String(idp.configuration?.issuer_url || '-')}
+                                        </TableCell>
+                                        <TableCell className="font-mono text-sm">
+                                            {String(idp.configuration?.client_id || '-')}
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center gap-1">
-                                                <Users className="h-4 w-4 text-gray-400" />
-                                                {idp.users_linked}
-                                            </div>
+                                            <Badge variant={idp.enabled ? 'default' : 'secondary'}>
+                                                {idp.enabled ? 'Active' : 'Disabled'}
+                                            </Badge>
                                         </TableCell>
                                         <TableCell>{new Date(idp.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="outline" size="sm">
-                                                Configure
-                                            </Button>
+                                            <div className="flex justify-end gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleVerify(idp.id)}
+                                                    disabled={verifyingId === idp.id}
+                                                >
+                                                    {verifyingId === idp.id ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                    ) : (
+                                                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                                                    )}
+                                                    Test Connection
+                                                </Button>
+                                                <Button variant="outline" size="sm">
+                                                    Configure
+                                                </Button>
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
