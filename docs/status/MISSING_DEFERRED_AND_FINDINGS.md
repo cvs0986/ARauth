@@ -331,7 +331,7 @@
 ### Phase B9: Admin Dashboard UI Integration (Completed 2026-01-11)
 
 | Item | Resolution | Commit/PR |
-|------|-----------|-----------|
+|------|-----------|-----------| 
 | Audit Logs UI Integration | Wired Export button to `auditApi.export` | feature/phase-b9-admin-ui |
 | Webhooks UI Integration | Fully wired List, Create, Delete with secret handling | feature/phase-b9-admin-ui |
 | Federation UI Integration | Wired OIDC IdP List and Test Connection functionality | feature/phase-b9-admin-ui |
@@ -340,6 +340,21 @@
 | Type Definitions | Fixed property names and import paths across components | feature/phase-b9-admin-ui |
 | Frontend Unit Tests | Created 22 tests (19 passing, 86% coverage) | feature/phase-b9-admin-ui |
 | Test Infrastructure | Configured Vitest, setupTests.ts, test directories | feature/phase-b9-admin-ui |
+
+### Phase C.1: Multi-Tier Rate Limiting (Completed 2026-01-11)
+
+| Item | Resolution | Commit/PR |
+|------|-----------|-----------| 
+| Rate Limiting Service | Created `identity/ratelimit` package with Redis backend | feature/phase-c1-rate-limiting |
+| Per-User Rate Limiting | Implemented with configurable limits and burst allowance | feature/phase-c1-rate-limiting |
+| Per-Client Rate Limiting | Implemented for OAuth client abuse prevention | feature/phase-c1-rate-limiting |
+| Per-IP Rate Limiting | Implemented for DDoS protection on admin endpoints | feature/phase-c1-rate-limiting |
+| Tiered Limits | Auth (20 RPM), Sensitive (10 RPM), Admin (30 RPM), General (60 RPM) | feature/phase-c1-rate-limiting |
+| Middleware Integration | Created `MultiTierRateLimit`, `UserOnlyRateLimit`, `IPOnlyRateLimit`, `ClientOnlyRateLimit` | feature/phase-c1-rate-limiting |
+| main.go Integration | Wired rate limiter with fail-fast for production | feature/phase-c1-rate-limiting |
+| Environment Configuration | Added `RATE_LIMIT_*_RPM` variables with defaults | feature/phase-c1-rate-limiting |
+| Production Documentation | Created comprehensive PRODUCTION.md deployment guide | feature/phase-c1-rate-limiting |
+| Test Coverage | 16/16 tests passing (9 service + 7 middleware tests) | feature/phase-c1-rate-limiting |
 
 ---
 
