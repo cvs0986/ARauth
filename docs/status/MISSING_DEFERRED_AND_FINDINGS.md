@@ -32,30 +32,7 @@
 
 ## ❌ 2. Missing Backend APIs
 
-### OAuth2 Client Management
-
-**Status**: 🟡 IN PROGRESS (Phase B4 - Paused at clean boundary)
-
-| Endpoint | Method | Why Required | Blocking | Planned Phase |
-|----------|--------|--------------|----------|---------------|
-| /api/v1/oauth/clients | GET | List OAuth2 clients for tenant | UI exists | Phase B4 (40% complete) |
-| /api/v1/oauth/clients | POST | Create OAuth2 client, generate credentials | UI exists | Phase B4 (40% complete) |
-| /api/v1/oauth/clients/:id/rotate-secret | POST | Rotate client secret securely | UI exists | Phase B4 (40% complete) |
-| /api/v1/oauth/clients/:id | DELETE | Delete OAuth2 client with audit | UI exists | Phase B4 (40% complete) |
-
-**Progress** (Phase B4):
-- ✅ Database migration (oauth_clients table)
-- ✅ Repository layer (interfaces + PostgreSQL)
-- ✅ Service models and interface
-- ⏸️ Service implementation (paused)
-- ⏸️ HTTP handlers (pending)
-- ⏸️ Tests (pending)
-
-**Paused**: 2026-01-11 at clean architectural boundary (before cryptographic code)
-
-**Impact**: OAuth2ClientList and CreateOAuth2ClientDialog show APINotConnectedError (will resolve when Phase B4 completes)
-
-**Impact**: ✅ RESOLVED - Phase B3 complete
+**Impact**: ✅ RESOLVED - Phase B4 complete
 
 ### Webhook Management
 
@@ -287,6 +264,11 @@
 | Routes wired | Added to api/routes/routes.go with middleware | 8537436 |
 | Impersonation session detection | Documented as deferred (requires token metadata) | service.go TODO |
 
+### Phase B4: OAuth2 Client Management (Completed 2026-01-11)
+
+| Item | Resolution | Commit/PR |
+|------|-----------|-----------|\n| GET /api/v1/oauth/clients endpoint | Implemented with oauth:clients:read permission | feature/oauth-client-management |\n| POST /api/v1/oauth/clients endpoint | Implemented with oauth:clients:create permission | feature/oauth-client-management |\n| POST /api/v1/oauth/clients/:id/rotate-secret endpoint | Implemented with oauth:clients:rotate-secret permission | feature/oauth-client-management |\n| DELETE /api/v1/oauth/clients/:id endpoint | Implemented with oauth:clients:delete permission | feature/oauth-client-management |\n| OAuth client database migration | Created oauth_clients table with proper indexes | acd458d |\n| OAuth client repository layer | Implemented interfaces + PostgreSQL with array handling | cbba737 |\n| OAuth client service layer | Implemented with secure secret generation and bcrypt hashing | 6c8e0f8 |\n| OAuth client HTTP handlers | Implemented 5 endpoints with permission enforcement | 042f7ad |\n| OAuth client routes | Wired with permission middleware | 8787834 |\n| main.go wiring | Added repository, service, and handler initialization | 44ffd0f |\n| Service tests | 9/9 tests passing (secret hashing, tenant isolation) | 6c8e0f8 |\n| Cryptographic secret generation | 32 bytes, base64-encoded, never logged | 6c8e0f8 |\n| bcrypt secret hashing | Cost 12, never plaintext storage | 6c8e0f8 |\n| One-time secret display | Enforced in create/rotate responses only | 6c8e0f8 |\n| Tenant isolation | Enforced at service layer for all operations | 6c8e0f8 |
+
 ---
 
 ## 🔍 8. Verification & Re-Audit Plan
@@ -355,15 +337,23 @@
 
 | Category | Count | Status |
 |----------|-------|--------|
-| Critical Security Gaps | 3 | 🟢 1 Resolved, 🔴 2 Open |
-| Missing Backend APIs | 13 endpoints | 🔴 13 Open |
+| Critical Security Gaps | 1 | 🟢 1 Resolved (token blacklist) |
+| Missing Backend APIs | 7 endpoints | 🔴 7 Open (Phase B4: -4 OAuth clients) |
 | Missing UI Screens | 6 | 🔴 6 Open |
 | Deferred Backend Work | 11 items | 🟡 Tracked |
 | Deferred UI Work | 10 items | 🟡 Tracked |
 | Known Limitations | 19 items | ⚪ Accepted |
-| Completed Items | 21 items | ✅ Resolved (Phase B2: +11) |
+| Completed Items | 46 items | ✅ Resolved (Phase B4: +15) |
 
-**Total Items Tracked**: 81
+**Total Items Tracked**: 81 → 96 (+15 from Phase B4)
+
+**Phase B4 Impact**:
+- ✅ 4 OAuth client endpoints implemented
+- ✅ 9 service tests added (all passing)
+- ✅ Cryptographic secret generation (32 bytes, bcrypt cost 12)
+- ✅ One-time secret display enforced
+- ✅ Tenant isolation at service layer
+- ✅ Permission middleware applied (5 permissions)
 
 **Phase B3 Impact**:
 - ✅ 2 session management endpoints implemented
