@@ -267,7 +267,33 @@
 ### Phase B4: OAuth2 Client Management (Completed 2026-01-11)
 
 | Item | Resolution | Commit/PR |
-|------|-----------|-----------|\n| GET /api/v1/oauth/clients endpoint | Implemented with oauth:clients:read permission | feature/oauth-client-management |\n| POST /api/v1/oauth/clients endpoint | Implemented with oauth:clients:create permission | feature/oauth-client-management |\n| POST /api/v1/oauth/clients/:id/rotate-secret endpoint | Implemented with oauth:clients:rotate-secret permission | feature/oauth-client-management |\n| DELETE /api/v1/oauth/clients/:id endpoint | Implemented with oauth:clients:delete permission | feature/oauth-client-management |\n| OAuth client database migration | Created oauth_clients table with proper indexes | acd458d |\n| OAuth client repository layer | Implemented interfaces + PostgreSQL with array handling | cbba737 |\n| OAuth client service layer | Implemented with secure secret generation and bcrypt hashing | 6c8e0f8 |\n| OAuth client HTTP handlers | Implemented 5 endpoints with permission enforcement | 042f7ad |\n| OAuth client routes | Wired with permission middleware | 8787834 |\n| main.go wiring | Added repository, service, and handler initialization | 44ffd0f |\n| Service tests | 9/9 tests passing (secret hashing, tenant isolation) | 6c8e0f8 |\n| Cryptographic secret generation | 32 bytes, base64-encoded, never logged | 6c8e0f8 |\n| bcrypt secret hashing | Cost 12, never plaintext storage | 6c8e0f8 |\n| One-time secret display | Enforced in create/rotate responses only | 6c8e0f8 |\n| Tenant isolation | Enforced at service layer for all operations | 6c8e0f8 |
+|------|-----------|-----------|
+| GET /api/v1/oauth/clients endpoint | Implemented with oauth:clients:read permission | feature/oauth-client-management |
+| POST /api/v1/oauth/clients endpoint | Implemented with oauth:clients:create permission | feature/oauth-client-management |
+| POST /api/v1/oauth/clients/:id/rotate-secret endpoint | Implemented with oauth:clients:rotate-secret permission | feature/oauth-client-management |
+| DELETE /api/v1/oauth/clients/:id endpoint | Implemented with oauth:clients:delete permission | feature/oauth-client-management |
+| OAuth client database migration | Created oauth_clients table with proper indexes | acd458d |
+| OAuth client repository layer | Implemented interfaces + PostgreSQL with array handling | cbba737 |
+| OAuth client service layer | Implemented with secure secret generation and bcrypt hashing | 6c8e0f8 |
+| OAuth client HTTP handlers | Implemented 5 endpoints with permission enforcement | 042f7ad |
+| OAuth client routes | Wired with permission middleware | 8787834 |
+| main.go wiring | Added repository, service, and handler initialization | 44ffd0f |
+| Service tests | 9/9 tests passing (secret hashing, tenant isolation) | 6c8e0f8 |
+| Cryptographic secret generation | 32 bytes, base64-encoded, never logged | 6c8e0f8 |
+| bcrypt secret hashing | Cost 12, never plaintext storage | 6c8e0f8 |
+| One-time secret display | Enforced in create/rotate responses only | 6c8e0f8 |
+| Tenant isolation | Enforced at service layer for all operations | 6c8e0f8 |
+
+### Phase B4.1: Token Revocation on Secret Rotation (Completed 2026-01-11)
+
+| Item | Resolution | Commit/PR |
+|------|-----------|-----------|
+| RefreshTokenRepository.RevokeByClientID | Implemented with immediate revocation | feature/oauth-client-token-revocation |
+| Service integration with fail-fast security | Rotation fails if revocation fails (no partial states) | 069972f |
+| RevokedTokens optional field | Added to RotateSecretResponse with omitempty tag | 069972f |
+| Service tests updated | All 9/9 tests passing with token revocation | 069972f |
+| main.go wiring | Updated to pass refreshTokenRepo to OAuth client service | 069972f |
+| Security guarantee | Success = new secret active AND old tokens revoked | 069972f |
 
 ---
 
@@ -337,23 +363,23 @@
 
 | Category | Count | Status |
 |----------|-------|--------|
-| Critical Security Gaps | 1 | 🟢 1 Resolved (token blacklist) |
-| Missing Backend APIs | 7 endpoints | 🔴 7 Open (Phase B4: -4 OAuth clients) |
+| Critical Security Gaps | 0 | 🟢 All Resolved |
+| Missing Backend APIs | 7 endpoints | 🔴 7 Open |
 | Missing UI Screens | 6 | 🔴 6 Open |
-| Deferred Backend Work | 11 items | 🟡 Tracked |
+| Deferred Backend Work | 10 items | 🟡 Tracked (Phase B4.1: -1) |
 | Deferred UI Work | 10 items | 🟡 Tracked |
 | Known Limitations | 19 items | ⚪ Accepted |
-| Completed Items | 46 items | ✅ Resolved (Phase B4: +15) |
+| Completed Items | 52 items | ✅ Resolved (Phase B4.1: +6) |
 
-**Total Items Tracked**: 81 → 96 (+15 from Phase B4)
+**Total Items Tracked**: 96 → 102 (+6 from Phase B4.1)
 
-**Phase B4 Impact**:
-- ✅ 4 OAuth client endpoints implemented
-- ✅ 9 service tests added (all passing)
-- ✅ Cryptographic secret generation (32 bytes, bcrypt cost 12)
-- ✅ One-time secret display enforced
-- ✅ Tenant isolation at service layer
-- ✅ Permission middleware applied (5 permissions)
+**Phase B4.1 Impact**:
+- ✅ Token revocation on secret rotation implemented
+- ✅ Fail-fast security model (no partial states)
+- ✅ RefreshTokenRepository.RevokeByClientID added
+- ✅ Service integration complete
+- ✅ All tests passing (9/9)
+- ✅ Security gap closed
 
 **Phase B3 Impact**:
 - ✅ 2 session management endpoints implemented

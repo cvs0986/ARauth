@@ -14,12 +14,16 @@ import (
 
 // Service implements OAuth2 client management with secure credential handling
 type Service struct {
-	repo interfaces.OAuthClientRepository
+	repo             interfaces.OAuthClientRepository
+	refreshTokenRepo interfaces.RefreshTokenRepository
 }
 
 // NewService creates a new OAuth client service
-func NewService(repo interfaces.OAuthClientRepository) ServiceInterface {
-	return &Service{repo: repo}
+func NewService(repo interfaces.OAuthClientRepository, refreshTokenRepo interfaces.RefreshTokenRepository) ServiceInterface {
+	return &Service{
+		repo:             repo,
+		refreshTokenRepo: refreshTokenRepo,
+	}
 }
 
 // generateClientSecret generates a cryptographically secure client secret
@@ -211,15 +215,21 @@ func (s *Service) RotateSecret(ctx context.Context, id uuid.UUID, tenantID uuid.
 		return nil, fmt.Errorf("failed to update oauth client secret: %w", err)
 	}
 
-	// TODO(Phase B4.1): Revoke all refresh tokens issued with old secret
-	// This requires RefreshTokenRepository.RevokeByClientID(clientID)
-	// Deferred to Phase B4.1 to avoid partial implementation
+	// Revoke all refresh tokens issued with old secret
+	// SECURITY: Rotation fails if revocation fails (no partial states)
+	revokedCount, err := s.refreshTokenRepo.RevokeByClientID(ctx, repoClient.ClientID)
+	if err != nil {
+		// CRITICAL: Do not return success if revocation fails
+		// This prevents a security gap where new secret is active but old tokens remain valid
+		return nil, fmt.Errorf("failed to revoke tokens for client %s: %w", repoClient.ClientID, err)
+	}
 
 	// Return response with ONE-TIME new secret
 	return &RotateSecretResponse{
-		ClientID:     repoClient.ClientID,
-		ClientSecret: newSecret, // ONE-TIME ONLY
-		RotatedAt:    repoClient.UpdatedAt,
+		ClientID:      repoClient.ClientID,
+		ClientSecret:  newSecret, // ONE-TIME ONLY
+		RotatedAt:     repoClient.UpdatedAt,
+		RevokedTokens: &revokedCount, // Optional: included for audit visibility
 	}, nil
 }
 

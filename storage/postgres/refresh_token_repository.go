@@ -221,11 +221,33 @@ func (r *refreshTokenRepository) RevokeAllForUser(ctx context.Context, userID uu
 	return nil
 }
 
+// RevokeByClientID revokes all refresh tokens for a specific OAuth2 client
+// This is used when rotating client secrets to invalidate old tokens
+func (r *refreshTokenRepository) RevokeByClientID(ctx context.Context, clientID string) (int, error) {
+	query := `
+		UPDATE refresh_tokens
+		SET revoked_at = NOW(), updated_at = NOW()
+		WHERE client_id = $1 AND revoked_at IS NULL
+	`
+
+	result, err := r.db.ExecContext(ctx, query, clientID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to revoke tokens by client ID: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	return int(rowsAffected), nil
+}
+
 // DeleteExpired deletes expired refresh tokens
 func (r *refreshTokenRepository) DeleteExpired(ctx context.Context) error {
 	query := `
 		DELETE FROM refresh_tokens
-		WHERE expires_at < NOW() AND (revoked_at IS NULL OR revoked_at < NOW())
+		WHERE expires_at < NOW()
 	`
 
 	_, err := r.db.ExecContext(ctx, query)

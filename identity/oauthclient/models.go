@@ -47,7 +47,8 @@ type Client struct {
 
 // RotateSecretResponse includes the new one-time secret (NEVER LOGGED, NEVER RE-SHOWN)
 type RotateSecretResponse struct {
-	ClientID     string    `json:"client_id"`
-	ClientSecret string    `json:"client_secret"` // ONE-TIME ONLY - never stored, never logged
-	RotatedAt    time.Time `json:"rotated_at"`
+	ClientID      string    `json:"client_id"`
+	ClientSecret  string    `json:"client_secret"` // ONE-TIME ONLY - never stored, never logged
+	RotatedAt     time.Time `json:"rotated_at"`
+	RevokedTokens *int      `json:"revoked_tokens,omitempty"` // Optional: count of revoked tokens
 }

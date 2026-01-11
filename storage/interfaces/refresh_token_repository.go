@@ -41,6 +41,11 @@ type RefreshTokenRepository interface {
 	// RevokeAllForUser revokes all refresh tokens for a user
 	RevokeAllForUser(ctx context.Context, userID uuid.UUID) error
 
+	// RevokeByClientID revokes all refresh tokens for a specific OAuth2 client
+	// This is used when rotating client secrets to invalidate old tokens
+	// Returns the count of revoked tokens
+	RevokeByClientID(ctx context.Context, clientID string) (int, error)
+
 	// DeleteExpired deletes expired refresh tokens
 	DeleteExpired(ctx context.Context) error
 }

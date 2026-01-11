@@ -316,7 +316,7 @@ func main() {
 
 	// Initialize OAuth client repository, service, and handler
 	oauthClientRepo := postgres.NewOAuthClientRepository(db)
-	oauthClientService := oauthclient.NewService(oauthClientRepo)
+	oauthClientService := oauthclient.NewService(oauthClientRepo, refreshTokenRepo)
 	oauthClientHandler := handlers.NewOAuthClientHandler(oauthClientService)
 
 	// Set Gin mode

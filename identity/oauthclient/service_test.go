@@ -55,10 +55,62 @@ func (m *MockOAuthClientRepository) Delete(ctx context.Context, id uuid.UUID) er
 	return args.Error(0)
 }
 
+// MockRefreshTokenRepository is a mock for testing
+type MockRefreshTokenRepository struct {
+	mock.Mock
+}
+
+func (m *MockRefreshTokenRepository) Create(ctx context.Context, token *interfaces.RefreshToken) error {
+	args := m.Called(ctx, token)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*interfaces.RefreshToken, error) {
+	args := m.Called(ctx, tokenHash)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*interfaces.RefreshToken), args.Error(1)
+}
+
+func (m *MockRefreshTokenRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]*interfaces.RefreshToken, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*interfaces.RefreshToken), args.Error(1)
+}
+
+func (m *MockRefreshTokenRepository) Revoke(ctx context.Context, tokenID uuid.UUID) error {
+	args := m.Called(ctx, tokenID)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) RevokeByTokenHash(ctx context.Context, tokenHash string) error {
+	args := m.Called(ctx, tokenHash)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) RevokeAllForUser(ctx context.Context, userID uuid.UUID) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) RevokeByClientID(ctx context.Context, clientID string) (int, error) {
+	args := m.Called(ctx, clientID)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockRefreshTokenRepository) DeleteExpired(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 // TestCreateClient_Success tests successful client creation
 func TestCreateClient_Success(t *testing.T) {
 	mockRepo := new(MockOAuthClientRepository)
-	service := NewService(mockRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockRefreshTokenRepo)
 
 	tenantID := uuid.New()
 	createdBy := uuid.New()
@@ -90,7 +142,8 @@ func TestCreateClient_Success(t *testing.T) {
 // TestCreateClient_SecretHashed tests that secrets are bcrypt hashed
 func TestCreateClient_SecretHashed(t *testing.T) {
 	mockRepo := new(MockOAuthClientRepository)
-	service := NewService(mockRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockRefreshTokenRepo)
 
 	tenantID := uuid.New()
 	createdBy := uuid.New()
@@ -125,7 +178,8 @@ func TestCreateClient_SecretHashed(t *testing.T) {
 // TestListClients_NoSecrets tests that secrets are not included in list
 func TestListClients_NoSecrets(t *testing.T) {
 	mockRepo := new(MockOAuthClientRepository)
-	service := NewService(mockRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockRefreshTokenRepo)
 
 	tenantID := uuid.New()
 	desc := "Test Description"
@@ -161,7 +215,8 @@ func TestListClients_NoSecrets(t *testing.T) {
 // TestGetClient_NoSecret tests that secret is not included in get
 func TestGetClient_NoSecret(t *testing.T) {
 	mockRepo := new(MockOAuthClientRepository)
-	service := NewService(mockRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockRefreshTokenRepo)
 
 	clientID := uuid.New()
 	tenantID := uuid.New()
@@ -195,7 +250,8 @@ func TestGetClient_NoSecret(t *testing.T) {
 // TestGetClient_TenantIsolation tests cross-tenant access is denied
 func TestGetClient_TenantIsolation(t *testing.T) {
 	mockRepo := new(MockOAuthClientRepository)
-	service := NewService(mockRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockRefreshTokenRepo)
 
 	clientID := uuid.New()
 	clientTenantID := uuid.New()
@@ -220,7 +276,8 @@ func TestGetClient_TenantIsolation(t *testing.T) {
 // TestRotateSecret_Success tests successful secret rotation
 func TestRotateSecret_Success(t *testing.T) {
 	mockRepo := new(MockOAuthClientRepository)
-	service := NewService(mockRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockRefreshTokenRepo)
 
 	clientID := uuid.New()
 	tenantID := uuid.New()
@@ -240,12 +297,17 @@ func TestRotateSecret_Success(t *testing.T) {
 		return client.ID == clientID && client.ClientSecretHash != "old_bcrypt_hash"
 	})).Return(nil)
 
+	// Mock token revocation (Phase B4.1)
+	mockRefreshTokenRepo.On("RevokeByClientID", mock.Anything, "client_abc123").Return(2, nil)
+
 	resp, err := service.RotateSecret(context.Background(), clientID, tenantID)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.NotEmpty(t, resp.ClientSecret) // New one-time secret returned
 	assert.Equal(t, "client_abc123", resp.ClientID)
+	assert.NotNil(t, resp.RevokedTokens)
+	assert.Equal(t, 2, *resp.RevokedTokens)
 
 	// Verify new hash is different from old hash
 	assert.NotEqual(t, "old_bcrypt_hash", newHash)
@@ -255,12 +317,14 @@ func TestRotateSecret_Success(t *testing.T) {
 	assert.NoError(t, err, "New secret hash should match the returned secret")
 
 	mockRepo.AssertExpectations(t)
+	mockRefreshTokenRepo.AssertExpectations(t)
 }
 
 // TestRotateSecret_TenantIsolation tests cross-tenant rotation is denied
 func TestRotateSecret_TenantIsolation(t *testing.T) {
 	mockRepo := new(MockOAuthClientRepository)
-	service := NewService(mockRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockRefreshTokenRepo)
 
 	clientID := uuid.New()
 	clientTenantID := uuid.New()
@@ -284,7 +348,8 @@ func TestRotateSecret_TenantIsolation(t *testing.T) {
 // TestDeleteClient_Success tests successful client deletion
 func TestDeleteClient_Success(t *testing.T) {
 	mockRepo := new(MockOAuthClientRepository)
-	service := NewService(mockRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockRefreshTokenRepo)
 
 	clientID := uuid.New()
 	tenantID := uuid.New()
@@ -306,7 +371,8 @@ func TestDeleteClient_Success(t *testing.T) {
 // TestDeleteClient_TenantIsolation tests cross-tenant deletion is denied
 func TestDeleteClient_TenantIsolation(t *testing.T) {
 	mockRepo := new(MockOAuthClientRepository)
-	service := NewService(mockRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockRefreshTokenRepo)
 
 	clientID := uuid.New()
 	clientTenantID := uuid.New()
