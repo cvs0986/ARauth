@@ -34,17 +34,16 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Copy, CheckCircle2, AlertTriangle, Webhook } from 'lucide-react';
-import { APINotConnectedError, getAPINotConnectedMessage, isAPINotConnected } from '@/lib/errors';
+import { Copy, CheckCircle2, AlertTriangle, Webhook as WebhookIcon } from 'lucide-react';
+import { getAPINotConnectedMessage, isAPINotConnected } from '@/lib/errors';
+import { webhookApi } from '../../services/api';
+// @ts-ignore
+import { Webhook } from '../../../../shared/types/api';
 
 const createWebhookSchema = z.object({
     name: z.string().min(1, 'Webhook name is required'),
     url: z.string().url('Must be a valid HTTPS URL').startsWith('https://', 'URL must use HTTPS'),
     events: z.array(z.string()).min(1, 'At least one event is required'),
-    retry_policy: z.object({
-        max_attempts: z.number().min(1).max(10),
-        backoff_seconds: z.number().min(1).max(3600),
-    }).optional(),
 });
 
 type CreateWebhookFormData = z.infer<typeof createWebhookSchema>;
@@ -70,7 +69,7 @@ const AVAILABLE_EVENTS = [
 export function CreateWebhookDialog({ open, onOpenChange, scope, tenantId }: CreateWebhookDialogProps) {
     const queryClient = useQueryClient();
     const [error, setError] = useState<string | null>(null);
-    const [createdWebhook, setCreatedWebhook] = useState<{ signing_secret: string; name: string } | null>(null);
+    const [createdWebhook, setCreatedWebhook] = useState<Webhook | null>(null);
     const [secretCopied, setSecretCopied] = useState(false);
 
     const {
@@ -84,10 +83,6 @@ export function CreateWebhookDialog({ open, onOpenChange, scope, tenantId }: Cre
         resolver: zodResolver(createWebhookSchema),
         defaultValues: {
             events: [],
-            retry_policy: {
-                max_attempts: 3,
-                backoff_seconds: 60,
-            },
         },
     });
 
@@ -95,16 +90,27 @@ export function CreateWebhookDialog({ open, onOpenChange, scope, tenantId }: Cre
 
     const createWebhookMutation = useMutation({
         mutationFn: async (data: CreateWebhookFormData) => {
-            // UI CONTRACT MODE: Throw APINotConnectedError
-            throw new APINotConnectedError('webhooks.create');
+            // Generate a random secret since backend requires it
+            const secret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+
+            return await webhookApi.create({
+                name: data.name,
+                url: data.url,
+                events: data.events,
+                enabled: true,
+                secret: secret,
+            });
         },
-        onSuccess: (data: any) => {
+        onSuccess: (data: Webhook) => {
             queryClient.invalidateQueries({ queryKey: scope === 'system' ? ['system-webhooks'] : ['webhooks', tenantId] });
             setCreatedWebhook(data);
             setError(null);
         },
         onError: (err: any) => {
-            setError(getAPINotConnectedMessage(err));
+            setError(getAPINotConnectedMessage(err) || err.message || 'Failed to create webhook');
+            console.error(err);
         },
     });
 
@@ -127,8 +133,8 @@ export function CreateWebhookDialog({ open, onOpenChange, scope, tenantId }: Cre
     };
 
     const copySecret = () => {
-        if (createdWebhook) {
-            navigator.clipboard.writeText(createdWebhook.signing_secret);
+        if (createdWebhook && createdWebhook.secret) {
+            navigator.clipboard.writeText(createdWebhook.secret);
             setSecretCopied(true);
         }
     };
@@ -157,7 +163,7 @@ export function CreateWebhookDialog({ open, onOpenChange, scope, tenantId }: Cre
                             <Label>Signing Secret</Label>
                             <div className="flex gap-2">
                                 <Input
-                                    value={createdWebhook.signing_secret}
+                                    value={createdWebhook.secret || ''}
                                     readOnly
                                     className="font-mono text-sm"
                                     type="password"
@@ -181,7 +187,7 @@ export function CreateWebhookDialog({ open, onOpenChange, scope, tenantId }: Cre
                         </div>
 
                         <Alert className="bg-orange-50 border-orange-200">
-                            <Webhook className="h-4 w-4 text-orange-600" />
+                            <WebhookIcon className="h-4 w-4 text-orange-600" />
                             <AlertDescription className="text-orange-800 text-sm">
                                 <strong>Security:</strong> Use this secret to verify webhook signatures and prevent spoofing.
                             </AlertDescription>

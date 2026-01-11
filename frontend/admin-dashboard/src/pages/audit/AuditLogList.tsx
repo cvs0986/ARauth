@@ -33,25 +33,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileText, Download, Filter } from 'lucide-react';
-import { APINotConnectedError, isAPINotConnected } from '@/lib/errors';
-
-interface AuditLog {
-    id: string;
-    timestamp: string;
-    actor: string;
-    action: string;
-    target: string;
-    result: 'success' | 'failure';
-    ip_address: string;
-    user_agent: string;
-}
+import { isAPINotConnected } from '@/lib/errors';
+import { auditApi } from '../../services/api';
+// @ts-ignore
+import { AuditLog } from '../../../../shared/types/api';
 
 export function AuditLogList() {
     const { principalType, homeTenantId, selectedTenantId, consoleMode } = usePrincipalContext();
-    const [exportOpen, setExportOpen] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
 
     // Determine effective tenant ID
-    const effectiveTenantId = principalType === 'SYSTEM' ? selectedTenantId : homeTenantId;
+    const effectiveTenantId = principalType === 'SYSTEM' ? (selectedTenantId || undefined) : (homeTenantId || undefined);
 
     // Fetch audit logs
     const { data: logs, isLoading, error } = useQuery({
@@ -59,12 +51,23 @@ export function AuditLogList() {
             ? ['system-audit-logs']
             : ['audit-logs', effectiveTenantId],
         queryFn: async () => {
-            // UI CONTRACT MODE: Throw APINotConnectedError
-            throw new APINotConnectedError('audit.logs.list');
+            return await auditApi.list({}, effectiveTenantId);
         },
         enabled: consoleMode === 'SYSTEM' ? true : !!effectiveTenantId,
         retry: false,
     });
+
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            await auditApi.export({}, effectiveTenantId);
+        } catch (err) {
+            console.error('Export failed', err);
+            // Optionally show toast
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     return (
         <PermissionGate permission="audit:read" systemPermission={principalType === 'SYSTEM'}>
@@ -85,8 +88,12 @@ export function AuditLogList() {
                             Filters
                         </Button>
                         <PermissionGate permission="audit:export" systemPermission={principalType === 'SYSTEM'}>
-                            <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
-                                <Download className="h-4 w-4 mr-2" />
+                            <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
+                                {isExporting ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2" />
+                                ) : (
+                                    <Download className="h-4 w-4 mr-2" />
+                                )}
                                 Export
                             </Button>
                         </PermissionGate>
@@ -105,7 +112,7 @@ export function AuditLogList() {
                     </AlertDescription>
                 </Alert>
 
-                {/* API Not Connected Notice */}
+                {/* API Not Connected Notice - Kept for generic errors, but usually removed now */}
                 {error && isAPINotConnected(error) && (
                     <Alert className="bg-blue-50 border-blue-200">
                         <FileText className="h-4 w-4 text-blue-600" />
@@ -135,26 +142,30 @@ export function AuditLogList() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Timestamp</TableHead>
+                                    <TableHead>Event Type</TableHead>
                                     <TableHead>Actor</TableHead>
-                                    <TableHead>Action</TableHead>
                                     <TableHead>Target</TableHead>
                                     <TableHead>Result</TableHead>
                                     <TableHead>IP Address</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {logs.map((log) => (
+                                {logs.map((log: AuditLog) => (
                                     <TableRow key={log.id}>
                                         <TableCell className="font-mono text-sm">
                                             {new Date(log.timestamp).toLocaleString()}
                                         </TableCell>
-                                        <TableCell className="font-medium">{log.actor}</TableCell>
                                         <TableCell>
                                             <Badge variant="outline" className="font-mono text-xs">
-                                                {log.action}
+                                                {log.event_type}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="font-mono text-sm">{log.target}</TableCell>
+                                        <TableCell className="font-medium">
+                                            {log.actor.username || log.actor.id}
+                                        </TableCell>
+                                        <TableCell className="font-mono text-sm">
+                                            {log.target?.name || log.target?.id || '-'}
+                                        </TableCell>
                                         <TableCell>
                                             <Badge variant={log.result === 'success' ? 'default' : 'destructive'}>
                                                 {log.result}
