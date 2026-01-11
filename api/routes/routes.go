@@ -6,6 +6,7 @@ import (
 	"github.com/arauth-identity/iam/api/handlers"
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/auth/token"
+	"github.com/arauth-identity/iam/identity/ratelimit"
 	"github.com/arauth-identity/iam/identity/scim"
 	"github.com/arauth-identity/iam/internal/cache"
 	"github.com/arauth-identity/iam/storage/interfaces"
@@ -36,14 +37,21 @@ func getRedis(redisClient interface{}) *redis.Client {
 }
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, scimHandler *handlers.SCIMHandler, scimTokenHandler *handlers.SCIMTokenHandler, scimTokenService scim.TokenServiceInterface, invitationHandler *handlers.InvitationHandler, sessionHandler *handlers.SessionHandler, oauthClientHandler *handlers.OAuthClientHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, scimHandler *handlers.SCIMHandler, scimTokenHandler *handlers.SCIMTokenHandler, scimTokenService scim.TokenServiceInterface, invitationHandler *handlers.InvitationHandler, sessionHandler *handlers.SessionHandler, oauthClientHandler *handlers.OAuthClientHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}, rateLimiter ratelimit.Limiter) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
 	router.Use(middleware.Recovery(logger))
-	router.Use(middleware.RateLimit(cacheClient))
 
-	// Health check
+	// Apply multi-tier rate limiting if available
+	if rateLimiter != nil {
+		router.Use(middleware.MultiTierRateLimit(rateLimiter))
+	} else {
+		// Fallback to legacy rate limiting (development only)
+		router.Use(middleware.RateLimit(cacheClient))
+	}
+
+	// Health check (no rate limiting)
 	healthHandler := handlers.NewHealthHandlerWithDeps(getDB(db), cacheClient, getRedis(redisClient))
 	router.GET("/health", healthHandler.Check)
 	router.GET("/health/live", healthHandler.Liveness)

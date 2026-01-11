@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/arauth-identity/iam/identity/oauth_scope"
 	"github.com/arauth-identity/iam/identity/oauthclient"
 	"github.com/arauth-identity/iam/identity/permission"
+	"github.com/arauth-identity/iam/identity/ratelimit"
 	"github.com/arauth-identity/iam/identity/role"
 	"github.com/arauth-identity/iam/identity/scim"
 	"github.com/arauth-identity/iam/identity/session"
@@ -112,6 +114,43 @@ func main() {
 	var cacheClient *cache.Cache
 	if redisClient != nil {
 		cacheClient = cache.NewCache(redisClient)
+	}
+
+	// Initialize rate limiter (REQUIRED for production)
+	var rateLimiter ratelimit.Limiter
+	if redisClient != nil {
+		// Use environment variables for rate limit configuration with defaults
+		rateLimitConfig := ratelimit.DefaultConfig()
+
+		// Allow environment variable overrides
+		if userRPM := os.Getenv("RATE_LIMIT_USER_RPM"); userRPM != "" {
+			if rpm, err := strconv.Atoi(userRPM); err == nil {
+				rateLimitConfig.UserRequestsPerMinute = rpm
+			}
+		}
+		if clientRPM := os.Getenv("RATE_LIMIT_CLIENT_RPM"); clientRPM != "" {
+			if rpm, err := strconv.Atoi(clientRPM); err == nil {
+				rateLimitConfig.ClientRequestsPerMinute = rpm
+			}
+		}
+		if adminIPRPM := os.Getenv("RATE_LIMIT_ADMIN_IP_RPM"); adminIPRPM != "" {
+			if rpm, err := strconv.Atoi(adminIPRPM); err == nil {
+				rateLimitConfig.AdminIPRequestsPerMinute = rpm
+			}
+		}
+
+		rateLimiter = ratelimit.NewRedisLimiter(redisClient, rateLimitConfig)
+		logger.Logger.Info("Rate limiter initialized",
+			zap.Int("user_rpm", rateLimitConfig.UserRequestsPerMinute),
+			zap.Int("client_rpm", rateLimitConfig.ClientRequestsPerMinute),
+			zap.Int("admin_ip_rpm", rateLimitConfig.AdminIPRequestsPerMinute),
+		)
+	} else {
+		// In production, rate limiting is REQUIRED
+		if os.Getenv("ENVIRONMENT") == "production" {
+			logger.Logger.Fatal("Redis is required for rate limiting in production")
+		}
+		logger.Logger.Warn("Rate limiting disabled - Redis not available (NOT SAFE FOR PRODUCTION)")
 	}
 
 	// Initialize repositories
@@ -333,7 +372,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, oauthScopeHandler, scimHandler, scimTokenHandler, scimTokenService, invitationHandler, sessionHandler, oauthClientHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, oauthScopeHandler, scimHandler, scimTokenHandler, scimTokenService, invitationHandler, sessionHandler, oauthClientHandler, tenantRepo, cacheClient, db, redisClient, tokenService, rateLimiter)
 
 	// Create HTTP server
 	srv := &http.Server{
