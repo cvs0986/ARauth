@@ -8,12 +8,14 @@ import (
 	"time"
 
 	"github.com/arauth-identity/iam/identity/ratelimit"
+	"github.com/arauth-identity/iam/observability/security_events"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // MultiTierRateLimit creates a comprehensive rate limiting middleware
 // that applies user, client, and IP-based limits based on context
-func MultiTierRateLimit(limiter ratelimit.Limiter) gin.HandlerFunc {
+func MultiTierRateLimit(limiter ratelimit.Limiter, eventLogger security_events.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Skip health checks
 		if c.Request.URL.Path == "/health" || c.Request.URL.Path == "/health/live" || c.Request.URL.Path == "/health/ready" {
@@ -27,14 +29,14 @@ func MultiTierRateLimit(limiter ratelimit.Limiter) gin.HandlerFunc {
 		// Check IP-based rate limit first (prevents DDoS)
 		ip := c.ClientIP()
 		if err := limiter.CheckIPLimit(c.Request.Context(), ip, category); err != nil {
-			handleRateLimitError(c, err)
+			handleRateLimitError(c, err, category, eventLogger)
 			return
 		}
 
 		// Check user-based rate limit if user is authenticated
 		if userID, exists := c.Get("user_id"); exists {
 			if err := limiter.CheckUserLimit(c.Request.Context(), fmt.Sprintf("%v", userID), category); err != nil {
-				handleRateLimitError(c, err)
+				handleRateLimitError(c, err, category, eventLogger)
 				return
 			}
 		}
@@ -42,7 +44,7 @@ func MultiTierRateLimit(limiter ratelimit.Limiter) gin.HandlerFunc {
 		// Check client-based rate limit if OAuth client is present
 		if clientID, exists := c.Get("client_id"); exists {
 			if err := limiter.CheckClientLimit(c.Request.Context(), fmt.Sprintf("%v", clientID)); err != nil {
-				handleRateLimitError(c, err)
+				handleRateLimitError(c, err, category, eventLogger)
 				return
 			}
 		}
@@ -142,7 +144,7 @@ func matchesPrefix(path string, prefixes []string) bool {
 }
 
 // handleRateLimitError handles rate limit errors and sends appropriate response
-func handleRateLimitError(c *gin.Context, err error) {
+func handleRateLimitError(c *gin.Context, err error, category ratelimit.EndpointCategory, eventLogger security_events.Logger) {
 	rateLimitErr, ok := err.(*ratelimit.RateLimitError)
 	if !ok {
 		// Generic error
@@ -152,6 +154,38 @@ func handleRateLimitError(c *gin.Context, err error) {
 		})
 		c.Abort()
 		return
+	}
+
+	// Log rate limit violation
+	if eventLogger != nil {
+		// Determine severity based on endpoint category
+		severity := security_events.SeverityWarning
+		if category == ratelimit.CategorySensitive {
+			severity = security_events.SeverityCritical
+		}
+
+		event := security_events.NewSecurityEvent(
+			security_events.EventRateLimitExceeded,
+			severity,
+		).WithIP(c.ClientIP()).
+			WithResource(c.Request.URL.Path).
+			WithAction(c.Request.Method).
+			WithResult("blocked").
+			WithDetail("limit_type", string(rateLimitErr.LimitType)).
+			WithDetail("category", string(category)).
+			WithDetail("limit", rateLimitErr.Limit).
+			WithDetail("current_count", rateLimitErr.CurrentCount)
+
+		if userID, exists := c.Get("user_id"); exists {
+			if uid, ok := userID.(uuid.UUID); ok {
+				event.WithUser(uid)
+			}
+		}
+		if tenantID, exists := GetTenantID(c); exists {
+			event.WithTenant(tenantID)
+		}
+
+		eventLogger.LogEvent(c.Request.Context(), event)
 	}
 
 	// Set rate limit headers

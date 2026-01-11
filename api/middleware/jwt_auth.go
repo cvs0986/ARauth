@@ -4,11 +4,13 @@ import (
 	"net/http"
 
 	"github.com/arauth-identity/iam/auth/token"
+	"github.com/arauth-identity/iam/observability/security_events"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // JWTAuthMiddleware creates middleware for JWT token validation
-func JWTAuthMiddleware(tokenService token.ServiceInterface) gin.HandlerFunc {
+func JWTAuthMiddleware(tokenService token.ServiceInterface, eventLogger security_events.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Extract token from Authorization header
 		authHeader := c.GetHeader("Authorization")
@@ -37,6 +39,19 @@ func JWTAuthMiddleware(tokenService token.ServiceInterface) gin.HandlerFunc {
 		// Validate token
 		claims, err := tokenService.ValidateAccessToken(tokenString)
 		if err != nil {
+			// Log token validation failure
+			if eventLogger != nil {
+				event := security_events.NewSecurityEvent(
+					security_events.EventTokenValidationFailed,
+					security_events.SeverityWarning,
+				).WithIP(c.ClientIP()).
+					WithResource(c.Request.URL.Path).
+					WithAction(c.Request.Method).
+					WithResult("failure").
+					WithDetail("reason", err.Error())
+				eventLogger.LogEvent(c.Request.Context(), event)
+			}
+
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error":   "unauthorized",
 				"message": "Invalid or expired token",
@@ -58,6 +73,31 @@ func JWTAuthMiddleware(tokenService token.ServiceInterface) gin.HandlerFunc {
 				return
 			}
 			if revoked {
+				// Log blacklisted token usage (CRITICAL)
+				if eventLogger != nil {
+					event := security_events.NewSecurityEvent(
+						security_events.EventBlacklistedTokenUsed,
+						security_events.SeverityCritical,
+					).WithIP(c.ClientIP()).
+						WithResource(c.Request.URL.Path).
+						WithAction(c.Request.Method).
+						WithResult("blocked").
+						WithDetail("token_id", claims.ID)
+
+					if claims.Subject != "" {
+						if userID, err := uuid.Parse(claims.Subject); err == nil {
+							event.WithUser(userID)
+						}
+					}
+					if claims.TenantID != "" {
+						if tenantID, err := uuid.Parse(claims.TenantID); err == nil {
+							event.WithTenant(tenantID)
+						}
+					}
+
+					eventLogger.LogEvent(c.Request.Context(), event)
+				}
+
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"error":   "unauthorized",
 					"message": "Token revoked",

@@ -3,9 +3,10 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/arauth-identity/iam/observability/security_events"
+	"github.com/arauth-identity/iam/storage/interfaces"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/arauth-identity/iam/storage/interfaces"
 )
 
 // AuthorizationMiddleware creates middleware for role-based authorization
@@ -131,7 +132,7 @@ func RequireRole(roleName string) gin.HandlerFunc {
 }
 
 // RequirePermission creates middleware that requires a specific permission
-func RequirePermission(resource, action string) gin.HandlerFunc {
+func RequirePermission(resource, action string, eventLogger security_events.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		permissions, exists := c.Get("user_permissions")
 		if !exists {
@@ -155,6 +156,30 @@ func RequirePermission(resource, action string) gin.HandlerFunc {
 		}
 
 		if !hasPermission {
+			// Log permission denial
+			if eventLogger != nil {
+				event := security_events.NewSecurityEvent(
+					security_events.EventPermissionDenied,
+					security_events.SeverityWarning,
+				).WithIP(c.ClientIP()).
+					WithResource(resource).
+					WithAction(action).
+					WithResult("denied").
+					WithDetail("required_permission", requiredPermission).
+					WithDetail("endpoint", c.Request.URL.Path)
+
+				if userID, exists := c.Get("user_id"); exists {
+					if uid, ok := userID.(uuid.UUID); ok {
+						event.WithUser(uid)
+					}
+				}
+				if tenantID, exists := GetTenantID(c); exists {
+					event.WithTenant(tenantID)
+				}
+
+				eventLogger.LogEvent(c.Request.Context(), event)
+			}
+
 			c.JSON(http.StatusForbidden, gin.H{
 				"error":   "forbidden",
 				"message": "Required permission not found: " + requiredPermission,
@@ -234,4 +259,3 @@ func HasPermission(c *gin.Context, resource, action string) bool {
 
 	return false
 }
-
