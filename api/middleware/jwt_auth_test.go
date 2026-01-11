@@ -105,7 +105,7 @@ func TestJWTAuthMiddleware_Revocation(t *testing.T) {
 			c.Request, _ = http.NewRequest("GET", "/", nil)
 			c.Request.Header.Set("Authorization", "Bearer "+tt.token)
 
-			middleware := JWTAuthMiddleware(mockService)
+			middleware := JWTAuthMiddleware(mockService, nil)
 			middleware(c)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)

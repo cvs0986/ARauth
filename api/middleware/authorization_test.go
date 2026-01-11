@@ -53,7 +53,7 @@ func TestRequirePermission(t *testing.T) {
 			parts := strings.Split(tt.requiredPerm, ":")
 			resource := parts[0]
 			action := parts[1]
-			router.GET("/test", RequirePermission(resource, action), func(c *gin.Context) {
+			router.GET("/test", RequirePermission(resource, action, nil), func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{"message": "success"})
 			})
 

@@ -52,7 +52,7 @@ func TestMultiTierRateLimit_IPLimit(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(MultiTierRateLimit(limiter))
+	router.Use(MultiTierRateLimit(limiter, nil))
 	router.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
@@ -81,7 +81,7 @@ func TestMultiTierRateLimit_UserLimit(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(MultiTierRateLimit(limiter))
+	router.Use(MultiTierRateLimit(limiter, nil))
 	router.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
@@ -125,7 +125,7 @@ func TestMultiTierRateLimit_CategoryAuth(t *testing.T) {
 		c.Set("user_id", "user-auth-test")
 		c.Next()
 	})
-	router.Use(UserOnlyRateLimit(limiter, ratelimit.CategoryAuth))
+	router.Use(UserOnlyRateLimit(limiter, ratelimit.CategoryAuth, nil))
 
 	router.POST("/api/v1/auth/login", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -152,7 +152,7 @@ func TestMultiTierRateLimit_SkipHealthCheck(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(MultiTierRateLimit(limiter))
+	router.Use(MultiTierRateLimit(limiter, nil))
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
 	})
@@ -173,7 +173,7 @@ func TestUserOnlyRateLimit(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(UserOnlyRateLimit(limiter, ratelimit.CategoryGeneral))
+	router.Use(UserOnlyRateLimit(limiter, ratelimit.CategoryGeneral, nil))
 	router.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
@@ -193,7 +193,7 @@ func TestIPOnlyRateLimit(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.Use(IPOnlyRateLimit(limiter, ratelimit.CategoryAdmin))
+	router.Use(IPOnlyRateLimit(limiter, ratelimit.CategoryAdmin, nil))
 	router.GET("/admin", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})

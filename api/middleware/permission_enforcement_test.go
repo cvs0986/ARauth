@@ -20,7 +20,7 @@ func TestRequirePermission_MissingPermission(t *testing.T) {
 		c.Set("user_permissions", []string{})
 		c.Next()
 	})
-	router.GET("/test", RequirePermission("users", "read"), func(c *gin.Context) {
+	router.GET("/test", RequirePermission("users", "read", nil), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
@@ -45,7 +45,7 @@ func TestRequirePermission_CorrectPermission(t *testing.T) {
 		c.Set("user_permissions", []string{"users:read"})
 		c.Next()
 	})
-	router.GET("/test", RequirePermission("users", "read"), func(c *gin.Context) {
+	router.GET("/test", RequirePermission("users", "read", nil), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
@@ -70,7 +70,7 @@ func TestRequirePermission_MultiplePermissions(t *testing.T) {
 		c.Set("user_permissions", []string{"users:read", "users:update", "roles:create"})
 		c.Next()
 	})
-	router.GET("/test", RequirePermission("users", "update"), func(c *gin.Context) {
+	router.GET("/test", RequirePermission("users", "update", nil), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
@@ -94,7 +94,7 @@ func TestRequirePermission_WrongPermission(t *testing.T) {
 		c.Set("user_permissions", []string{"users:read"})
 		c.Next()
 	})
-	router.GET("/test", RequirePermission("users", "delete"), func(c *gin.Context) {
+	router.GET("/test", RequirePermission("users", "delete", nil), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
@@ -114,7 +114,7 @@ func TestRequirePermission_NoPermissionsContext(t *testing.T) {
 	// Setup
 	router := gin.New()
 	// No permissions set in context
-	router.GET("/test", RequirePermission("users", "read"), func(c *gin.Context) {
+	router.GET("/test", RequirePermission("users", "read", nil), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
@@ -190,7 +190,7 @@ func TestRequirePermission_GranularPermissions(t *testing.T) {
 				c.Set("user_permissions", tt.userPermissions)
 				c.Next()
 			})
-			router.GET("/test", RequirePermission(tt.requiredResource, tt.requiredAction), func(c *gin.Context) {
+			router.GET("/test", RequirePermission(tt.requiredResource, tt.requiredAction, nil), func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{"message": "success"})
 			})
 
@@ -253,7 +253,7 @@ func TestPermissionEnforcement_CriticalOperations(t *testing.T) {
 				c.Set("user_permissions", []string{})
 				c.Next()
 			})
-			router.POST("/test", RequirePermission(op.resource, op.action), func(c *gin.Context) {
+			router.POST("/test", RequirePermission(op.resource, op.action, nil), func(c *gin.Context) {
 				c.JSON(http.StatusOK, gin.H{"message": "success"})
 			})
 
