@@ -197,6 +197,16 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 				sessions.POST("/:id/revoke", middleware.RequirePermission("sessions", "revoke"), sessionHandler.RevokeSession)
 			}
 
+			// OAuth client routes (tenant-scoped)
+			oauthClients := tenantScoped.Group("/oauth/clients")
+			{
+				oauthClients.POST("", middleware.RequirePermission("oauth", "clients:create"), oauthClientHandler.CreateClient)
+				oauthClients.GET("", middleware.RequirePermission("oauth", "clients:read"), oauthClientHandler.ListClients)
+				oauthClients.GET("/:id", middleware.RequirePermission("oauth", "clients:read"), oauthClientHandler.GetClient)
+				oauthClients.POST("/:id/rotate-secret", middleware.RequirePermission("oauth", "clients:rotate-secret"), oauthClientHandler.RotateSecret)
+				oauthClients.DELETE("/:id", middleware.RequirePermission("oauth", "clients:delete"), oauthClientHandler.DeleteClient)
+			}
+
 			// MFA routes (tenant-scoped - require authentication)
 			mfa := tenantScoped.Group("/mfa")
 			{
