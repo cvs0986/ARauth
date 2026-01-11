@@ -3,8 +3,8 @@ package federation
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/federation"
+	"github.com/google/uuid"
 )
 
 // ServiceInterface defines the interface for federation service operations
@@ -15,6 +15,9 @@ type ServiceInterface interface {
 	GetIdentityProvidersByTenant(ctx context.Context, tenantID uuid.UUID) ([]*federation.IdentityProvider, error)
 	UpdateIdentityProvider(ctx context.Context, id uuid.UUID, req *UpdateIdPRequest) (*federation.IdentityProvider, error)
 	DeleteIdentityProvider(ctx context.Context, id uuid.UUID) error
+
+	// Verification
+	VerifyIdentityProvider(ctx context.Context, id uuid.UUID) (*VerificationResult, error)
 
 	// OIDC Flow
 	InitiateOIDCLogin(ctx context.Context, tenantID uuid.UUID, providerID uuid.UUID, redirectURI string) (string, string, error) // Returns auth URL and state
@@ -27,18 +30,18 @@ type ServiceInterface interface {
 
 // CreateIdPRequest represents a request to create an identity provider
 type CreateIdPRequest struct {
-	Name            string                 `json:"name" binding:"required"`
-	Type            federation.IdentityProviderType `json:"type" binding:"required"`
-	Enabled         bool                   `json:"enabled"`
-	Configuration   map[string]interface{} `json:"configuration" binding:"required"`
-	AttributeMapping map[string]interface{} `json:"attribute_mapping,omitempty"`
+	Name             string                          `json:"name" binding:"required"`
+	Type             federation.IdentityProviderType `json:"type" binding:"required"`
+	Enabled          bool                            `json:"enabled"`
+	Configuration    map[string]interface{}          `json:"configuration" binding:"required"`
+	AttributeMapping map[string]interface{}          `json:"attribute_mapping,omitempty"`
 }
 
 // UpdateIdPRequest represents a request to update an identity provider
 type UpdateIdPRequest struct {
-	Name            *string                `json:"name,omitempty"`
-	Enabled         *bool                  `json:"enabled,omitempty"`
-	Configuration   map[string]interface{} `json:"configuration,omitempty"`
+	Name             *string                `json:"name,omitempty"`
+	Enabled          *bool                  `json:"enabled,omitempty"`
+	Configuration    map[string]interface{} `json:"configuration,omitempty"`
 	AttributeMapping map[string]interface{} `json:"attribute_mapping,omitempty"`
 }
 
@@ -55,3 +58,9 @@ type LoginResponse struct {
 	IDToken     string    `json:"id_token,omitempty"`
 }
 
+// VerificationResult represents the result of an identity provider verification
+type VerificationResult struct {
+	Success bool                   `json:"success"`
+	Message string                 `json:"message"`
+	Details map[string]interface{} `json:"details,omitempty"`
+}

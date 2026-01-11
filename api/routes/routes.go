@@ -277,6 +277,7 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 				identityProviders.GET("/:id", middleware.RequirePermission("federation", "read"), federationHandler.GetIdentityProvider)
 				identityProviders.PUT("/:id", middleware.RequirePermission("federation", "update"), federationHandler.UpdateIdentityProvider)
 				identityProviders.DELETE("/:id", middleware.RequirePermission("federation", "delete"), federationHandler.DeleteIdentityProvider)
+				identityProviders.POST("/:id/verify", middleware.RequirePermission("federation", "verify"), federationHandler.VerifyIdentityProvider)
 			}
 		}
 

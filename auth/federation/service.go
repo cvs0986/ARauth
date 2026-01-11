@@ -5,25 +5,29 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
+	"crypto/x509"
+	"encoding/pem"
+	"net/url"
+
 	"github.com/arauth-identity/iam/auth/claims"
+	oidcclient "github.com/arauth-identity/iam/auth/federation/oidc"
+	samlclient "github.com/arauth-identity/iam/auth/federation/saml"
 	"github.com/arauth-identity/iam/auth/token"
 	"github.com/arauth-identity/iam/identity/federation"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
-	oidcclient "github.com/arauth-identity/iam/auth/federation/oidc"
-	samlclient "github.com/arauth-identity/iam/auth/federation/saml"
+	"github.com/google/uuid"
 )
 
 // Service provides federation functionality
 type Service struct {
-	idpRepo      interfaces.IdentityProviderRepository
-	fedIdRepo    interfaces.FederatedIdentityRepository
-	userRepo     interfaces.UserRepository
+	idpRepo        interfaces.IdentityProviderRepository
+	fedIdRepo      interfaces.FederatedIdentityRepository
+	userRepo       interfaces.UserRepository
 	credentialRepo interfaces.CredentialRepository
-	claimsBuilder *claims.Builder
-	tokenService  token.ServiceInterface
-	stateStore   map[string]*State // In-memory state store (should be Redis in production)
+	claimsBuilder  *claims.Builder
+	tokenService   token.ServiceInterface
+	stateStore     map[string]*State // In-memory state store (should be Redis in production)
 }
 
 // State represents OAuth state for federation
@@ -67,12 +71,12 @@ func (s *Service) CreateIdentityProvider(ctx context.Context, tenantID uuid.UUID
 	}
 
 	provider := &federation.IdentityProvider{
-		ID:              uuid.New(),
-		TenantID:        tenantID,
-		Name:            req.Name,
-		Type:            req.Type,
-		Enabled:         req.Enabled,
-		Configuration:   req.Configuration,
+		ID:               uuid.New(),
+		TenantID:         tenantID,
+		Name:             req.Name,
+		Type:             req.Type,
+		Enabled:          req.Enabled,
+		Configuration:    req.Configuration,
 		AttributeMapping: req.AttributeMapping,
 	}
 
@@ -334,9 +338,9 @@ func (s *Service) HandleOIDCCallback(ctx context.Context, providerID uuid.UUID, 
 			ProviderID: providerID,
 			ExternalID: userInfo.Sub,
 			Attributes: map[string]interface{}{
-				"email":             userInfo.Email,
-				"email_verified":    userInfo.EmailVerified,
-				"name":              userInfo.Name,
+				"email":              userInfo.Email,
+				"email_verified":     userInfo.EmailVerified,
+				"name":               userInfo.Name,
 				"preferred_username": userInfo.PreferredUsername,
 			},
 			IsPrimary: true,
@@ -733,3 +737,136 @@ func (s *Service) findOrCreateSAMLUser(ctx context.Context, provider *federation
 	return user, true, nil
 }
 
+// VerifyIdentityProvider verifies an identity provider configuration
+func (s *Service) VerifyIdentityProvider(ctx context.Context, id uuid.UUID) (*VerificationResult, error) {
+	provider, err := s.idpRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("identity provider not found: %w", err)
+	}
+
+	if provider.Type == federation.IdentityProviderTypeOIDC {
+		return s.verifyOIDC(ctx, provider)
+	} else if provider.Type == federation.IdentityProviderTypeSAML {
+		return s.verifySAML(ctx, provider)
+	}
+
+	return nil, fmt.Errorf("unknown provider type: %s", provider.Type)
+}
+
+func (s *Service) verifyOIDC(ctx context.Context, provider *federation.IdentityProvider) (*VerificationResult, error) {
+	oidcConfig := s.buildOIDCConfig(provider.Configuration)
+
+	if oidcConfig.IssuerURL == "" {
+		return &VerificationResult{
+			Success: false,
+			Message: "Issuer URL is missing",
+		}, nil
+	}
+
+	client := oidcclient.NewClient(oidcConfig)
+
+	// Attempt discovery
+	// We use a short timeout for verification
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	discoveryInfo, err := client.Discover(ctx)
+	if err != nil {
+		return &VerificationResult{
+			Success: false,
+			Message: fmt.Sprintf("Failed to discover OIDC provider: %v", err),
+			Details: map[string]interface{}{
+				"issuer_url": oidcConfig.IssuerURL,
+				"error":      err.Error(),
+			},
+		}, nil
+	}
+
+	return &VerificationResult{
+		Success: true,
+		Message: "OIDC provider verified successfully",
+		Details: map[string]interface{}{
+			"issuer_url":             oidcConfig.IssuerURL,
+			"authorization_endpoint": discoveryInfo.AuthorizationEndpoint,
+			"token_endpoint":         discoveryInfo.TokenEndpoint,
+		},
+	}, nil
+}
+
+func (s *Service) verifySAML(ctx context.Context, provider *federation.IdentityProvider) (*VerificationResult, error) {
+	samlConfig := s.buildSAMLConfig(provider.Configuration)
+
+	details := make(map[string]interface{})
+
+	// 1. Verify SSO URL
+	if samlConfig.SSOURL == "" {
+		return &VerificationResult{Success: false, Message: "SSO URL is missing"}, nil
+	}
+
+	// Basic URL validation
+	u, err := url.Parse(samlConfig.SSOURL)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return &VerificationResult{
+			Success: false,
+			Message: "Invalid SSO URL format",
+			Details: map[string]interface{}{"sso_url": samlConfig.SSOURL},
+		}, nil
+	}
+	details["sso_url_valid"] = true
+
+	// 2. Verify Entity ID
+	if samlConfig.EntityID == "" {
+		return &VerificationResult{Success: false, Message: "Entity ID is missing"}, nil
+	}
+
+	// 3. Verify Certificate
+	if samlConfig.X509Certificate == "" {
+		return &VerificationResult{Success: false, Message: "X509 Certificate is missing"}, nil
+	}
+
+	certBlock, _ := pem.Decode([]byte(samlConfig.X509Certificate))
+	if certBlock == nil {
+		return &VerificationResult{
+			Success: false,
+			Message: "Invalid X509 Certificate (PEM decode failed)",
+		}, nil
+	}
+
+	cert, err := x509.ParseCertificate(certBlock.Bytes)
+	if err != nil {
+		return &VerificationResult{
+			Success: false,
+			Message: fmt.Sprintf("Invalid X509 Certificate: %v", err),
+		}, nil
+	}
+
+	now := time.Now()
+	if now.Before(cert.NotBefore) {
+		return &VerificationResult{
+			Success: false,
+			Message: "Certificate is not yet valid",
+			Details: map[string]interface{}{
+				"not_before": cert.NotBefore,
+			},
+		}, nil
+	}
+	if now.After(cert.NotAfter) {
+		return &VerificationResult{
+			Success: false,
+			Message: "Certificate has expired",
+			Details: map[string]interface{}{
+				"not_after": cert.NotAfter,
+			},
+		}, nil
+	}
+
+	details["certificate_subject"] = cert.Subject.CommonName
+	details["certificate_expires"] = cert.NotAfter
+	details["certificate_valid"] = true
+
+	return &VerificationResult{
+		Success: true,
+		Message: "SAML provider configuration verified",
+		Details: details,
+	}, nil
+}

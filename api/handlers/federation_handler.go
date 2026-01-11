@@ -3,10 +3,10 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/auth/federation"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // FederationHandler handles federation-related HTTP requests
@@ -149,7 +149,7 @@ func (h *FederationHandler) InitiateOIDCLogin(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"authorization_url": authURL,
-		"state":            state,
+		"state":             state,
 	})
 }
 
@@ -248,3 +248,44 @@ func (h *FederationHandler) HandleSAMLCallback(c *gin.Context) {
 	c.JSON(http.StatusOK, loginResp)
 }
 
+// VerifyIdentityProvider handles POST /api/v1/identity-providers/:id/verify
+func (h *FederationHandler) VerifyIdentityProvider(c *gin.Context) {
+	tenantID, exists := middleware.GetTenantID(c)
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tenant_required", "message": "Tenant ID is required"})
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_id", "message": "Invalid identity provider ID"})
+		return
+	}
+
+	// Verify the provider belongs to the tenant first
+	provider, err := h.federationService.GetIdentityProvider(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not_found", "message": "Identity provider not found"})
+		return
+	}
+	if provider.TenantID != tenantID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "forbidden", "message": "Identity provider does not belong to tenant"})
+		return
+	}
+
+	// Perform verification
+	result, err := h.federationService.VerifyIdentityProvider(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "verification_error", "message": err.Error()})
+		return
+	}
+
+	if !result.Success {
+		// Return 400 Bad Request for failed verification
+		c.JSON(http.StatusBadRequest, result)
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}

@@ -47,6 +47,14 @@
 **Impact**: WebhookList and CreateWebhookDialog show APINotConnectedError
 
 
+### Federation Backend Verification
+
+| Endpoint | Method | Why Required | Blocking | Planned Phase |
+|----------|--------|--------------|----------|---------------|
+| /api/v1/identity-providers/:id/verify | POST | Verify IDP configuration (Test Connection) | Security Assurance | **Completed (Phase B7)** |
+
+**Impact**: "Test Connection" button in UI has no backend to call.
+
 ### Recovery Code Management
 
 | Item | Why Required | Blocking | Planned Phase |
@@ -446,6 +454,11 @@ This document is the **single source of truth** for all missing, deferred, and k
 1. Every phase MUST review and update this document
 2. New findings MUST be added immediately
 3. Resolved items MUST be moved to Completed section
+## STATISTICS (Live)
+- **Total Critical Items Found (Since B1)**: 29
+- **Completed Items**: 29
+- **Deferred Items**: 0
+- **Net Critical Gap**: 0 
 4. Deferred items MUST include justification
 5. No silent deferrals allowed
 
