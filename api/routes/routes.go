@@ -36,7 +36,7 @@ func getRedis(redisClient interface{}) *redis.Client {
 }
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, scimHandler *handlers.SCIMHandler, scimTokenService scim.TokenServiceInterface, invitationHandler *handlers.InvitationHandler, sessionHandler *handlers.SessionHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, scimHandler *handlers.SCIMHandler, scimTokenService scim.TokenServiceInterface, invitationHandler *handlers.InvitationHandler, sessionHandler *handlers.SessionHandler, oauthClientHandler *handlers.OAuthClientHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -195,6 +195,16 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			{
 				sessions.GET("", middleware.RequirePermission("sessions", "read"), sessionHandler.ListSessions)
 				sessions.POST("/:id/revoke", middleware.RequirePermission("sessions", "revoke"), sessionHandler.RevokeSession)
+			}
+
+			// OAuth client routes (tenant-scoped)
+			oauthClients := tenantScoped.Group("/oauth/clients")
+			{
+				oauthClients.POST("", middleware.RequirePermission("oauth", "clients:create"), oauthClientHandler.CreateClient)
+				oauthClients.GET("", middleware.RequirePermission("oauth", "clients:read"), oauthClientHandler.ListClients)
+				oauthClients.GET("/:id", middleware.RequirePermission("oauth", "clients:read"), oauthClientHandler.GetClient)
+				oauthClients.POST("/:id/rotate-secret", middleware.RequirePermission("oauth", "clients:rotate-secret"), oauthClientHandler.RotateSecret)
+				oauthClients.DELETE("/:id", middleware.RequirePermission("oauth", "clients:delete"), oauthClientHandler.DeleteClient)
 			}
 
 			// MFA routes (tenant-scoped - require authentication)
