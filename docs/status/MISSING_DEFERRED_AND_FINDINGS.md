@@ -26,8 +26,6 @@
 
 | Item | Scope | Risk | Status | Planned Fix |
 |------|-------|------|--------|-------------|
-| No active session listing endpoint | Backend - Session management | MEDIUM - Users cannot see/revoke active sessions | 🔴 OPEN | Phase B3 |
-| No session revocation endpoint | Backend - Session management | MEDIUM - Users cannot revoke individual sessions | 🔴 OPEN | Phase B3 |
 | Token blacklist Redis persistence not verified | Backend - Token service | MEDIUM - Blacklist may not survive Redis restart | 🟡 NEEDS VERIFICATION | Phase B2 audit |
 
 ---
@@ -45,14 +43,7 @@
 
 **Impact**: OAuth2ClientList and CreateOAuth2ClientDialog show APINotConnectedError
 
-### Active Session Management
-
-| Endpoint | Method | Why Required | Blocking | Planned Phase |
-|----------|--------|--------------|----------|---------------|
-| /api/v1/sessions | GET | List active refresh tokens for user | Security requirement | Phase B3 |
-| /api/v1/sessions/:id/revoke | POST | Revoke individual session with audit reason | Security requirement | Phase B3 |
-
-**Impact**: Users cannot see or manage their active sessions
+**Impact**: ✅ RESOLVED - Phase B3 complete
 
 ### Webhook Management
 
@@ -269,6 +260,21 @@
 | Permission enforcement tests | Created comprehensive test suite (9 tests, all passing) | b6dcd5a3 |
 | MISSING_DEFERRED_AND_FINDINGS.md registry | Created governance registry with 80 items tracked | 013ffaa |
 
+### Phase B3: Active Session Management (Completed 2026-01-11)
+
+| Item | Resolution | Commit/PR |
+|------|-----------|-----------|
+| GET /api/v1/sessions endpoint | Implemented with sessions:read permission | feature/active-session-management |
+| POST /api/v1/sessions/:id/revoke endpoint | Implemented with sessions:revoke permission | feature/active-session-management |
+| Session service layer | Created identity/session package with tenant isolation | 70c9f9e, 6bbf0b7 |
+| Session handler with audit logging | Implemented with extractActorFromContext | 60c5135 |
+| Permission enforcement | sessions:read and sessions:revoke required | 8537436 |
+| Audit reason validation | Server-side validation (min 10 chars) | 60c5135 |
+| Cross-tenant access blocking | Session ownership verified before revoke | 60c5135 |
+| Handler tests | 5/5 tests passing | a6995da |
+| Routes wired | Added to api/routes/routes.go with middleware | 8537436 |
+| Impersonation session detection | Documented as deferred (requires token metadata) | service.go TODO |
+
 ---
 
 ## 🔍 8. Verification & Re-Audit Plan
@@ -345,7 +351,14 @@
 | Known Limitations | 19 items | ⚪ Accepted |
 | Completed Items | 21 items | ✅ Resolved (Phase B2: +11) |
 
-**Total Items Tracked**: 83
+**Total Items Tracked**: 81
+
+**Phase B3 Impact**:
+- ✅ 2 session management endpoints implemented
+- ✅ 5 handler tests added (all passing)
+- ✅ Tenant isolation enforced
+- ✅ Audit logging with reason validation
+- ✅ Permission middleware applied (sessions:read, sessions:revoke)
 
 **Phase B2 Impact**:
 - ✅ 11 permission enforcement gaps resolved

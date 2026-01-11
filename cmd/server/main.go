@@ -10,38 +10,39 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/arauth-identity/iam/api/handlers"
 	"github.com/arauth-identity/iam/api/routes"
-	"github.com/arauth-identity/iam/auth/hydra"
 	"github.com/arauth-identity/iam/auth/claims"
+	"github.com/arauth-identity/iam/auth/federation"
+	"github.com/arauth-identity/iam/auth/hydra"
+	"github.com/arauth-identity/iam/auth/introspection"
 	"github.com/arauth-identity/iam/auth/login"
 	"github.com/arauth-identity/iam/auth/mfa"
 	"github.com/arauth-identity/iam/auth/token"
 	"github.com/arauth-identity/iam/config/loader"
 	"github.com/arauth-identity/iam/config/validator"
+	auditevent "github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/identity/capability"
+	"github.com/arauth-identity/iam/identity/impersonation"
+	"github.com/arauth-identity/iam/identity/invitation"
+	"github.com/arauth-identity/iam/identity/linking"
+	"github.com/arauth-identity/iam/identity/oauth_scope"
 	"github.com/arauth-identity/iam/identity/permission"
 	"github.com/arauth-identity/iam/identity/role"
+	"github.com/arauth-identity/iam/identity/scim"
+	"github.com/arauth-identity/iam/identity/session"
 	"github.com/arauth-identity/iam/identity/tenant"
 	"github.com/arauth-identity/iam/identity/user"
-	"github.com/arauth-identity/iam/auth/federation"
 	"github.com/arauth-identity/iam/identity/webhook"
-	"github.com/arauth-identity/iam/identity/linking"
-	"github.com/arauth-identity/iam/identity/impersonation"
-	"github.com/arauth-identity/iam/identity/oauth_scope"
-	"github.com/arauth-identity/iam/identity/scim"
-	"github.com/arauth-identity/iam/identity/invitation"
-	"github.com/arauth-identity/iam/internal/email"
-	"github.com/arauth-identity/iam/auth/introspection"
-	webhookdispatcher "github.com/arauth-identity/iam/internal/webhook"
 	auditlogger "github.com/arauth-identity/iam/internal/audit"
-	auditevent "github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/internal/cache"
+	"github.com/arauth-identity/iam/internal/email"
 	"github.com/arauth-identity/iam/internal/logger"
+	webhookdispatcher "github.com/arauth-identity/iam/internal/webhook"
 	"github.com/arauth-identity/iam/security/encryption"
 	"github.com/arauth-identity/iam/security/totp"
 	"github.com/arauth-identity/iam/storage/postgres"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -124,7 +125,7 @@ func main() {
 	roleRepo := postgres.NewRoleRepository(db)
 	permissionRepo := postgres.NewPermissionRepository(db)
 	systemRoleRepo := postgres.NewSystemRoleRepository(db) // NEW: System role repository
-	
+
 	// Initialize capability repositories
 	systemCapabilityRepo := postgres.NewSystemCapabilityRepository(db)
 	tenantCapabilityRepo := postgres.NewTenantCapabilityRepository(db)
@@ -198,7 +199,7 @@ func main() {
 	// Initialize token service
 	// Initialize blacklist service
 	blacklistService := token.NewBlacklistService(cacheClient, logger.Logger)
-	
+
 	tokenService, err := token.NewService(&cfg.Security, lifetimeResolver, blacklistService)
 	if err != nil {
 		logger.Logger.Fatal("Failed to initialize token service", zap.Error(err))
@@ -237,11 +238,14 @@ func main() {
 
 	// Initialize services
 	tenantService := tenant.NewService(tenantRepo, tenantInitializer)
-	userService := user.NewService(userRepo, credentialRepo, refreshTokenRepo) // Pass credentialRepo to create credentials automatically
+	userService := user.NewService(userRepo, credentialRepo) // Pass credentialRepo to create credentials automatically
 	loginService := login.NewService(userRepo, credentialRepo, refreshTokenRepo, tenantSettingsRepo, tenantRepo, hydraClient, claimsBuilder, tokenService, lifetimeResolver, capabilityService)
 	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, mfaSessionManager, capabilityService)
 	roleService := role.NewService(roleRepo, permissionRepo)
 	permissionService := permission.NewService(permissionRepo, tenantInitializer)
+
+	// Initialize session service
+	sessionService := session.NewService(refreshTokenRepo, userRepo)
 
 	// Initialize refresh service
 	refreshService := token.NewRefreshService(tokenService, refreshTokenRepo, userRepo, claimsBuilder, lifetimeResolver)
@@ -267,11 +271,11 @@ func main() {
 	permissionHandler := handlers.NewPermissionHandler(permissionService, auditEventService)
 	roleHandler := handlers.NewRoleHandler(roleService, systemRoleRepo, userRepo, auditEventService, permissionService)
 	systemHandler := handlers.NewSystemHandler(tenantService, tenantRepo, tenantSettingsRepo, capabilityService, auditEventService) // NEW: System handler with tenant settings
-	capabilityHandler := handlers.NewCapabilityHandler(capabilityService) // NEW: Capability handler
-	auditHandler := handlers.NewAuditHandler(auditEventService) // NEW: Audit event handler
-	federationHandler := handlers.NewFederationHandler(federationService) // NEW: Federation handler
-	webhookHandler := handlers.NewWebhookHandler(webhookService) // NEW: Webhook handler
-	identityLinkingHandler := handlers.NewIdentityLinkingHandler(identityLinkingService) // NEW: Identity linking handler
+	capabilityHandler := handlers.NewCapabilityHandler(capabilityService)                                                           // NEW: Capability handler
+	auditHandler := handlers.NewAuditHandler(auditEventService)                                                                     // NEW: Audit event handler
+	federationHandler := handlers.NewFederationHandler(federationService)                                                           // NEW: Federation handler
+	webhookHandler := handlers.NewWebhookHandler(webhookService)                                                                    // NEW: Webhook handler
+	identityLinkingHandler := handlers.NewIdentityLinkingHandler(identityLinkingService)                                            // NEW: Identity linking handler
 
 	// Initialize token introspection service (RFC 7662)
 	introspectionService := introspection.NewService(jwtSecret, publicKey, cfg.Security.JWT.Issuer)
@@ -300,13 +304,14 @@ func main() {
 	// Initialize SCIM handler
 	scimHandler := handlers.NewSCIMHandler(scimProvisioningService, scimTokenService)
 
-
 	// Initialize invitation repository and service
 	invitationRepo := postgres.NewInvitationRepository(db)
 	emailService := email.NewNoOpEmailService()
 	invitationService := invitation.NewService(invitationRepo, userService, roleService, userRepo, emailService, tenantRepo)
 	invitationHandler := handlers.NewInvitationHandler(invitationService)
 
+	// Initialize session handler
+	sessionHandler := handlers.NewSessionHandler(sessionService, auditEventService)
 
 	// Set Gin mode
 	if cfg.Logging.Level == "debug" {
@@ -319,7 +324,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, oauthScopeHandler, scimHandler, scimTokenService, invitationHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, oauthScopeHandler, scimHandler, scimTokenService, invitationHandler, sessionHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
 
 	// Create HTTP server
 	srv := &http.Server{
@@ -357,4 +362,3 @@ func main() {
 
 	logger.Logger.Info("Server exited")
 }
-
