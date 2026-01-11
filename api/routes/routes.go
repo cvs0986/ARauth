@@ -3,13 +3,13 @@ package routes
 import (
 	"database/sql"
 
-	"github.com/gin-gonic/gin"
 	"github.com/arauth-identity/iam/api/handlers"
 	"github.com/arauth-identity/iam/api/middleware"
-	"github.com/arauth-identity/iam/identity/scim"
 	"github.com/arauth-identity/iam/auth/token"
+	"github.com/arauth-identity/iam/identity/scim"
 	"github.com/arauth-identity/iam/internal/cache"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -36,7 +36,7 @@ func getRedis(redisClient interface{}) *redis.Client {
 }
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, scimHandler *handlers.SCIMHandler, scimTokenService scim.TokenServiceInterface, invitationHandler *handlers.InvitationHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, scimHandler *handlers.SCIMHandler, scimTokenService scim.TokenServiceInterface, invitationHandler *handlers.InvitationHandler, sessionHandler *handlers.SessionHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -71,11 +71,11 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			systemTenants.DELETE("/:id", middleware.RequireSystemPermission("tenant", "delete"), systemHandler.DeleteTenant)
 			systemTenants.POST("/:id/suspend", middleware.RequireSystemPermission("tenant", "suspend"), systemHandler.SuspendTenant)
 			systemTenants.POST("/:id/resume", middleware.RequireSystemPermission("tenant", "resume"), systemHandler.ResumeTenant)
-			
+
 			// Tenant settings management (system admin only)
 			systemTenants.GET("/:id/settings", middleware.RequireSystemPermission("tenant", "configure"), systemHandler.GetTenantSettings)
 			systemTenants.PUT("/:id/settings", middleware.RequireSystemPermission("tenant", "configure"), systemHandler.UpdateTenantSettings)
-			
+
 			// Tenant capability assignment (system admin only)
 			systemTenants.GET("/:id/capabilities", middleware.RequireSystemPermission("tenant", "configure"), capabilityHandler.GetTenantCapabilities)
 			systemTenants.PUT("/:id/capabilities/:key", middleware.RequireSystemPermission("tenant", "configure"), capabilityHandler.SetTenantCapability)
@@ -166,28 +166,35 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			{
 				users.POST("", middleware.RequirePermission("users", "create"), userHandler.Create)
 				users.GET("", middleware.RequirePermission("users", "read"), userHandler.List)
-			// User roles routes (must come before /:id to avoid route conflict)
-			// Use :id instead of :user_id to avoid wildcard name conflict
+				// User roles routes (must come before /:id to avoid route conflict)
+				// Use :id instead of :user_id to avoid wildcard name conflict
 				users.GET("/:id/roles", middleware.RequirePermission("users", "read"), roleHandler.GetUserRoles)
 				users.POST("/:id/roles/:role_id", middleware.RequirePermission("users", "roles:assign"), roleHandler.AssignRoleToUser)
 				users.DELETE("/:id/roles/:role_id", middleware.RequirePermission("users", "roles:remove"), roleHandler.RemoveRoleFromUser)
-			// User permissions route (must come before /:id)
+				// User permissions route (must come before /:id)
 				users.GET("/:id/permissions", middleware.RequirePermission("users", "read"), userHandler.GetUserPermissions)
-			// User capabilities routes (must come before /:id)
+				// User capabilities routes (must come before /:id)
 				users.GET("/:id/capabilities", middleware.RequirePermission("users", "read"), capabilityHandler.GetUserCapabilities)
 				users.GET("/:id/capabilities/:key", middleware.RequirePermission("users", "read"), capabilityHandler.GetUserCapability)
 				users.POST("/:id/capabilities/:key/enroll", middleware.RequirePermission("users", "capabilities:manage"), capabilityHandler.EnrollUserCapability)
 				users.DELETE("/:id/capabilities/:key", middleware.RequirePermission("users", "capabilities:manage"), capabilityHandler.UnenrollUserCapability)
-			// User identity linking routes (must come before /:id)
+				// User identity linking routes (must come before /:id)
 				users.GET("/:id/identities", middleware.RequirePermission("users", "read"), identityLinkingHandler.GetUserIdentities)
 				users.POST("/:id/identities", middleware.RequirePermission("users", "identities:link"), identityLinkingHandler.LinkIdentity)
 				users.DELETE("/:id/identities/:identity_id", middleware.RequirePermission("users", "identities:unlink"), identityLinkingHandler.UnlinkIdentity)
 				users.PUT("/:id/identities/:identity_id/primary", middleware.RequirePermission("users", "identities:manage"), identityLinkingHandler.SetPrimaryIdentity)
 				users.POST("/:id/identities/:identity_id/verify", middleware.RequirePermission("users", "identities:verify"), identityLinkingHandler.VerifyIdentity)
-			// Generic user routes
+				// Generic user routes
 				users.GET("/:id", middleware.RequirePermission("users", "read"), userHandler.GetByID)
-					users.PUT("/:id", middleware.RequirePermission("users", "update"), userHandler.Update)
-					users.DELETE("/:id", middleware.RequirePermission("users", "delete"), userHandler.Delete)
+				users.PUT("/:id", middleware.RequirePermission("users", "update"), userHandler.Update)
+				users.DELETE("/:id", middleware.RequirePermission("users", "delete"), userHandler.Delete)
+			}
+
+			// Session routes (tenant-scoped)
+			sessions := tenantScoped.Group("/sessions")
+			{
+				sessions.GET("", middleware.RequirePermission("sessions", "read"), sessionHandler.ListSessions)
+				sessions.POST("/:id/revoke", middleware.RequirePermission("sessions", "revoke"), sessionHandler.RevokeSession)
 			}
 
 			// MFA routes (tenant-scoped - require authentication)
@@ -294,54 +301,54 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			oauthScopes.DELETE("/:id", middleware.RequirePermission("oauth", "scopes:delete"), oauthScopeHandler.DeleteScope)
 		}
 
-	// SCIM 2.0 API routes (public, authenticated via Bearer token)
-	scimV2 := router.Group("/scim/v2")
-	{
-		// SCIM discovery endpoints (no auth required)
-		scimV2.GET("/ServiceProviderConfig", scimHandler.ServiceProviderConfig)
-		scimV2.GET("/ResourceTypes", scimHandler.ResourceTypes)
-		scimV2.GET("/Schemas", scimHandler.Schemas)
-
-		// SCIM resource endpoints (require authentication)
-		scimUsers := scimV2.Group("/Users")
-		scimUsers.Use(middleware.SCIMAuthMiddleware(scimTokenService))
-		scimUsers.Use(middleware.RequireSCIMScope("users"))
+		// SCIM 2.0 API routes (public, authenticated via Bearer token)
+		scimV2 := router.Group("/scim/v2")
 		{
-			scimUsers.POST("", scimHandler.CreateUser)
-			scimUsers.GET("", scimHandler.ListUsers)
-			scimUsers.GET("/:id", scimHandler.GetUser)
-			scimUsers.PUT("/:id", scimHandler.UpdateUser)
-			scimUsers.DELETE("/:id", scimHandler.DeleteUser)
+			// SCIM discovery endpoints (no auth required)
+			scimV2.GET("/ServiceProviderConfig", scimHandler.ServiceProviderConfig)
+			scimV2.GET("/ResourceTypes", scimHandler.ResourceTypes)
+			scimV2.GET("/Schemas", scimHandler.Schemas)
+
+			// SCIM resource endpoints (require authentication)
+			scimUsers := scimV2.Group("/Users")
+			scimUsers.Use(middleware.SCIMAuthMiddleware(scimTokenService))
+			scimUsers.Use(middleware.RequireSCIMScope("users"))
+			{
+				scimUsers.POST("", scimHandler.CreateUser)
+				scimUsers.GET("", scimHandler.ListUsers)
+				scimUsers.GET("/:id", scimHandler.GetUser)
+				scimUsers.PUT("/:id", scimHandler.UpdateUser)
+				scimUsers.DELETE("/:id", scimHandler.DeleteUser)
+			}
+
+			scimGroups := scimV2.Group("/Groups")
+			scimGroups.Use(middleware.SCIMAuthMiddleware(scimTokenService))
+			scimGroups.Use(middleware.RequireSCIMScope("groups"))
+			{
+				scimGroups.POST("", scimHandler.CreateGroup)
+				scimGroups.GET("", scimHandler.ListGroups)
+				scimGroups.GET("/:id", scimHandler.GetGroup)
+				scimGroups.PUT("/:id", scimHandler.UpdateGroup)
+				scimGroups.DELETE("/:id", scimHandler.DeleteGroup)
+			}
+
+			// Bulk operations
+			scimBulk := scimV2.Group("/Bulk")
+			scimBulk.Use(middleware.SCIMAuthMiddleware(scimTokenService))
+			{
+				scimBulk.POST("", scimHandler.BulkOperations)
+			}
 		}
 
-		scimGroups := scimV2.Group("/Groups")
-		scimGroups.Use(middleware.SCIMAuthMiddleware(scimTokenService))
-		scimGroups.Use(middleware.RequireSCIMScope("groups"))
-		{
-			scimGroups.POST("", scimHandler.CreateGroup)
-			scimGroups.GET("", scimHandler.ListGroups)
-			scimGroups.GET("/:id", scimHandler.GetGroup)
-			scimGroups.PUT("/:id", scimHandler.UpdateGroup)
-			scimGroups.DELETE("/:id", scimHandler.DeleteGroup)
-		}
-
-		// Bulk operations
-		scimBulk := scimV2.Group("/Bulk")
-		scimBulk.Use(middleware.SCIMAuthMiddleware(scimTokenService))
-		{
-			scimBulk.POST("", scimHandler.BulkOperations)
+		// System audit events route (SYSTEM users only - system-wide audit)
+		if ts, ok := tokenService.(token.ServiceInterface); ok {
+			systemAPI := router.Group("/system")
+			systemAPI.Use(middleware.JWTAuthMiddleware(ts))
+			systemAPI.Use(middleware.RequireSystemUser(ts))
+			{
+				systemAPI.GET("/audit/events", auditHandler.QueryEvents)
+				systemAPI.GET("/audit/events/:id", auditHandler.GetEvent)
+			}
 		}
 	}
-
-	// System audit events route (SYSTEM users only - system-wide audit)
-	if ts, ok := tokenService.(token.ServiceInterface); ok {
-		systemAPI := router.Group("/system")
-		systemAPI.Use(middleware.JWTAuthMiddleware(ts))
-		systemAPI.Use(middleware.RequireSystemUser(ts))
-		{
-			systemAPI.GET("/audit/events", auditHandler.QueryEvents)
-			systemAPI.GET("/audit/events/:id", auditHandler.GetEvent)
-		}
-	}
-}
 }
