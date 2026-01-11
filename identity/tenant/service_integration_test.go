@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package tenant
@@ -6,10 +7,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/identity/user"
 	"github.com/arauth-identity/iam/internal/testutil"
 	"github.com/arauth-identity/iam/storage/postgres"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -104,7 +105,8 @@ func TestService_Isolation_Integration(t *testing.T) {
 	tenantService := NewService(tenantRepo)
 	// Create a mock credential repo for testing (not used in tenant service tests)
 	credentialRepo := postgres.NewCredentialRepository(db)
-	userService := user.NewService(userRepo, credentialRepo)
+	refreshTokenRepo := postgres.NewRefreshTokenRepository(db)
+	userService := user.NewService(userRepo, credentialRepo, refreshTokenRepo)
 
 	// Create two tenants
 	tenant1Req := &CreateTenantRequest{
@@ -152,4 +154,3 @@ func TestService_Isolation_Integration(t *testing.T) {
 	assert.Equal(t, tenant2.ID, retrievedUser2.TenantID)
 	assert.NotEqual(t, tenant1.ID, retrievedUser2.TenantID)
 }
-

@@ -469,3 +469,7 @@ func (m *MockRefreshTokenRepository) RevokeAllForUser(ctx context.Context, userI
 	return nil
 }
 func (m *MockRefreshTokenRepository) DeleteExpired(ctx context.Context) error { return nil }
+func (m *MockRefreshTokenRepository) RevokeByClientID(ctx context.Context, clientID string) (int, error) {
+	args := m.Called(ctx, clientID)
+	return args.Int(0), args.Error(1)
+}

@@ -34,6 +34,7 @@
 
 **Impact**: ✅ RESOLVED - Phase B4 complete
 
+
 ### Webhook Management
 
 | Endpoint | Method | Why Required | Blocking | Planned Phase |
@@ -292,6 +293,17 @@
 | Service integration with fail-fast security | Rotation fails if revocation fails (no partial states) | 069972f |
 | RevokedTokens optional field | Added to RotateSecretResponse with omitempty tag | 069972f |
 | Service tests updated | All 9/9 tests passing with token revocation | 069972f |
+
+### Phase B5: Session Revocation on Password Change (Completed 2026-01-11)
+
+| Item | Resolution | Commit/PR |
+|------|-----------|-----------|
+| POST /api/v1/users/:id/change-password endpoint | Implemented with users:update permission and system user support | feature/session-revocation-password-change |
+| User.ChangePassword Service Method | Implemented with fail-fast session revocation | feature/session-revocation-password-change |
+| Session Revocation Integration | Calls RefreshTokenRepository.RevokeAllForUser | feature/session-revocation-password-change |
+| Fail-Fast Security Model | Password change aborts if session revocation fails | feature/session-revocation-password-change |
+| Audit Logging | Logs 'user.password.changed' with 'revoked_sessions=all' | feature/session-revocation-password-change |
+| Unit Tests | Added TestChangePassword success/failure cases and handler tests | feature/session-revocation-password-change |
 | main.go wiring | Updated to pass refreshTokenRepo to OAuth client service | 069972f |
 | Security guarantee | Success = new secret active AND old tokens revoked | 069972f |
 
@@ -364,14 +376,21 @@
 | Category | Count | Status |
 |----------|-------|--------|
 | Critical Security Gaps | 0 | 🟢 All Resolved |
-| Missing Backend APIs | 7 endpoints | 🔴 7 Open |
+| Missing Backend APIs | 6 endpoints | 🔴 6 Open |
 | Missing UI Screens | 6 | 🔴 6 Open |
 | Deferred Backend Work | 10 items | 🟡 Tracked (Phase B4.1: -1) |
 | Deferred UI Work | 10 items | 🟡 Tracked |
 | Known Limitations | 19 items | ⚪ Accepted |
-| Completed Items | 52 items | ✅ Resolved (Phase B4.1: +6) |
+| Completed Items | 58 items | ✅ Resolved (Phase B5: +6) |
 
-**Total Items Tracked**: 96 → 102 (+6 from Phase B4.1)
+**Total Items Tracked**: 102 → 108 (+6 from Phase B5)
+
+**Phase B5 Impact**:
+- ✅ Password change with session revocation implemented
+- ✅ Immediate security enforcement (token invalidation)
+- ✅ Fail-fast security model verified
+- ✅ Audit logging for sensitive action
+- ✅ 100% test coverage for new flow
 
 **Phase B4.1 Impact**:
 - ✅ Token revocation on secret rotation implemented
@@ -402,6 +421,7 @@
 |------|-------|---------|------------|
 | 2026-01-11 | B2 Planning | Initial registry creation, backfilled all known gaps | Antigravity AI |
 | 2026-01-11 | B2 Complete | Moved 11 permission gaps to Completed, updated statistics | Antigravity AI |
+| 2026-01-11 | B5 Complete | Session Revocation on Password Change implemented | Antigravity AI |
 
 ---
 

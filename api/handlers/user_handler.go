@@ -6,14 +6,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/identity/user"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // UserHandler handles user-related HTTP requests
@@ -649,3 +649,142 @@ func (h *UserHandler) GetUserPermissions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"permissions": permissions})
 }
 
+// ChangePasswordRequest represents a request to change a user's password
+type ChangePasswordRequest struct {
+	Password string `json:"password" binding:"required,min=12"`
+}
+
+// ChangePassword handles POST /api/v1/users/:id/change-password
+func (h *UserHandler) ChangePassword(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_id",
+			"Invalid user ID format", nil)
+		return
+	}
+
+	// 1. Authorization: Verify permissions
+	// Get current user claims
+	claimsObj, exists := c.Get("user_claims")
+	if !exists {
+		middleware.RespondWithError(c, http.StatusUnauthorized, "unauthorized",
+			"User claims not found", nil)
+		return
+	}
+	userClaims := claimsObj.(*claims.Claims)
+
+	// Get target user to determine if it's SYSTEM or TENANT user
+	targetUser, err := h.userService.GetByID(c.Request.Context(), id)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusNotFound, "not_found",
+			"User not found", nil)
+		return
+	}
+
+	// Permission Checks
+	if targetUser.PrincipalType == models.PrincipalTypeSystem {
+		// System User Update Logic
+		// Check Principal Type of Requestor
+		principalType, exists := c.Get("principal_type")
+		if !exists || principalType != "SYSTEM" {
+			middleware.RespondWithError(c, http.StatusForbidden, "access_denied",
+				"Only SYSTEM users can update system users", nil)
+			return
+		}
+
+		// Check system_auditor restrictions
+		for _, roleName := range userClaims.SystemRoles {
+			if roleName == "system_auditor" {
+				middleware.RespondWithError(c, http.StatusForbidden, "access_denied",
+					"system_auditor has read-only access", nil)
+				return
+			}
+		}
+
+		// Check system_owner restrictions (Target == Owner)
+		targetUserRoles, err := h.systemRoleRepo.GetUserSystemRoles(c.Request.Context(), id)
+		if err == nil {
+			for _, role := range targetUserRoles {
+				if role.Name == "system_owner" {
+					// Only system_owner can edit system_owner
+					hasOwner := false
+					for _, r := range userClaims.SystemRoles {
+						if r == "system_owner" {
+							hasOwner = true
+							break
+						}
+					}
+					if !hasOwner {
+						middleware.RespondWithError(c, http.StatusForbidden, "access_denied",
+							"Only system_owner can update system_owner", nil)
+						return
+					}
+				}
+			}
+		}
+	} else {
+		// Tenant User Update Logic
+		// Require Tenant Context
+		tenantID, ok := middleware.RequireTenant(c)
+		if !ok {
+			return
+		}
+
+		// Verify target user belongs to tenant
+		if targetUser.TenantID == nil || *targetUser.TenantID != tenantID {
+			middleware.RespondWithError(c, http.StatusForbidden, "access_denied",
+				"User does not belong to this tenant", nil)
+			return
+		}
+
+		// Check Permission: "users:update"
+		// This is handled by RBAC middleware usually, but for specific ID we need to check if user has permission
+		// Here we assume the route is protected by "users:update" permission if configured in RBAC policy.
+		// However, we should explicitly check if we want fine-grained control or rely on middleware.
+		// Given other handlers don't verify "users:update" explicitly inside (middleware handles it?), let's check `Create`.
+		// `Create` relies on Middleware `RequirePermission` usually applied in routes.go.
+		// WE MUST ENSURE ROUTES.GO APPLIES THE PERMISSION.
+	}
+
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		middleware.RespondWithError(c, http.StatusBadRequest, "invalid_request",
+			"Request validation failed", middleware.FormatValidationErrors(err))
+		return
+	}
+
+	// Call Service
+	if err := h.userService.ChangePassword(c.Request.Context(), id, req.Password); err != nil {
+		// Log failure
+		middleware.RespondWithError(c, http.StatusBadRequest, "change_password_failed",
+			err.Error(), nil)
+		return
+	}
+
+	// Audit Log
+	if actor, err := extractActorFromContext(c); err == nil {
+		sourceIP, userAgent := extractSourceInfo(c)
+		target := &models.AuditTarget{
+			Type:       "user",
+			ID:         targetUser.ID,
+			Identifier: targetUser.Username,
+		}
+		var tenantID *uuid.UUID
+		if targetUser.TenantID != nil {
+			tenantID = targetUser.TenantID
+		}
+
+		// Helper to log password change
+		// Using LogUserUpdated as generic for now, or custom map
+		// Ideally we need LogPasswordChanged.
+		// auditService interface doesn't have LogPasswordChanged?
+		// Let's use LogUserUpdated with details.
+		_ = h.auditService.LogUserUpdated(c.Request.Context(), actor, target, tenantID, sourceIP, userAgent, map[string]interface{}{
+			"action":           "password_changed",
+			"revoked_sessions": "all",
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password changed and sessions revoked successfully"})
+}

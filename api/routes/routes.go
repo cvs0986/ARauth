@@ -96,6 +96,7 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		{
 			systemUsers.GET("", userHandler.ListSystem)
 			systemUsers.POST("", userHandler.CreateSystem)
+			systemUsers.POST("/:id/change-password", userHandler.ChangePassword)
 		}
 
 		// System roles management (system admin only) - show predefined system roles
@@ -185,6 +186,7 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 				users.PUT("/:id/identities/:identity_id/primary", middleware.RequirePermission("users", "identities:manage"), identityLinkingHandler.SetPrimaryIdentity)
 				users.POST("/:id/identities/:identity_id/verify", middleware.RequirePermission("users", "identities:verify"), identityLinkingHandler.VerifyIdentity)
 				// Generic user routes
+				users.POST("/:id/change-password", middleware.RequirePermission("users", "update"), userHandler.ChangePassword)
 				users.GET("/:id", middleware.RequirePermission("users", "read"), userHandler.GetByID)
 				users.PUT("/:id", middleware.RequirePermission("users", "update"), userHandler.Update)
 				users.DELETE("/:id", middleware.RequirePermission("users", "delete"), userHandler.Delete)

@@ -133,7 +133,8 @@ func TestCreateUser(t *testing.T) {
 
 	mockRepo := NewFakeUserRepository()
 	mockCredRepo := &FakeCredentialRepository{}
-	service := NewService(mockRepo, mockCredRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockCredRepo, mockRefreshTokenRepo)
 
 	tests := []struct {
 		name    string
@@ -207,7 +208,8 @@ func TestGetUserByID(t *testing.T) {
 
 	mockRepo := NewFakeUserRepository()
 	mockCredRepo := &FakeCredentialRepository{}
-	service := NewService(mockRepo, mockCredRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockCredRepo, mockRefreshTokenRepo)
 
 	// Create a test user
 	createReq := &CreateUserRequest{
@@ -241,7 +243,8 @@ func TestUpdateUser(t *testing.T) {
 
 	mockRepo := NewFakeUserRepository()
 	mockCredRepo := &FakeCredentialRepository{}
-	service := NewService(mockRepo, mockCredRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockCredRepo, mockRefreshTokenRepo)
 
 	// Create a test user
 	createReq := &CreateUserRequest{
@@ -275,7 +278,8 @@ func TestDeleteUser(t *testing.T) {
 
 	mockRepo := NewFakeUserRepository()
 	mockCredRepo := &FakeCredentialRepository{}
-	service := NewService(mockRepo, mockCredRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockCredRepo, mockRefreshTokenRepo)
 
 	// Create a test user
 	createReq := &CreateUserRequest{

@@ -124,3 +124,54 @@ func (m *MockCredentialRepository) Delete(ctx context.Context, userID uuid.UUID)
 	args := m.Called(ctx, userID)
 	return args.Error(0)
 }
+
+// MockRefreshTokenRepository is a mock implementation of RefreshTokenRepository using testify
+type MockRefreshTokenRepository struct {
+	mock.Mock
+}
+
+func (m *MockRefreshTokenRepository) Create(ctx context.Context, token *interfaces.RefreshToken) error {
+	args := m.Called(ctx, token)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*interfaces.RefreshToken, error) {
+	args := m.Called(ctx, tokenHash)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*interfaces.RefreshToken), args.Error(1)
+}
+
+func (m *MockRefreshTokenRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]*interfaces.RefreshToken, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*interfaces.RefreshToken), args.Error(1)
+}
+
+func (m *MockRefreshTokenRepository) Revoke(ctx context.Context, tokenID uuid.UUID) error {
+	args := m.Called(ctx, tokenID)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) RevokeByTokenHash(ctx context.Context, tokenHash string) error {
+	args := m.Called(ctx, tokenHash)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) RevokeAllForUser(ctx context.Context, userID uuid.UUID) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
+}
+
+func (m *MockRefreshTokenRepository) RevokeByClientID(ctx context.Context, clientID string) (int, error) {
+	args := m.Called(ctx, clientID)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *MockRefreshTokenRepository) DeleteExpired(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}

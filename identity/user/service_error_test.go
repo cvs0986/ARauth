@@ -12,7 +12,8 @@ import (
 func TestService_Create_InvalidEmail(t *testing.T) {
 	mockRepo := new(MockUserRepository)
 	mockCredRepo := new(MockCredentialRepository)
-	service := NewService(mockRepo, mockCredRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockCredRepo, mockRefreshTokenRepo)
 
 	req := &CreateUserRequest{
 		TenantID: uuid.New(),
@@ -29,7 +30,8 @@ func TestService_Create_InvalidEmail(t *testing.T) {
 func TestService_Create_EmptyUsername(t *testing.T) {
 	mockRepo := new(MockUserRepository)
 	mockCredRepo := new(MockCredentialRepository)
-	service := NewService(mockRepo, mockCredRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockCredRepo, mockRefreshTokenRepo)
 
 	req := &CreateUserRequest{
 		TenantID: uuid.New(),
@@ -45,7 +47,8 @@ func TestService_Create_EmptyUsername(t *testing.T) {
 func TestService_GetByID_NotFound(t *testing.T) {
 	mockRepo := new(MockUserRepository)
 	mockCredRepo := new(MockCredentialRepository)
-	service := NewService(mockRepo, mockCredRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockCredRepo, mockRefreshTokenRepo)
 
 	nonExistentID := uuid.New()
 	mockRepo.On("GetByID", mock.Anything, nonExistentID).Return(nil, assert.AnError)
@@ -58,7 +61,8 @@ func TestService_GetByID_NotFound(t *testing.T) {
 func TestService_GetByUsername_NotFound(t *testing.T) {
 	mockRepo := new(MockUserRepository)
 	mockCredRepo := new(MockCredentialRepository)
-	service := NewService(mockRepo, mockCredRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockCredRepo, mockRefreshTokenRepo)
 
 	tenantID := uuid.New()
 	username := "nonexistent"
@@ -72,7 +76,8 @@ func TestService_GetByUsername_NotFound(t *testing.T) {
 func TestService_Update_NotFound(t *testing.T) {
 	mockRepo := new(MockUserRepository)
 	mockCredRepo := new(MockCredentialRepository)
-	service := NewService(mockRepo, mockCredRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockCredRepo, mockRefreshTokenRepo)
 
 	req := &UpdateUserRequest{
 		Email: stringPtr("updated@example.com"),
@@ -89,7 +94,8 @@ func TestService_Update_NotFound(t *testing.T) {
 func TestService_Delete_NotFound(t *testing.T) {
 	mockRepo := new(MockUserRepository)
 	mockCredRepo := new(MockCredentialRepository)
-	service := NewService(mockRepo, mockCredRepo)
+	mockRefreshTokenRepo := new(MockRefreshTokenRepository)
+	service := NewService(mockRepo, mockCredRepo, mockRefreshTokenRepo)
 
 	nonExistentID := uuid.New()
 	// Service directly calls repo.Delete without checking existence
@@ -103,4 +109,3 @@ func TestService_Delete_NotFound(t *testing.T) {
 func stringPtr(s string) *string {
 	return &s
 }
-

@@ -101,6 +101,11 @@ func (m *MockUserService) ListSystem(ctx context.Context, filters *interfaces.Us
 	return args.Get(0).([]*models.User), args.Error(1)
 }
 
+func (m *MockUserService) ChangePassword(ctx context.Context, userID uuid.UUID, newPassword string) error {
+	args := m.Called(ctx, userID, newPassword)
+	return args.Error(0)
+}
+
 func TestUserHandler_Create(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

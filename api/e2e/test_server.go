@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 package e2e
@@ -6,10 +7,8 @@ import (
 	"database/sql"
 	"net/http/httptest"
 
-	"github.com/gin-gonic/gin"
 	"github.com/arauth-identity/iam/api/handlers"
 	"github.com/arauth-identity/iam/api/middleware"
-	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/auth/login"
 	"github.com/arauth-identity/iam/auth/mfa"
 	"github.com/arauth-identity/iam/identity/permission"
@@ -19,6 +18,7 @@ import (
 	"github.com/arauth-identity/iam/internal/audit"
 	"github.com/arauth-identity/iam/internal/cache"
 	"github.com/arauth-identity/iam/storage/postgres"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -36,7 +36,7 @@ func setupTestServerWithAuth(db *sql.DB, cacheClient *cache.Cache, loginService 
 	permissionRepo := postgres.NewPermissionRepository(db)
 
 	// Setup services
-	userService := user.NewService(postgres.NewUserRepository(db), postgres.NewCredentialRepository(db))
+	userService := user.NewService(postgres.NewUserRepository(db), postgres.NewCredentialRepository(db), postgres.NewRefreshTokenRepository(db))
 	tenantService := tenant.NewService(tenantRepo)
 	roleService := role.NewService(roleRepo, permissionRepo)
 	permissionService := permission.NewService(permissionRepo)
@@ -122,7 +122,8 @@ func setupTestServer(db *sql.DB, cacheClient *cache.Cache) (*httptest.Server, *g
 
 	// Setup services
 	credentialRepo := postgres.NewCredentialRepository(db)
-	userService := user.NewService(userRepo, credentialRepo)
+	refreshTokenRepo := postgres.NewRefreshTokenRepository(db)
+	userService := user.NewService(userRepo, credentialRepo, refreshTokenRepo)
 	tenantService := tenant.NewService(tenantRepo)
 	roleService := role.NewService(roleRepo, permissionRepo)
 	permissionService := permission.NewService(permissionRepo)
@@ -179,4 +180,3 @@ func setupTestServer(db *sql.DB, cacheClient *cache.Cache) (*httptest.Server, *g
 	server := httptest.NewServer(router)
 	return server, router
 }
-

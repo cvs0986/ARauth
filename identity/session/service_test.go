@@ -58,6 +58,11 @@ func (m *MockRefreshTokenRepository) DeleteExpired(ctx context.Context) error {
 	return args.Error(0)
 }
 
+func (m *MockRefreshTokenRepository) RevokeByClientID(ctx context.Context, clientID string) (int, error) {
+	args := m.Called(ctx, clientID)
+	return args.Int(0), args.Error(1)
+}
+
 // MockUserRepository is a mock for testing
 type MockUserRepository struct {
 	mock.Mock
