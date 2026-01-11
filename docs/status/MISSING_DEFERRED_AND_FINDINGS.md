@@ -34,14 +34,26 @@
 
 ### OAuth2 Client Management
 
+**Status**: 🟡 IN PROGRESS (Phase B4 - Paused at clean boundary)
+
 | Endpoint | Method | Why Required | Blocking | Planned Phase |
 |----------|--------|--------------|----------|---------------|
-| /api/v1/tenants/:id/oauth/clients | GET | List OAuth2 clients for tenant | UI exists | Phase B4 |
-| /api/v1/tenants/:id/oauth/clients | POST | Create OAuth2 client, generate credentials | UI exists | Phase B4 |
-| /api/v1/tenants/:id/oauth/clients/:id/rotate-secret | POST | Rotate client secret securely | UI exists | Phase B4 |
-| /api/v1/tenants/:id/oauth/clients/:id | DELETE | Delete OAuth2 client with audit | UI exists | Phase B4 |
+| /api/v1/oauth/clients | GET | List OAuth2 clients for tenant | UI exists | Phase B4 (40% complete) |
+| /api/v1/oauth/clients | POST | Create OAuth2 client, generate credentials | UI exists | Phase B4 (40% complete) |
+| /api/v1/oauth/clients/:id/rotate-secret | POST | Rotate client secret securely | UI exists | Phase B4 (40% complete) |
+| /api/v1/oauth/clients/:id | DELETE | Delete OAuth2 client with audit | UI exists | Phase B4 (40% complete) |
 
-**Impact**: OAuth2ClientList and CreateOAuth2ClientDialog show APINotConnectedError
+**Progress** (Phase B4):
+- ✅ Database migration (oauth_clients table)
+- ✅ Repository layer (interfaces + PostgreSQL)
+- ✅ Service models and interface
+- ⏸️ Service implementation (paused)
+- ⏸️ HTTP handlers (pending)
+- ⏸️ Tests (pending)
+
+**Paused**: 2026-01-11 at clean architectural boundary (before cryptographic code)
+
+**Impact**: OAuth2ClientList and CreateOAuth2ClientDialog show APINotConnectedError (will resolve when Phase B4 completes)
 
 **Impact**: ✅ RESOLVED - Phase B3 complete
 
