@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/identity/session"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -67,7 +68,7 @@ func TestListSessions_Success(t *testing.T) {
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
-		c.Set("tenant_id", tenantID.String())
+		c.Set("tenant_id", tenantID)
 		c.Set("user_id", userID.String())
 		c.Next()
 	})
@@ -80,10 +81,6 @@ func TestListSessions_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	mockSessionService.AssertExpectations(t)
 }
-
-// TestListSessions_DeniedWithoutPermission tests that listing requires sessions:read permission
-// Note: This test would require middleware setup which is tested in permission_enforcement_test.go
-// Here we test the handler logic assuming permission middleware passed
 
 // TestRevokeSession_Success tests successful session revocation
 func TestRevokeSession_Success(t *testing.T) {
@@ -113,14 +110,9 @@ func TestRevokeSession_Success(t *testing.T) {
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
-		c.Set("tenant_id", tenantID.String())
+		c.Set("tenant_id", tenantID)
 		c.Set("user_id", userID.String())
-		c.Set("user_claims", &struct {
-			Subject       string
-			Username      string
-			Email         string
-			PrincipalType string
-		}{
+		c.Set("user_claims", &claims.Claims{
 			Subject:       userID.String(),
 			Username:      "testuser",
 			PrincipalType: "TENANT",
@@ -157,7 +149,7 @@ func TestRevokeSession_MissingAuditReason(t *testing.T) {
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
-		c.Set("tenant_id", tenantID.String())
+		c.Set("tenant_id", tenantID)
 		c.Set("user_id", userID.String())
 		c.Next()
 	})
@@ -189,7 +181,7 @@ func TestRevokeSession_AuditReasonTooShort(t *testing.T) {
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
-		c.Set("tenant_id", tenantID.String())
+		c.Set("tenant_id", tenantID)
 		c.Set("user_id", userID.String())
 		c.Next()
 	})
@@ -225,7 +217,7 @@ func TestRevokeSession_CrossTenantDenied(t *testing.T) {
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
-		c.Set("tenant_id", tenantID.String())
+		c.Set("tenant_id", tenantID)
 		c.Set("user_id", userID.String())
 		c.Next()
 	})
