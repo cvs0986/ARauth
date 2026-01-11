@@ -40,9 +40,9 @@
 | Endpoint | Method | Why Required | Blocking | Planned Phase |
 |----------|--------|--------------|----------|---------------|
 | /api/v1/webhooks | GET | List webhooks for tenant | UI exists | Phase B5 |
-| /api/v1/webhooks | POST | Create webhook with HTTPS validation | UI exists | Phase B5 |
-| /api/v1/webhooks/:id | PUT | Update webhook configuration | UI exists | Phase B5 |
-| /api/v1/webhooks/:id | DELETE | Delete webhook with audit | UI exists | Phase B5 |
+| /api/v1/webhooks | POST | Create webhook with HTTPS validation | UI exists | **Completed (Phase B8)** |
+| /api/v1/webhooks/:id | PUT | Update webhook configuration | UI exists | **Completed (Phase B8)** |
+| /api/v1/webhooks/:id | DELETE | Delete webhook with audit | UI exists | **Completed (Phase B8)** |
 
 **Impact**: WebhookList and CreateWebhookDialog show APINotConnectedError
 
@@ -83,7 +83,7 @@
 | Flow | Area | Issue | Blocking | Planned Phase |
 |------|------|-------|----------|---------------|
 | Federation "Test Connection" backend verification | Federation | UI shows test button but no backend validation | No | Phase B7 |
-| Audit log export validation | Audit Logs | Export button exists but no backend support | No | Phase B8 |
+| Audit log export validation | Audit Logs | Export button exists but no backend support | No | **Completed (Phase B8)** |
 | Bulk user operations | User Management | No UI or backend for bulk actions | No | Future |
 | Advanced search/filtering | Multiple areas | Basic filtering only | No | Future |
 
@@ -189,7 +189,7 @@
 | Webhook list shows APINotConnectedError | Feature appears broken | Backend implementation in Phase B5 | Phase B5 |
 | No active session management UI | Users cannot see/revoke sessions | Backend implementation in Phase B3 | Phase B3 |
 | Federation test connection has no backend | Test button does nothing | Backend implementation in Phase B7 | Phase B7 |
-| Audit log export has no backend | Export button does nothing | Backend implementation in Phase B8 | Phase B8 |
+| Audit log export has no backend | Export button does nothing | Backend implementation in Phase B8 | **Completed (Phase B8)** |
 | No bulk user operations | Must perform actions one by one | Future enhancement | Future |
 | No advanced search/filtering | Basic filtering only | Future enhancement | Future |
 
@@ -249,6 +249,15 @@
 | OAuth scope permission enforcement | Added RequirePermission to 5 routes | a7c8769 |
 | Permission enforcement tests | Created comprehensive test suite (9 tests, all passing) | b6dcd5a3 |
 | MISSING_DEFERRED_AND_FINDINGS.md registry | Created governance registry with 80 items tracked | 013ffaa |
+
+### Phase B8: Audit & Webhook Verification (Completed 2026-01-11)
+
+| Item | Resolution | Commit/PR |
+|------|-----------|-----------|
+| Audit Log Export (CSV) | Implemented `GET /api/v1/audit/export` | feature/audit-export-webhook-verification |
+| Webhook API Verification | Added comprehensive handler tests (CRUD) | feature/audit-export-webhook-verification |
+| Tenant Isolation (Webhooks) | Verified via tests | feature/audit-export-webhook-verification |
+| Webhook Technical Debt | Cleared (tests added coverage) | feature/audit-export-webhook-verification |
 
 ### Phase B3: Active Session Management (Completed 2026-01-11)
 

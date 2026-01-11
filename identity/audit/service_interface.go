@@ -13,11 +13,14 @@ type ServiceInterface interface {
 	// LogEvent logs a structured audit event
 	LogEvent(ctx context.Context, event *models.AuditEvent) error
 
-	// QueryEvents queries audit events with filters
+	// QueryEvents retrieves audit events based on filters
 	QueryEvents(ctx context.Context, filters *interfaces.AuditEventFilters) ([]*models.AuditEvent, int, error)
 
-	// GetEvent retrieves a specific audit event by ID
+	// GetEvent retrieves a single audit event by ID
 	GetEvent(ctx context.Context, eventID uuid.UUID) (*models.AuditEvent, error)
+
+	// ExportEvents exports audit events as CSV based on filters
+	ExportEvents(ctx context.Context, filters *interfaces.AuditEventFilters) ([]byte, string, error)
 
 	// Helper methods for common events
 	LogUserCreated(ctx context.Context, actor models.AuditActor, target *models.AuditTarget, tenantID *uuid.UUID, sourceIP, userAgent string, metadata map[string]interface{}) error

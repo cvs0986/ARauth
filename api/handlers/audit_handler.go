@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/arauth-identity/iam/api/middleware"
 	"github.com/arauth-identity/iam/auth/claims"
 	"github.com/arauth-identity/iam/identity/audit"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // AuditHandler handles audit event-related HTTP requests
@@ -157,6 +157,60 @@ func (h *AuditHandler) GetEvent(c *gin.Context) {
 	c.JSON(http.StatusOK, event)
 }
 
+// ExportEvents handles GET /api/v1/audit/export
+func (h *AuditHandler) ExportEvents(c *gin.Context) {
+	// 1. Get Filters (Reuse extraction logic or refactor, currently duplicating slightly for clarity)
+	var tenantID *uuid.UUID
+	if tenantIDStr, exists := middleware.GetTenantID(c); exists {
+		tenantID = &tenantIDStr
+	}
+
+	filters := &interfaces.AuditEventFilters{
+		TenantID: tenantID,
+	}
+
+	if eventType := c.Query("event_type"); eventType != "" {
+		filters.EventType = &eventType
+	}
+	if actorUserIDStr := c.Query("actor_user_id"); actorUserIDStr != "" {
+		if actorUserID, err := uuid.Parse(actorUserIDStr); err == nil {
+			filters.ActorUserID = &actorUserID
+		}
+	}
+	if targetType := c.Query("target_type"); targetType != "" {
+		filters.TargetType = &targetType
+	}
+	if targetIDStr := c.Query("target_id"); targetIDStr != "" {
+		if targetID, err := uuid.Parse(targetIDStr); err == nil {
+			filters.TargetID = &targetID
+		}
+	}
+	if result := c.Query("result"); result != "" {
+		filters.Result = &result
+	}
+	if startDateStr := c.Query("start_date"); startDateStr != "" {
+		if startDate, err := time.Parse(time.RFC3339, startDateStr); err == nil {
+			filters.StartDate = &startDate
+		}
+	}
+	if endDateStr := c.Query("end_date"); endDateStr != "" {
+		if endDate, err := time.Parse(time.RFC3339, endDateStr); err == nil {
+			filters.EndDate = &endDate
+		}
+	}
+
+	// 2. Call Service
+	data, filename, err := h.auditService.ExportEvents(c.Request.Context(), filters)
+	if err != nil {
+		middleware.RespondWithError(c, http.StatusInternalServerError, "export_failed", fmt.Sprintf("Failed to export audit events: %v", err), nil)
+		return
+	}
+
+	// 3. Return CSV
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	c.Data(http.StatusOK, "text/csv", data)
+}
+
 // extractActorFromContext extracts actor information from Gin context
 func extractActorFromContext(c *gin.Context) (models.AuditActor, error) {
 	claimsObj, exists := c.Get("user_claims")
@@ -203,4 +257,3 @@ func extractSourceInfo(c *gin.Context) (sourceIP, userAgent string) {
 
 	return sourceIP, userAgent
 }
-

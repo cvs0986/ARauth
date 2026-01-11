@@ -306,8 +306,17 @@ func (m *MockAuditService) QueryEvents(ctx context.Context, filters *interfaces.
 	return args.Get(0).([]*models.AuditEvent), args.Int(1), args.Error(2)
 }
 
+func (m *MockAuditService) ExportEvents(ctx context.Context, filters *interfaces.AuditEventFilters) ([]byte, string, error) {
+	args := m.Called(ctx, filters)
+	return args.Get(0).([]byte), args.String(1), args.Error(2)
+}
+
 func (m *MockAuditService) GetEvent(ctx context.Context, eventID uuid.UUID) (*models.AuditEvent, error) {
-	return nil, nil
+	args := m.Called(ctx, eventID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.AuditEvent), args.Error(1)
 }
 func (m *MockAuditService) LogEvent(ctx context.Context, event *models.AuditEvent) error {
 	return nil
