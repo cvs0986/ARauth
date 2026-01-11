@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 	"github.com/arauth-identity/iam/identity/models"
 	"github.com/arauth-identity/iam/storage/interfaces"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // TokenService provides SCIM token management
@@ -189,3 +189,41 @@ func (s *TokenService) ValidateToken(ctx context.Context, tokenString string) (*
 	return token, nil
 }
 
+// RotateToken rotates a SCIM token, returning the new plaintext token
+func (s *TokenService) RotateToken(ctx context.Context, id uuid.UUID) (*models.SCIMToken, string, error) {
+	// Get existing token
+	token, err := s.tokenRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, "", fmt.Errorf("token not found: %w", err)
+	}
+
+	// Generate new token
+	plaintextToken, err := generateToken()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	// Hash token (bcrypt for verification)
+	tokenHash, err := hashToken(plaintextToken)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to hash token: %w", err)
+	}
+
+	// Create lookup hash (SHA256 for fast lookup)
+	lookupHash := hashTokenForLookup(plaintextToken)
+
+	// Update token fields
+	token.TokenHash = tokenHash
+	token.LookupHash = lookupHash
+
+	// Reset LastUsedAt since it's a new secret?
+	// Or keep it? Usually keep history but this is a credential rotation.
+	// Let's keep existing LastUsedAt metadata but the secret is new.
+
+	// Update in database
+	if err := s.tokenRepo.Update(ctx, token); err != nil {
+		return nil, "", fmt.Errorf("failed to update token: %w", err)
+	}
+
+	return token, plaintextToken, nil
+}

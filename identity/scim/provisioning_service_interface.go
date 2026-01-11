@@ -67,3 +67,4 @@ type BulkOperationResult struct {
 	Response interface{} `json:"response,omitempty"`
 }
 
+

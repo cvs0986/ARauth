@@ -305,6 +305,9 @@ func main() {
 	// Initialize SCIM handler
 	scimHandler := handlers.NewSCIMHandler(scimProvisioningService, scimTokenService)
 
+	// Initialize SCIM token handler
+	scimTokenHandler := handlers.NewSCIMTokenHandler(scimTokenService, auditEventService)
+
 	// Initialize invitation repository and service
 	invitationRepo := postgres.NewInvitationRepository(db)
 	emailService := email.NewNoOpEmailService()
@@ -330,7 +333,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, oauthScopeHandler, scimHandler, scimTokenService, invitationHandler, sessionHandler, oauthClientHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, oauthScopeHandler, scimHandler, scimTokenHandler, scimTokenService, invitationHandler, sessionHandler, oauthClientHandler, tenantRepo, cacheClient, db, redisClient, tokenService)
 
 	// Create HTTP server
 	srv := &http.Server{

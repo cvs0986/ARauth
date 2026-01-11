@@ -24,21 +24,23 @@ type TokenServiceInterface interface {
 	// DeleteToken deletes a SCIM token
 	DeleteToken(ctx context.Context, id uuid.UUID) error
 
+	// RotateToken rotates a SCIM token, returning the new plaintext token
+	RotateToken(ctx context.Context, id uuid.UUID) (*models.SCIMToken, string, error)
+
 	// ValidateToken validates a SCIM token and returns the token if valid
 	ValidateToken(ctx context.Context, tokenString string) (*models.SCIMToken, error)
 }
 
 // CreateTokenRequest represents a request to create a SCIM token
 type CreateTokenRequest struct {
-	Name      string    `json:"name" binding:"required"`
-	Scopes    []string  `json:"scopes" binding:"required,min=1"`
-	ExpiresAt *string   `json:"expires_at,omitempty"` // ISO 8601 format
+	Name      string   `json:"name" binding:"required"`
+	Scopes    []string `json:"scopes" binding:"required,min=1"`
+	ExpiresAt *string  `json:"expires_at,omitempty"` // ISO 8601 format
 }
 
 // UpdateTokenRequest represents a request to update a SCIM token
 type UpdateTokenRequest struct {
-	Name      *string   `json:"name,omitempty"`
-	Scopes    []string  `json:"scopes,omitempty"`
-	ExpiresAt *string   `json:"expires_at,omitempty"` // ISO 8601 format
+	Name      *string  `json:"name,omitempty"`
+	Scopes    []string `json:"scopes,omitempty"`
+	ExpiresAt *string  `json:"expires_at,omitempty"` // ISO 8601 format
 }
-
