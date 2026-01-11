@@ -9,6 +9,7 @@ import (
 	"github.com/arauth-identity/iam/identity/ratelimit"
 	"github.com/arauth-identity/iam/identity/scim"
 	"github.com/arauth-identity/iam/internal/cache"
+	"github.com/arauth-identity/iam/observability/security_events"
 	"github.com/arauth-identity/iam/storage/interfaces"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -37,7 +38,7 @@ func getRedis(redisClient interface{}) *redis.Client {
 }
 
 // SetupRoutes configures all routes
-func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, scimHandler *handlers.SCIMHandler, scimTokenHandler *handlers.SCIMTokenHandler, scimTokenService scim.TokenServiceInterface, invitationHandler *handlers.InvitationHandler, sessionHandler *handlers.SessionHandler, oauthClientHandler *handlers.OAuthClientHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}, rateLimiter ratelimit.Limiter) {
+func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.UserHandler, authHandler *handlers.AuthHandler, mfaHandler *handlers.MFAHandler, tenantHandler *handlers.TenantHandler, roleHandler *handlers.RoleHandler, permissionHandler *handlers.PermissionHandler, systemHandler *handlers.SystemHandler, capabilityHandler *handlers.CapabilityHandler, auditHandler *handlers.AuditHandler, federationHandler *handlers.FederationHandler, webhookHandler *handlers.WebhookHandler, identityLinkingHandler *handlers.IdentityLinkingHandler, introspectionHandler *handlers.IntrospectionHandler, impersonationHandler *handlers.ImpersonationHandler, oauthScopeHandler *handlers.OAuthScopeHandler, scimHandler *handlers.SCIMHandler, scimTokenHandler *handlers.SCIMTokenHandler, scimTokenService scim.TokenServiceInterface, invitationHandler *handlers.InvitationHandler, sessionHandler *handlers.SessionHandler, oauthClientHandler *handlers.OAuthClientHandler, tenantRepo interfaces.TenantRepository, cacheClient *cache.Cache, db interface{}, redisClient interface{}, tokenService interface{}, rateLimiter ratelimit.Limiter, eventLogger security_events.Logger) {
 	// Global middleware
 	router.Use(middleware.CORS())
 	router.Use(middleware.Logging(logger))
@@ -45,7 +46,7 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 
 	// Apply multi-tier rate limiting if available
 	if rateLimiter != nil {
-		router.Use(middleware.MultiTierRateLimit(rateLimiter))
+		router.Use(middleware.MultiTierRateLimit(rateLimiter, eventLogger))
 	} else {
 		// Fallback to legacy rate limiting (development only)
 		router.Use(middleware.RateLimit(cacheClient))
@@ -65,7 +66,7 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 	{
 		// System routes require JWT authentication and SYSTEM principal type
 		if ts, ok := tokenService.(token.ServiceInterface); ok {
-			systemAPI.Use(middleware.JWTAuthMiddleware(ts))
+			systemAPI.Use(middleware.JWTAuthMiddleware(ts, eventLogger))
 			systemAPI.Use(middleware.RequireSystemUser(ts))
 		}
 
@@ -163,7 +164,7 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		tenantScoped := v1.Group("")
 		// Apply JWT authentication middleware first
 		if ts, ok := tokenService.(token.ServiceInterface); ok {
-			tenantScoped.Use(middleware.JWTAuthMiddleware(ts))
+			tenantScoped.Use(middleware.JWTAuthMiddleware(ts, eventLogger))
 			// Allow both SYSTEM and TENANT users to access tenant-scoped routes
 			// RequireTenantUser is removed - TenantMiddleware will handle tenant context extraction
 		}
@@ -173,48 +174,48 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			// Note: More specific routes (with /roles) must come before generic :id routes
 			users := tenantScoped.Group("/users")
 			{
-				users.POST("", middleware.RequirePermission("users", "create"), userHandler.Create)
-				users.GET("", middleware.RequirePermission("users", "read"), userHandler.List)
+				users.POST("", middleware.RequirePermission("users", "create", eventLogger), userHandler.Create)
+				users.GET("", middleware.RequirePermission("users", "read", eventLogger), userHandler.List)
 				// User roles routes (must come before /:id to avoid route conflict)
 				// Use :id instead of :user_id to avoid wildcard name conflict
-				users.GET("/:id/roles", middleware.RequirePermission("users", "read"), roleHandler.GetUserRoles)
-				users.POST("/:id/roles/:role_id", middleware.RequirePermission("users", "roles:assign"), roleHandler.AssignRoleToUser)
-				users.DELETE("/:id/roles/:role_id", middleware.RequirePermission("users", "roles:remove"), roleHandler.RemoveRoleFromUser)
+				users.GET("/:id/roles", middleware.RequirePermission("users", "read", eventLogger), roleHandler.GetUserRoles)
+				users.POST("/:id/roles/:role_id", middleware.RequirePermission("users", "roles:assign", eventLogger), roleHandler.AssignRoleToUser)
+				users.DELETE("/:id/roles/:role_id", middleware.RequirePermission("users", "roles:remove", eventLogger), roleHandler.RemoveRoleFromUser)
 				// User permissions route (must come before /:id)
-				users.GET("/:id/permissions", middleware.RequirePermission("users", "read"), userHandler.GetUserPermissions)
+				users.GET("/:id/permissions", middleware.RequirePermission("users", "read", eventLogger), userHandler.GetUserPermissions)
 				// User capabilities routes (must come before /:id)
-				users.GET("/:id/capabilities", middleware.RequirePermission("users", "read"), capabilityHandler.GetUserCapabilities)
-				users.GET("/:id/capabilities/:key", middleware.RequirePermission("users", "read"), capabilityHandler.GetUserCapability)
-				users.POST("/:id/capabilities/:key/enroll", middleware.RequirePermission("users", "capabilities:manage"), capabilityHandler.EnrollUserCapability)
-				users.DELETE("/:id/capabilities/:key", middleware.RequirePermission("users", "capabilities:manage"), capabilityHandler.UnenrollUserCapability)
+				users.GET("/:id/capabilities", middleware.RequirePermission("users", "read", eventLogger), capabilityHandler.GetUserCapabilities)
+				users.GET("/:id/capabilities/:key", middleware.RequirePermission("users", "read", eventLogger), capabilityHandler.GetUserCapability)
+				users.POST("/:id/capabilities/:key/enroll", middleware.RequirePermission("users", "capabilities:manage", eventLogger), capabilityHandler.EnrollUserCapability)
+				users.DELETE("/:id/capabilities/:key", middleware.RequirePermission("users", "capabilities:manage", eventLogger), capabilityHandler.UnenrollUserCapability)
 				// User identity linking routes (must come before /:id)
-				users.GET("/:id/identities", middleware.RequirePermission("users", "read"), identityLinkingHandler.GetUserIdentities)
-				users.POST("/:id/identities", middleware.RequirePermission("users", "identities:link"), identityLinkingHandler.LinkIdentity)
-				users.DELETE("/:id/identities/:identity_id", middleware.RequirePermission("users", "identities:unlink"), identityLinkingHandler.UnlinkIdentity)
-				users.PUT("/:id/identities/:identity_id/primary", middleware.RequirePermission("users", "identities:manage"), identityLinkingHandler.SetPrimaryIdentity)
-				users.POST("/:id/identities/:identity_id/verify", middleware.RequirePermission("users", "identities:verify"), identityLinkingHandler.VerifyIdentity)
+				users.GET("/:id/identities", middleware.RequirePermission("users", "read", eventLogger), identityLinkingHandler.GetUserIdentities)
+				users.POST("/:id/identities", middleware.RequirePermission("users", "identities:link", eventLogger), identityLinkingHandler.LinkIdentity)
+				users.DELETE("/:id/identities/:identity_id", middleware.RequirePermission("users", "identities:unlink", eventLogger), identityLinkingHandler.UnlinkIdentity)
+				users.PUT("/:id/identities/:identity_id/primary", middleware.RequirePermission("users", "identities:manage", eventLogger), identityLinkingHandler.SetPrimaryIdentity)
+				users.POST("/:id/identities/:identity_id/verify", middleware.RequirePermission("users", "identities:verify", eventLogger), identityLinkingHandler.VerifyIdentity)
 				// Generic user routes
-				users.POST("/:id/change-password", middleware.RequirePermission("users", "update"), userHandler.ChangePassword)
-				users.GET("/:id", middleware.RequirePermission("users", "read"), userHandler.GetByID)
-				users.PUT("/:id", middleware.RequirePermission("users", "update"), userHandler.Update)
-				users.DELETE("/:id", middleware.RequirePermission("users", "delete"), userHandler.Delete)
+				users.POST("/:id/change-password", middleware.RequirePermission("users", "update", eventLogger), userHandler.ChangePassword)
+				users.GET("/:id", middleware.RequirePermission("users", "read", eventLogger), userHandler.GetByID)
+				users.PUT("/:id", middleware.RequirePermission("users", "update", eventLogger), userHandler.Update)
+				users.DELETE("/:id", middleware.RequirePermission("users", "delete", eventLogger), userHandler.Delete)
 			}
 
 			// Session routes (tenant-scoped)
 			sessions := tenantScoped.Group("/sessions")
 			{
-				sessions.GET("", middleware.RequirePermission("sessions", "read"), sessionHandler.ListSessions)
-				sessions.POST("/:id/revoke", middleware.RequirePermission("sessions", "revoke"), sessionHandler.RevokeSession)
+				sessions.GET("", middleware.RequirePermission("sessions", "read", eventLogger), sessionHandler.ListSessions)
+				sessions.POST("/:id/revoke", middleware.RequirePermission("sessions", "revoke", eventLogger), sessionHandler.RevokeSession)
 			}
 
 			// OAuth client routes (tenant-scoped)
 			oauthClients := tenantScoped.Group("/oauth/clients")
 			{
-				oauthClients.POST("", middleware.RequirePermission("oauth", "clients:create"), oauthClientHandler.CreateClient)
-				oauthClients.GET("", middleware.RequirePermission("oauth", "clients:read"), oauthClientHandler.ListClients)
-				oauthClients.GET("/:id", middleware.RequirePermission("oauth", "clients:read"), oauthClientHandler.GetClient)
-				oauthClients.POST("/:id/rotate-secret", middleware.RequirePermission("oauth", "clients:rotate-secret"), oauthClientHandler.RotateSecret)
-				oauthClients.DELETE("/:id", middleware.RequirePermission("oauth", "clients:delete"), oauthClientHandler.DeleteClient)
+				oauthClients.POST("", middleware.RequirePermission("oauth", "clients:create", eventLogger), oauthClientHandler.CreateClient)
+				oauthClients.GET("", middleware.RequirePermission("oauth", "clients:read", eventLogger), oauthClientHandler.ListClients)
+				oauthClients.GET("/:id", middleware.RequirePermission("oauth", "clients:read", eventLogger), oauthClientHandler.GetClient)
+				oauthClients.POST("/:id/rotate-secret", middleware.RequirePermission("oauth", "clients:rotate-secret", eventLogger), oauthClientHandler.RotateSecret)
+				oauthClients.DELETE("/:id", middleware.RequirePermission("oauth", "clients:delete", eventLogger), oauthClientHandler.DeleteClient)
 			}
 
 			// MFA routes (tenant-scoped - require authentication)
@@ -228,32 +229,32 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			// Note: More specific routes (with /permissions) must come before generic :id routes
 			roles := tenantScoped.Group("/roles")
 			{
-				roles.POST("", middleware.RequirePermission("roles", "create"), roleHandler.Create)
-				roles.GET("", middleware.RequirePermission("roles", "read"), roleHandler.List)
+				roles.POST("", middleware.RequirePermission("roles", "create", eventLogger), roleHandler.Create)
+				roles.GET("", middleware.RequirePermission("roles", "read", eventLogger), roleHandler.List)
 				// Permission routes (must come before :id routes to avoid conflict)
-				roles.GET("/:id/permissions", middleware.RequirePermission("roles", "read"), roleHandler.GetRolePermissions)
-				roles.POST("/:id/permissions/:permission_id", middleware.RequirePermission("roles", "permissions:assign"), roleHandler.AssignPermissionToRole)
-				roles.DELETE("/:id/permissions/:permission_id", middleware.RequirePermission("roles", "permissions:remove"), roleHandler.RemovePermissionFromRole)
+				roles.GET("/:id/permissions", middleware.RequirePermission("roles", "read", eventLogger), roleHandler.GetRolePermissions)
+				roles.POST("/:id/permissions/:permission_id", middleware.RequirePermission("roles", "permissions:assign", eventLogger), roleHandler.AssignPermissionToRole)
+				roles.DELETE("/:id/permissions/:permission_id", middleware.RequirePermission("roles", "permissions:remove", eventLogger), roleHandler.RemovePermissionFromRole)
 				// Generic role routes
-				roles.GET("/:id", middleware.RequirePermission("roles", "read"), roleHandler.GetByID)
-				roles.PUT("/:id", middleware.RequirePermission("roles", "update"), roleHandler.Update)
-				roles.DELETE("/:id", middleware.RequirePermission("roles", "delete"), roleHandler.Delete)
+				roles.GET("/:id", middleware.RequirePermission("roles", "read", eventLogger), roleHandler.GetByID)
+				roles.PUT("/:id", middleware.RequirePermission("roles", "update", eventLogger), roleHandler.Update)
+				roles.DELETE("/:id", middleware.RequirePermission("roles", "delete", eventLogger), roleHandler.Delete)
 			}
 
 			// Permission routes (tenant-scoped)
 			permissions := tenantScoped.Group("/permissions")
 			{
-				permissions.POST("", middleware.RequirePermission("permissions", "create"), permissionHandler.Create)
-				permissions.GET("", middleware.RequirePermission("permissions", "read"), permissionHandler.List)
-				permissions.GET("/:id", middleware.RequirePermission("permissions", "read"), permissionHandler.GetByID)
-				permissions.PUT("/:id", middleware.RequirePermission("permissions", "update"), permissionHandler.Update)
-				permissions.DELETE("/:id", middleware.RequirePermission("permissions", "delete"), permissionHandler.Delete)
+				permissions.POST("", middleware.RequirePermission("permissions", "create", eventLogger), permissionHandler.Create)
+				permissions.GET("", middleware.RequirePermission("permissions", "read", eventLogger), permissionHandler.List)
+				permissions.GET("/:id", middleware.RequirePermission("permissions", "read", eventLogger), permissionHandler.GetByID)
+				permissions.PUT("/:id", middleware.RequirePermission("permissions", "update", eventLogger), permissionHandler.Update)
+				permissions.DELETE("/:id", middleware.RequirePermission("permissions", "delete", eventLogger), permissionHandler.Delete)
 			}
 
 			// Tenant settings routes (tenant-scoped - TENANT users can access their own settings)
 			// Route: GET/PUT /api/v1/tenant/settings (uses tenant from context)
-			tenantScoped.GET("/tenant/settings", middleware.RequirePermission("tenant", "settings:read"), systemHandler.GetTenantSettingsFromContext)
-			tenantScoped.PUT("/tenant/settings", middleware.RequirePermission("tenant", "settings:update"), systemHandler.UpdateTenantSettingsFromContext)
+			tenantScoped.GET("/tenant/settings", middleware.RequirePermission("tenant", "settings:read", eventLogger), systemHandler.GetTenantSettingsFromContext)
+			tenantScoped.PUT("/tenant/settings", middleware.RequirePermission("tenant", "settings:update", eventLogger), systemHandler.UpdateTenantSettingsFromContext)
 
 			// System capabilities viewing (tenant-scoped, read-only for TENANT users)
 			tenantScoped.GET("/tenant/system-capabilities", capabilityHandler.ListSystemCapabilitiesFromContext)
@@ -263,9 +264,9 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			tenantScoped.GET("/tenant/capabilities", capabilityHandler.GetTenantCapabilitiesFromContext)
 
 			// Tenant feature enablement (tenant-scoped)
-			tenantScoped.GET("/tenant/features", middleware.RequirePermission("tenant", "read"), capabilityHandler.GetTenantFeatures)
-			tenantScoped.PUT("/tenant/features/:key", middleware.RequirePermission("tenant", "features:manage"), capabilityHandler.EnableTenantFeature)
-			tenantScoped.DELETE("/tenant/features/:key", middleware.RequirePermission("tenant", "features:manage"), capabilityHandler.DisableTenantFeature)
+			tenantScoped.GET("/tenant/features", middleware.RequirePermission("tenant", "read", eventLogger), capabilityHandler.GetTenantFeatures)
+			tenantScoped.PUT("/tenant/features/:key", middleware.RequirePermission("tenant", "features:manage", eventLogger), capabilityHandler.EnableTenantFeature)
+			tenantScoped.DELETE("/tenant/features/:key", middleware.RequirePermission("tenant", "features:manage", eventLogger), capabilityHandler.DisableTenantFeature)
 
 			// Tenant capability evaluation (tenant-scoped)
 			tenantScoped.GET("/tenant/capabilities/evaluation", capabilityHandler.EvaluateTenantCapabilitiesFromContext)
@@ -274,20 +275,20 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			// Audit routes
 			auditRoutes := tenantScoped.Group("/audit")
 			{
-				auditRoutes.GET("/events", middleware.RequirePermission("audit", "read"), auditHandler.QueryEvents)
-				auditRoutes.GET("/events/:id", middleware.RequirePermission("audit", "read"), auditHandler.GetEvent)
-				auditRoutes.GET("/export", middleware.RequirePermission("audit", "export"), auditHandler.ExportEvents)
+				auditRoutes.GET("/events", middleware.RequirePermission("audit", "read", eventLogger), auditHandler.QueryEvents)
+				auditRoutes.GET("/events/:id", middleware.RequirePermission("audit", "read", eventLogger), auditHandler.GetEvent)
+				auditRoutes.GET("/export", middleware.RequirePermission("audit", "export", eventLogger), auditHandler.ExportEvents)
 			}
 
 			// Federation routes (Identity Providers)
 			identityProviders := tenantScoped.Group("/identity-providers")
 			{
-				identityProviders.POST("", middleware.RequirePermission("federation", "create"), federationHandler.CreateIdentityProvider)
-				identityProviders.GET("", middleware.RequirePermission("federation", "read"), federationHandler.ListIdentityProviders)
-				identityProviders.GET("/:id", middleware.RequirePermission("federation", "read"), federationHandler.GetIdentityProvider)
-				identityProviders.PUT("/:id", middleware.RequirePermission("federation", "update"), federationHandler.UpdateIdentityProvider)
-				identityProviders.DELETE("/:id", middleware.RequirePermission("federation", "delete"), federationHandler.DeleteIdentityProvider)
-				identityProviders.POST("/:id/verify", middleware.RequirePermission("federation", "verify"), federationHandler.VerifyIdentityProvider)
+				identityProviders.POST("", middleware.RequirePermission("federation", "create", eventLogger), federationHandler.CreateIdentityProvider)
+				identityProviders.GET("", middleware.RequirePermission("federation", "read", eventLogger), federationHandler.ListIdentityProviders)
+				identityProviders.GET("/:id", middleware.RequirePermission("federation", "read", eventLogger), federationHandler.GetIdentityProvider)
+				identityProviders.PUT("/:id", middleware.RequirePermission("federation", "update", eventLogger), federationHandler.UpdateIdentityProvider)
+				identityProviders.DELETE("/:id", middleware.RequirePermission("federation", "delete", eventLogger), federationHandler.DeleteIdentityProvider)
+				identityProviders.POST("/:id/verify", middleware.RequirePermission("federation", "verify", eventLogger), federationHandler.VerifyIdentityProvider)
 			}
 		}
 
@@ -308,20 +309,20 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		// Impersonation endpoints (tenant-scoped, requires admin permission)
 		impersonation := tenantScoped.Group("/impersonation")
 		{
-			impersonation.POST("/users/:id/impersonate", middleware.RequirePermission("users", "impersonate"), impersonationHandler.StartImpersonation)
-			impersonation.GET("", middleware.RequirePermission("users", "impersonate"), impersonationHandler.ListImpersonationSessions)
-			impersonation.GET("/:session_id", middleware.RequirePermission("users", "impersonate"), impersonationHandler.GetImpersonationSession)
-			impersonation.DELETE("/:session_id", middleware.RequirePermission("users", "impersonate"), impersonationHandler.EndImpersonation)
+			impersonation.POST("/users/:id/impersonate", middleware.RequirePermission("users", "impersonate", eventLogger), impersonationHandler.StartImpersonation)
+			impersonation.GET("", middleware.RequirePermission("users", "impersonate", eventLogger), impersonationHandler.ListImpersonationSessions)
+			impersonation.GET("/:session_id", middleware.RequirePermission("users", "impersonate", eventLogger), impersonationHandler.GetImpersonationSession)
+			impersonation.DELETE("/:session_id", middleware.RequirePermission("users", "impersonate", eventLogger), impersonationHandler.EndImpersonation)
 		}
 
 		// OAuth Scope endpoints (tenant-scoped)
 		oauthScopes := tenantScoped.Group("/oauth/scopes")
 		{
-			oauthScopes.POST("", middleware.RequirePermission("oauth", "scopes:create"), oauthScopeHandler.CreateScope)
-			oauthScopes.GET("", middleware.RequirePermission("oauth", "scopes:read"), oauthScopeHandler.ListScopes)
-			oauthScopes.GET("/:id", middleware.RequirePermission("oauth", "scopes:read"), oauthScopeHandler.GetScope)
-			oauthScopes.PUT("/:id", middleware.RequirePermission("oauth", "scopes:update"), oauthScopeHandler.UpdateScope)
-			oauthScopes.DELETE("/:id", middleware.RequirePermission("oauth", "scopes:delete"), oauthScopeHandler.DeleteScope)
+			oauthScopes.POST("", middleware.RequirePermission("oauth", "scopes:create", eventLogger), oauthScopeHandler.CreateScope)
+			oauthScopes.GET("", middleware.RequirePermission("oauth", "scopes:read", eventLogger), oauthScopeHandler.ListScopes)
+			oauthScopes.GET("/:id", middleware.RequirePermission("oauth", "scopes:read", eventLogger), oauthScopeHandler.GetScope)
+			oauthScopes.PUT("/:id", middleware.RequirePermission("oauth", "scopes:update", eventLogger), oauthScopeHandler.UpdateScope)
+			oauthScopes.DELETE("/:id", middleware.RequirePermission("oauth", "scopes:delete", eventLogger), oauthScopeHandler.DeleteScope)
 		}
 
 		// SCIM 2.0 API routes (public, authenticated via Bearer token)
@@ -366,17 +367,17 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 		// SCIM Token Management routes (tenant-scoped)
 		scimTokens := tenantScoped.Group("/scim/tokens")
 		{
-			scimTokens.POST("", middleware.RequirePermission("scim_tokens", "create"), scimTokenHandler.CreateToken)
-			scimTokens.GET("", middleware.RequirePermission("scim_tokens", "read"), scimTokenHandler.ListTokens)
-			scimTokens.GET("/:id", middleware.RequirePermission("scim_tokens", "read"), scimTokenHandler.GetToken)
-			scimTokens.POST("/:id/rotate", middleware.RequirePermission("scim_tokens", "write"), scimTokenHandler.RotateToken)
-			scimTokens.DELETE("/:id", middleware.RequirePermission("scim_tokens", "delete"), scimTokenHandler.DeleteToken)
+			scimTokens.POST("", middleware.RequirePermission("scim_tokens", "create", eventLogger), scimTokenHandler.CreateToken)
+			scimTokens.GET("", middleware.RequirePermission("scim_tokens", "read", eventLogger), scimTokenHandler.ListTokens)
+			scimTokens.GET("/:id", middleware.RequirePermission("scim_tokens", "read", eventLogger), scimTokenHandler.GetToken)
+			scimTokens.POST("/:id/rotate", middleware.RequirePermission("scim_tokens", "write", eventLogger), scimTokenHandler.RotateToken)
+			scimTokens.DELETE("/:id", middleware.RequirePermission("scim_tokens", "delete", eventLogger), scimTokenHandler.DeleteToken)
 		}
 
 		// System audit events route (SYSTEM users only - system-wide audit)
 		if ts, ok := tokenService.(token.ServiceInterface); ok {
 			systemAPI := router.Group("/system")
-			systemAPI.Use(middleware.JWTAuthMiddleware(ts))
+			systemAPI.Use(middleware.JWTAuthMiddleware(ts, eventLogger))
 			systemAPI.Use(middleware.RequireSystemUser(ts))
 			{
 				systemAPI.GET("/audit/events", auditHandler.QueryEvents)

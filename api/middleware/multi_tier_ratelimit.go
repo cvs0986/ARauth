@@ -54,7 +54,7 @@ func MultiTierRateLimit(limiter ratelimit.Limiter, eventLogger security_events.L
 }
 
 // UserOnlyRateLimit applies rate limiting only to authenticated users
-func UserOnlyRateLimit(limiter ratelimit.Limiter, category ratelimit.EndpointCategory) gin.HandlerFunc {
+func UserOnlyRateLimit(limiter ratelimit.Limiter, category ratelimit.EndpointCategory, eventLogger security_events.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, exists := c.Get("user_id")
 		if !exists {
@@ -64,7 +64,7 @@ func UserOnlyRateLimit(limiter ratelimit.Limiter, category ratelimit.EndpointCat
 		}
 
 		if err := limiter.CheckUserLimit(c.Request.Context(), fmt.Sprintf("%v", userID), category); err != nil {
-			handleRateLimitError(c, err)
+			handleRateLimitError(c, err, category, eventLogger)
 			return
 		}
 
@@ -73,11 +73,11 @@ func UserOnlyRateLimit(limiter ratelimit.Limiter, category ratelimit.EndpointCat
 }
 
 // IPOnlyRateLimit applies rate limiting based on IP address only
-func IPOnlyRateLimit(limiter ratelimit.Limiter, category ratelimit.EndpointCategory) gin.HandlerFunc {
+func IPOnlyRateLimit(limiter ratelimit.Limiter, category ratelimit.EndpointCategory, eventLogger security_events.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
 		if err := limiter.CheckIPLimit(c.Request.Context(), ip, category); err != nil {
-			handleRateLimitError(c, err)
+			handleRateLimitError(c, err, category, eventLogger)
 			return
 		}
 
@@ -85,8 +85,8 @@ func IPOnlyRateLimit(limiter ratelimit.Limiter, category ratelimit.EndpointCateg
 	}
 }
 
-// ClientOnlyRateLimit applies rate limiting based on OAuth client only
-func ClientOnlyRateLimit(limiter ratelimit.Limiter) gin.HandlerFunc {
+// ClientOnlyRateLimit applies rate limiting based on OAuth client ID only
+func ClientOnlyRateLimit(limiter ratelimit.Limiter, eventLogger security_events.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		clientID, exists := c.Get("client_id")
 		if !exists {
@@ -96,7 +96,7 @@ func ClientOnlyRateLimit(limiter ratelimit.Limiter) gin.HandlerFunc {
 		}
 
 		if err := limiter.CheckClientLimit(c.Request.Context(), fmt.Sprintf("%v", clientID)); err != nil {
-			handleRateLimitError(c, err)
+			handleRateLimitError(c, err, ratelimit.CategoryGeneral, eventLogger)
 			return
 		}
 

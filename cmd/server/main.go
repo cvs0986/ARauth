@@ -42,6 +42,7 @@ import (
 	"github.com/arauth-identity/iam/internal/email"
 	"github.com/arauth-identity/iam/internal/logger"
 	webhookdispatcher "github.com/arauth-identity/iam/internal/webhook"
+	"github.com/arauth-identity/iam/observability/security_events"
 	"github.com/arauth-identity/iam/security/encryption"
 	"github.com/arauth-identity/iam/security/totp"
 	"github.com/arauth-identity/iam/storage/postgres"
@@ -151,6 +152,21 @@ func main() {
 			logger.Logger.Fatal("Redis is required for rate limiting in production")
 		}
 		logger.Logger.Warn("Rate limiting disabled - Redis not available (NOT SAFE FOR PRODUCTION)")
+	}
+
+	// Initialize security event logger (async, batched)
+	var securityEventLogger security_events.Logger
+	if db != nil {
+		securityEventRepo := postgres.NewSecurityEventRepository(db)
+		batchSize := 100
+		flushInterval := 5 * time.Second
+		securityEventLogger = security_events.NewAsyncLogger(securityEventRepo, logger.Logger, batchSize, flushInterval)
+		logger.Logger.Info("Security event logger initialized",
+			zap.Int("batch_size", batchSize),
+			zap.Duration("flush_interval", flushInterval),
+		)
+	} else {
+		logger.Logger.Warn("Security event logging disabled - database not available")
 	}
 
 	// Initialize repositories
@@ -372,7 +388,7 @@ func main() {
 	router := gin.New()
 
 	// Setup routes with dependencies
-	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, oauthScopeHandler, scimHandler, scimTokenHandler, scimTokenService, invitationHandler, sessionHandler, oauthClientHandler, tenantRepo, cacheClient, db, redisClient, tokenService, rateLimiter)
+	routes.SetupRoutes(router, logger.Logger, userHandler, authHandler, mfaHandler, tenantHandler, roleHandler, permissionHandler, systemHandler, capabilityHandler, auditHandler, federationHandler, webhookHandler, identityLinkingHandler, introspectionHandler, impersonationHandler, oauthScopeHandler, scimHandler, scimTokenHandler, scimTokenService, invitationHandler, sessionHandler, oauthClientHandler, tenantRepo, cacheClient, db, redisClient, tokenService, rateLimiter, securityEventLogger)
 
 	// Create HTTP server
 	srv := &http.Server{
