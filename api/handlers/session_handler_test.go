@@ -164,7 +164,7 @@ func TestRevokeSession_MissingAuditReason(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "audit_reason")
+	assert.Contains(t, w.Body.String(), "AuditReason")
 }
 
 // TestRevokeSession_AuditReasonTooShort tests that audit_reason must be at least 10 characters
