@@ -127,6 +127,11 @@ func (m *MockAuthAuditService) LogPermissionUpdated(ctx context.Context, actor m
 func (m *MockAuthAuditService) LogPermissionDeleted(ctx context.Context, actor models.AuditActor, target *models.AuditTarget, tenantID *uuid.UUID, sourceIP, userAgent string) error {
 	return nil
 }
+
+func (m *MockAuthAuditService) ExportEvents(ctx context.Context, filters *interfaces.AuditEventFilters) ([]byte, string, error) {
+	args := m.Called(ctx, filters)
+	return args.Get(0).([]byte), args.String(1), args.Error(2)
+}
 func (m *MockAuthAuditService) LogMFAEnrolled(ctx context.Context, actor models.AuditActor, tenantID *uuid.UUID, sourceIP, userAgent string) error {
 	return nil
 }

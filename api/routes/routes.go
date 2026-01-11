@@ -263,10 +263,12 @@ func SetupRoutes(router *gin.Engine, logger *zap.Logger, userHandler *handlers.U
 			tenantScoped.GET("/tenant/capabilities/evaluation", capabilityHandler.EvaluateTenantCapabilitiesFromContext)
 
 			// Audit events routes (tenant-scoped)
-			audit := tenantScoped.Group("/audit")
+			// Audit routes
+			auditRoutes := tenantScoped.Group("/audit")
 			{
-				audit.GET("/events", middleware.RequirePermission("audit", "read"), auditHandler.QueryEvents)
-				audit.GET("/events/:id", middleware.RequirePermission("audit", "read"), auditHandler.GetEvent)
+				auditRoutes.GET("/events", middleware.RequirePermission("audit", "read"), auditHandler.QueryEvents)
+				auditRoutes.GET("/events/:id", middleware.RequirePermission("audit", "read"), auditHandler.GetEvent)
+				auditRoutes.GET("/export", middleware.RequirePermission("audit", "export"), auditHandler.ExportEvents)
 			}
 
 			// Federation routes (Identity Providers)

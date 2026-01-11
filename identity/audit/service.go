@@ -1,7 +1,9 @@
 package audit
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -113,6 +115,65 @@ func (s *Service) GetEvent(ctx context.Context, eventID uuid.UUID) (*models.Audi
 
 	event.Expand()
 	return event, nil
+}
+
+// ExportEvents exports audit events as CSV based on filters
+func (s *Service) ExportEvents(ctx context.Context, filters *interfaces.AuditEventFilters) ([]byte, string, error) {
+	// Query events (reuse existing query logic)
+	// For export, we might want to increase the limit, but for now we respect the filters
+	// If filters.PageSize is 0, QueryEvents might use default.
+	// Ideally for export we want "all matching" or a large limit.
+	// Let's assume the caller sets appropriate pagination or we iterate.
+	// For a V1 MVP, we will fetch up to MaxPageSize (100) or whatever is requested.
+	// To support full export, we would need pagination loop, but let's start simple as per requirement.
+
+	events, _, err := s.repo.QueryEvents(ctx, filters)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to query audit events for export: %w", err)
+	}
+
+	b := &bytes.Buffer{}
+	w := csv.NewWriter(b)
+
+	// Write Header
+	header := []string{"Event ID", "Timestamp", "Event Type", "Actor", "Result", "IP Address", "Target Type", "Target ID"}
+	if err := w.Write(header); err != nil {
+		return nil, "", fmt.Errorf("failed to write CSV header: %w", err)
+	}
+
+	// Write Rows
+	for _, event := range events {
+		event.Expand() // Populate Actor/Target details if needed
+
+		record := []string{
+			event.ID.String(),
+			event.Timestamp.Format(time.RFC3339),
+			event.EventType,
+			fmt.Sprintf("%s (%s)", event.Actor.Username, event.Actor.PrincipalType),
+			event.Result,
+			event.SourceIP,
+			"", "",
+		}
+
+		if event.Target != nil {
+			record[6] = event.Target.Type
+			if event.Target.ID != uuid.Nil {
+				record[7] = event.Target.ID.String()
+			}
+		}
+
+		if err := w.Write(record); err != nil {
+			return nil, "", fmt.Errorf("failed to write CSV record: %w", err)
+		}
+	}
+
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return nil, "", fmt.Errorf("failed to flush CSV writer: %w", err)
+	}
+
+	filename := fmt.Sprintf("audit_export_%s.csv", time.Now().Format("20060102_150405"))
+	return b.Bytes(), filename, nil
 }
 
 // createEvent is a helper to create an audit event
