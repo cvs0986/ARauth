@@ -237,7 +237,7 @@ func main() {
 
 	// Initialize services
 	tenantService := tenant.NewService(tenantRepo, tenantInitializer)
-	userService := user.NewService(userRepo, credentialRepo) // Pass credentialRepo to create credentials automatically
+	userService := user.NewService(userRepo, credentialRepo, refreshTokenRepo) // Pass credentialRepo to create credentials automatically
 	loginService := login.NewService(userRepo, credentialRepo, refreshTokenRepo, tenantSettingsRepo, tenantRepo, hydraClient, claimsBuilder, tokenService, lifetimeResolver, capabilityService)
 	mfaService := mfa.NewService(userRepo, credentialRepo, mfaRecoveryCodeRepo, totpGenerator, encryptor, mfaSessionManager, capabilityService)
 	roleService := role.NewService(roleRepo, permissionRepo)
